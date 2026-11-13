@@ -1,0 +1,185 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* Brand Colors */
+  --color-ivory: #F4F1EA;
+  --color-ivory-light: #FAF8F5;
+  --color-charcoal: #20211F;
+  --color-charcoal-light: #2E302D;
+  --color-charcoal-muted: #434440;
+  --color-bronze: #A78B65;
+  --color-bronze-hover: #937854;
+  --color-bronze-light: #C2AB89;
+  --color-warm-grey: #B8B5AE;
+  --color-warm-grey-light: #D6D4CF;
+  --color-warm-grey-dark: #7A7771;
+  --color-white: #FFFFFF;
+
+  /* Typography */
+  --font-serif: var(--font-serif), "Playfair Display", Georgia, serif;
+  --font-sans: var(--font-sans), Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Editorial Spacing Scales */
+  --spacing-18: 4.5rem;
+  --spacing-22: 5.5rem;
+  --spacing-26: 6.5rem;
+  --spacing-30: 7.5rem;
+  --spacing-section: clamp(4rem, 8vw, 8rem);
+  --spacing-gutter: clamp(1.25rem, 4vw, 3.5rem);
+
+  /* Animation Easing */
+  --ease-editorial: cubic-bezier(0.25, 1, 0.5, 1);
+
+  /* Custom Animations */
+  --animate-fade-in: fadeIn 0.8s var(--ease-editorial) forwards;
+  --animate-slide-up: slideUp 0.8s var(--ease-editorial) forwards;
+
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    0% {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* Base Styles & Document Defaults */
+:root {
+  --background: #F4F1EA;
+  --foreground: #20211F;
+  --accent: #A78B65;
+  --border: #B8B5AE;
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: #F4F1EA;
+  color: #20211F;
+  font-family: var(--font-sans), Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: #F4F1EA;
+  color: #20211F;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* Architectural Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif), "Playfair Display", Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: #20211F;
+  line-height: 1.15;
+}
+
+p {
+  line-height: 1.7;
+}
+
+/* Selection Color Styling */
+::selection {
+  background-color: #A78B65;
+  color: #FFFFFF;
+}
+
+::-moz-selection {
+  background-color: #A78B65;
+  color: #FFFFFF;
+}
+
+/* Subtle Architectural Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F4F1EA;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #B8B5AE;
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #A78B65;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #B8B5AE #F4F1EA;
+}
+
+/* Links */
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: #A78B65;
+}
+
+/* Architectural Editorial Utilities */
+.editorial-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--spacing-gutter);
+}
+
+.editorial-label {
+  font-family: var(--font-sans), Inter, sans-serif;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.editorial-border {
+  border: 1px solid #B8B5AE;
+}
+
+.editorial-border-t {
+  border-top: 1px solid #B8B5AE;
+}
+
+.editorial-border-b {
+  border-bottom: 1px solid #B8B5AE;
+}
+
+.editorial-border-l {
+  border-left: 1px solid #B8B5AE;
+}
+
+.editorial-border-r {
+  border-right: 1px solid #B8B5AE;
+}
+
+.editorial-divider {
+  height: 1px;
+  width: 100%;
+  background-color: #B8B5AE;
+}
+
+/* Strict Design Rule: Architectural Square Edges - No Rounded Corners, No Glassmorphism */
+button, input, textarea, select, img {
+  border-radius: 0 !important;
+}
