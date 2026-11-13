@@ -1,0 +1,354 @@
+import fs from 'fs';
+import path from 'path';
+import { createClient as createSupabaseClient } from '@/lib/supabase/server';
+
+export interface DBQuote {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  projectLocation: string;
+  serviceRequired: string;
+  propertyType?: string;
+  description: string;
+  preferredContact: string;
+  attachmentUrl?: string;
+  status: 'pending' | 'reviewed' | 'quoted' | 'closed';
+  adminNotes?: string;
+  createdAt: string;
+}
+
+export interface DBApplication {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  position: string;
+  yearsOfExperience: string;
+  portfolioUrl?: string;
+  coverLetter?: string;
+  resumeUrl?: string;
+  status: 'pending' | 'reviewing' | 'interviewed' | 'rejected' | 'hired';
+  adminNotes?: string;
+  createdAt: string;
+}
+
+export interface DBFeedback {
+  id: string;
+  customerName: string;
+  email?: string;
+  projectReference?: string;
+  rating: number;
+  message: string;
+  permissionToPublish: boolean;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+}
+
+export interface DBProject {
+  id: string;
+  slug: string;
+  title: string;
+  category: string;
+  lifecycle: string;
+  location: string;
+  year: string;
+  architect: string;
+  builder: string;
+  heroImage: string;
+  finishes: string;
+  description: string;
+  createdAt: string;
+}
+
+export interface DBArticle {
+  id: string;
+  slug: string;
+  title: string;
+  category: string;
+  excerpt: string;
+  readTime: string;
+  date: string;
+  author: string;
+  coverImage: string;
+  createdAt: string;
+}
+
+const DATA_DIR = path.join(process.cwd(), 'data');
+
+function ensureDataFile<T>(filename: string, defaultData: T[]): T[] {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+  const filePath = path.join(DATA_DIR, filename);
+  if (!fs.existsSync(filePath)) {
+    fs.writeFileSync(filePath, JSON.stringify(defaultData, null, 2), 'utf-8');
+    return defaultData;
+  }
+  try {
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    return JSON.parse(raw);
+  } catch {
+    return defaultData;
+  }
+}
+
+function writeDataFile<T>(filename: string, data: T[]) {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+  const filePath = path.join(DATA_DIR, filename);
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+// Check if live Supabase instance is configured with non-placeholder values
+export function isSupabaseConfigured(): boolean {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  return Boolean(
+    url &&
+    key &&
+    !url.includes('placeholder') &&
+    !key.includes('placeholder') &&
+    url.startsWith('https://')
+  );
+}
+
+// ----------------- QUOTES -----------------
+export async function getQuotes(): Promise<DBQuote[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = await createSupabaseClient();
+      const { data, error } = await supabase
+        .from('quote_requests')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error && data) {
+        return data.map((d: any) => ({
+          id: d.id,
+          fullName: d.full_name,
+          email: d.email,
+          phone: d.phone,
+          projectLocation: d.project_location,
+          serviceRequired: d.service_required,
+          propertyType: d.property_type,
+          description: d.description,
+          preferredContact: d.preferred_contact,
+          attachmentUrl: d.attachment_url,
+          status: d.status,
+          adminNotes: d.admin_notes,
+          createdAt: d.created_at,
+        }));
+      }
+    } catch (e) {
+      console.error('Supabase getQuotes fallback:', e);
+    }
+  }
+
+  return ensureDataFile<DBQuote>('quotes.json', [
+    {
+      id: 'qt-001',
+      fullName: 'Julian Vance',
+      email: 'j.vance@example.com',
+      phone: '+61 412 000 111',
+      projectLocation: 'Toorak, VIC [Placeholder]',
+      serviceRequired: 'Interior Architectural Painting',
+      propertyType: 'Residential Luxury',
+      description: 'Level 5 full interior repaint across a newly framed contemporary residence.',
+      preferredContact: 'email',
+      status: 'pending',
+      adminNotes: 'Sample inquiry for testing purposes.',
+      createdAt: new Date().toISOString(),
+    },
+  ]);
+}
+
+export async function addQuote(quote: Omit<DBQuote, 'id' | 'createdAt' | 'status'>): Promise<DBQuote> {
+  const newQuote: DBQuote = {
+    ...quote,
+    id: `qt-${Date.now().toString(36)}`,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+  };
+
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = await createSupabaseClient();
+      const { data, error } = await supabase.from('quote_requests').insert({
+        id: newQuote.id,
+        full_name: newQuote.fullName,
+        email: newQuote.email,
+        phone: newQuote.phone,
+        project_location: newQuote.projectLocation,
+        service_required: newQuote.serviceRequired,
+        property_type: newQuote.propertyType,
+        description: newQuote.description,
+        preferred_contact: newQuote.preferredContact,
+        attachment_url: newQuote.attachmentUrl,
+        status: newQuote.status,
+      }).select().single();
+      if (!error && data) return newQuote;
+    } catch (e) {
+      console.error('Supabase addQuote fallback to persistent disk:', e);
+    }
+  }
+
+  const current = ensureDataFile<DBQuote>('quotes.json', []);
+  current.unshift(newQuote);
+  writeDataFile('quotes.json', current);
+  return newQuote;
+}
+
+// ----------------- APPLICATIONS -----------------
+export async function getApplications(): Promise<DBApplication[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = await createSupabaseClient();
+      const { data, error } = await supabase
+        .from('job_applications')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error && data) {
+        return data.map((d: any) => ({
+          id: d.id,
+          fullName: d.applicant_name,
+          email: d.email,
+          phone: d.phone,
+          position: d.position || 'General Applicant',
+          yearsOfExperience: d.years_of_experience || '1+',
+          portfolioUrl: d.portfolio_url,
+          coverLetter: d.cover_letter,
+          resumeUrl: d.cv_url,
+          status: d.status,
+          adminNotes: d.admin_notes,
+          createdAt: d.created_at,
+        }));
+      }
+    } catch (e) {
+      console.error('Supabase getApplications fallback:', e);
+    }
+  }
+
+  return ensureDataFile<DBApplication>('applications.json', [
+    {
+      id: 'app-001',
+      fullName: 'Marcus Bell',
+      email: 'marcus.bell@example.com',
+      phone: '+61 433 000 222',
+      position: 'Senior Architectural Spray Technician',
+      yearsOfExperience: '8',
+      portfolioUrl: 'https://example.com/portfolio',
+      coverLetter: 'Specialist in airless spray of catalyzed polyurethanes.',
+      resumeUrl: '/uploads/resumes/sample-cv.pdf',
+      status: 'reviewing',
+      adminNotes: 'Sample applicant for demonstration.',
+      createdAt: new Date().toISOString(),
+    },
+  ]);
+}
+
+export async function addApplication(app: Omit<DBApplication, 'id' | 'createdAt' | 'status'>): Promise<DBApplication> {
+  const newApp: DBApplication = {
+    ...app,
+    id: `app-${Date.now().toString(36)}`,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+  };
+
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = await createSupabaseClient();
+      const { data, error } = await supabase.from('job_applications').insert({
+        id: newApp.id,
+        applicant_name: newApp.fullName,
+        email: newApp.email,
+        phone: newApp.phone,
+        cover_letter: newApp.coverLetter,
+        cv_url: newApp.resumeUrl,
+        status: newApp.status,
+      }).select().single();
+      if (!error && data) return newApp;
+    } catch (e) {
+      console.error('Supabase addApplication fallback to persistent disk:', e);
+    }
+  }
+
+  const current = ensureDataFile<DBApplication>('applications.json', []);
+  current.unshift(newApp);
+  writeDataFile('applications.json', current);
+  return newApp;
+}
+
+// ----------------- FEEDBACK -----------------
+export async function getFeedback(): Promise<DBFeedback[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = await createSupabaseClient();
+      const { data, error } = await supabase
+        .from('customer_feedback')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error && data) {
+        return data.map((d: any) => ({
+          id: d.id,
+          customerName: d.name,
+          email: d.email,
+          projectReference: d.project_reference,
+          rating: d.rating,
+          message: d.message,
+          permissionToPublish: true,
+          status: d.status,
+          createdAt: d.created_at,
+        }));
+      }
+    } catch (e) {
+      console.error('Supabase getFeedback fallback:', e);
+    }
+  }
+
+  return ensureDataFile<DBFeedback>('feedback.json', [
+    {
+      id: 'fb-001',
+      customerName: 'Marcus Sterling [Placeholder]',
+      email: 'm.sterling@example.com',
+      projectReference: 'Toorak Private Estate [Placeholder]',
+      rating: 5,
+      message: 'Substrate preparation and dust containment met expectations. Zero dust migration.',
+      permissionToPublish: true,
+      status: 'approved',
+      createdAt: new Date().toISOString(),
+    },
+  ]);
+}
+
+export async function addFeedback(fb: Omit<DBFeedback, 'id' | 'createdAt' | 'status'>): Promise<DBFeedback> {
+  const newFb: DBFeedback = {
+    ...fb,
+    id: `fb-${Date.now().toString(36)}`,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+  };
+
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = await createSupabaseClient();
+      const { data, error } = await supabase.from('customer_feedback').insert({
+        id: newFb.id,
+        name: newFb.customerName,
+        email: newFb.email,
+        project_reference: newFb.projectReference,
+        rating: newFb.rating,
+        message: newFb.message,
+        status: newFb.status,
+      }).select().single();
+      if (!error && data) return newFb;
+    } catch (e) {
+      console.error('Supabase addFeedback fallback to persistent disk:', e);
+    }
+  }
+
+  const current = ensureDataFile<DBFeedback>('feedback.json', []);
+  current.unshift(newFb);
+  writeDataFile('feedback.json', current);
+  return newFb;
+}

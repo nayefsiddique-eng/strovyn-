@@ -9,6 +9,7 @@ export interface ButtonBaseProps {
   variant?: ButtonVariant;
   size?: ButtonSize;
   loading?: boolean;
+  disabled?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   className?: string;

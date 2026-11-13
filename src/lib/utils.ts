@@ -2,7 +2,15 @@
  * General purpose utilities for Strovyn Painting Co.
  */
 
-type ClassValue = string | number | boolean | undefined | null | ClassValue[];
+type ClassValue =
+  | string
+  | number
+  | bigint
+  | boolean
+  | undefined
+  | null
+  | { [key: string]: any }
+  | ClassValue[];
 
 /**
  * Merges class names into a single clean space-delimited string.

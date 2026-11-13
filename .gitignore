@@ -32,6 +32,14 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# Allow the example template
+!.env.local.example
+
+# Local persistent data store (do not commit — contains customer PII)
+/data/
+
+# Private storage directory (private uploads outside public web folder)
+/private_storage/
 
 # vercel
 .vercel
