@@ -68,8 +68,9 @@ export default function CareersPage() {
       }
 
       setSubmitted(true);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Submission failed. Please try again.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Submission failed. Please try again.';
+      setErrorMsg(msg);
     } finally {
       setLoading(false);
     }

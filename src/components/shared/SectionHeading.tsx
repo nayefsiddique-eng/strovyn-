@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { motion, type HTMLMotionProps } from "framer-motion";
+import { motion, type HTMLMotionProps, type Variants } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 export type SectionHeadingAlign = "left" | "center" | "right";
@@ -16,7 +16,7 @@ export interface SectionHeadingProps
   showDivider?: boolean;
 }
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -27,14 +27,14 @@ const containerVariants = {
   },
 };
 
-const itemVariants: any = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 16 },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
       duration: 0.6,
-      ease: [0.22, 1, 0.36, 1],
+      ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
     },
   },
 };

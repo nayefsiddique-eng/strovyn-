@@ -4,20 +4,41 @@ import fs from 'fs';
 import { cookies } from 'next/headers';
 import { PROJECTS_DATA } from '@/data/projectsData';
 import { getProjectsWithOverrides, savePhotoOverride, getPhotoOverrides } from '@/lib/projectPhotos';
+import {
+  verifyAdminKey,
+  createSessionToken,
+  verifySessionToken,
+  invalidateSession,
+} from '@/lib/security/auth';
+import { checkRateLimit } from '@/lib/security/rateLimiter';
+import { validateUploadFile } from '@/lib/security/fileValidation';
+import { isSupabaseConfigured } from '@/lib/db/mockData';
+import { createClient as createSupabaseClient } from '@/lib/supabase/server';
 
-// Default secure admin key if not set in environment
-const ADMIN_ACCESS_KEY = process.env.STROVYN_ADMIN_KEY || 'strovyn-craft-2026';
 const SESSION_COOKIE_NAME = 'strovyn_admin_session';
 
-function verifySession(cookieStore: Awaited<ReturnType<typeof cookies>>): boolean {
-  const session = cookieStore.get(SESSION_COOKIE_NAME);
-  return session?.value === 'authenticated_admin_valid';
+/**
+ * Validates Origin/Host for CSRF defense on state mutations
+ */
+function verifyCsrf(req: Request): boolean {
+  const origin = req.headers.get('origin');
+  const host = req.headers.get('host');
+  if (!origin || !host) return true; // Non-browser / same-origin relative
+  try {
+    const originUrl = new URL(origin);
+    return originUrl.host === host;
+  } catch {
+    return false;
+  }
 }
 
-// GET: Returns list of projects and their photos (requires auth)
+// GET: Returns list of projects and their current photos (requires signed session)
 export async function GET() {
   const cookieStore = await cookies();
-  if (!verifySession(cookieStore)) {
+  const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const session = verifySessionToken(sessionToken);
+
+  if (!session) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -35,46 +56,93 @@ export async function GET() {
   });
 }
 
-// POST: Handles login OR photo replacement
+// POST: Handles login, logout, OR photo replacement
 export async function POST(req: Request) {
   const cookieStore = await cookies();
 
-  // Check if this is a login request
+  // CSRF verification on all POST requests
+  if (!verifyCsrf(req)) {
+    return NextResponse.json({ success: false, error: 'CSRF validation failed' }, { status: 403 });
+  }
+
   const contentType = req.headers.get('content-type') || '';
+
+  // 1. JSON Actions: Login & Logout
   if (contentType.includes('application/json')) {
-    const body = await req.json();
-    if (body.action === 'login') {
-      if (body.key === ADMIN_ACCESS_KEY) {
-        cookieStore.set(SESSION_COOKIE_NAME, 'authenticated_admin_valid', {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
-          maxAge: 60 * 60 * 24 * 7, // 7 days
-          path: '/',
-        });
-        return NextResponse.json({ success: true, message: 'Authentication successful' });
-      } else {
-        return NextResponse.json({ success: false, error: 'Invalid access key' }, { status: 403 });
-      }
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ success: false, error: 'Invalid JSON request format' }, { status: 400 });
     }
 
+    // LOGIN ACTION
+    if (body.action === 'login') {
+      const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'local-client';
+      const rateCheck = await checkRateLimit(`admin_login_${clientIp}`, 5, 900000); // 5 attempts per 15 mins
+      if (!rateCheck.allowed) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Too many login attempts. Please wait ${rateCheck.retryAfterSec || 60} seconds.`,
+          },
+          { status: 429 }
+        );
+      }
+
+      if (!body.key || typeof body.key !== 'string') {
+        return NextResponse.json({ success: false, error: 'Access key is required' }, { status: 400 });
+      }
+
+      if (!verifyAdminKey(body.key)) {
+        return NextResponse.json({ success: false, error: 'Invalid administration key' }, { status: 403 });
+      }
+
+      const token = createSessionToken();
+      if (!token) {
+        console.error('CRITICAL: ADMIN_SESSION_SECRET is missing. Cannot sign session token.');
+        return NextResponse.json(
+          { success: false, error: 'Server configuration error. Contact administrator.' },
+          { status: 500 }
+        );
+      }
+
+      cookieStore.set(SESSION_COOKIE_NAME, token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 8 * 60 * 60, // 8 hours
+        path: '/',
+      });
+
+      return NextResponse.json({ success: true, message: 'Authentication successful' });
+    }
+
+    // LOGOUT ACTION
     if (body.action === 'logout') {
+      const currentToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+      if (currentToken) {
+        invalidateSession(currentToken);
+      }
       cookieStore.delete(SESSION_COOKIE_NAME);
-      return NextResponse.json({ success: true, message: 'Logged out' });
+      return NextResponse.json({ success: true, message: 'Logged out successfully' });
     }
   }
 
-  // All other operations require authenticated session
-  if (!verifySession(cookieStore)) {
+  // 2. All mutation operations require a valid HMAC-signed session
+  const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const session = verifySessionToken(sessionToken);
+
+  if (!session) {
     return NextResponse.json({ success: false, error: 'Unauthorized access' }, { status: 401 });
   }
 
-  // Handle file upload & photo replacement
+  // 3. Handle File Upload & Photo Replacement
   try {
     const formData = await req.formData();
-    const slug = formData.get('slug') as string;
-    const type = formData.get('type') as 'hero' | 'gallery';
-    const indexStr = formData.get('index') as string;
+    const slug = formData.get('slug') as string | null;
+    const type = formData.get('type') as 'hero' | 'gallery' | null;
+    const indexStr = formData.get('index') as string | null;
     const file = formData.get('file') as File | null;
     const directUrl = formData.get('url') as string | null;
 
@@ -90,35 +158,68 @@ export async function POST(req: Request) {
     let finalImageUrl = '';
 
     if (file) {
-      // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-      if (!allowedTypes.includes(file.type)) {
+      const allowedImageMimes = ['image/jpeg', 'image/png', 'image/webp'];
+      const fileBuffer = Buffer.from(await file.arrayBuffer());
+
+      const validation = validateUploadFile(
+        fileBuffer,
+        file.name,
+        file.type,
+        allowedImageMimes,
+        10 * 1024 * 1024 // 10MB
+      );
+
+      if (!validation.valid || !validation.sanitizedFilename) {
         return NextResponse.json(
-          { success: false, error: 'Invalid image format. JPEG, PNG, or WebP only.' },
+          { success: false, error: validation.error || 'Invalid image file.' },
           { status: 400 }
         );
       }
 
-      // Max 10MB
-      if (file.size > 10 * 1024 * 1024) {
+      const cleanFileName = validation.sanitizedFilename;
+
+      // In production with Supabase Storage
+      if (isSupabaseConfigured()) {
+        try {
+          const supabase = await createSupabaseClient();
+          const bucket = 'project-photos';
+          const { data, error } = await supabase.storage
+            .from(bucket)
+            .upload(`${slug}/${cleanFileName}`, fileBuffer, {
+              contentType: validation.detectedType || file.type,
+              upsert: false,
+            });
+
+          if (!error && data) {
+            const { data: pubData } = supabase.storage.from(bucket).getPublicUrl(data.path);
+            finalImageUrl = pubData.publicUrl;
+          }
+        } catch (err) {
+          console.error('Supabase storage upload failed:', err);
+        }
+      }
+
+      // Production guard: Fail closed if in production without Supabase Storage
+      if (!finalImageUrl && process.env.NODE_ENV === 'production') {
         return NextResponse.json(
-          { success: false, error: 'Image exceeds 10MB limit.' },
-          { status: 400 }
+          {
+            success: false,
+            error: 'Production cloud storage is unconfigured. Cannot persist uploads.',
+          },
+          { status: 503 }
         );
       }
 
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const ext = path.extname(file.name) || '.jpg';
-      const cleanFileName = `${slug}-${type}-${Date.now()}${ext}`;
-      const saveDir = path.join(process.cwd(), 'public', 'images', 'projects');
-
-      if (!fs.existsSync(saveDir)) {
-        fs.mkdirSync(saveDir, { recursive: true });
+      // Development local fallback
+      if (!finalImageUrl) {
+        const saveDir = path.join(process.cwd(), 'public', 'images', 'projects');
+        if (!fs.existsSync(saveDir)) {
+          fs.mkdirSync(saveDir, { recursive: true });
+        }
+        const fullFilePath = path.join(saveDir, cleanFileName);
+        fs.writeFileSync(fullFilePath, fileBuffer);
+        finalImageUrl = `/images/projects/${cleanFileName}`;
       }
-
-      const fullFilePath = path.join(saveDir, cleanFileName);
-      fs.writeFileSync(fullFilePath, buffer);
-      finalImageUrl = `/images/projects/${cleanFileName}`;
     } else if (directUrl) {
       finalImageUrl = directUrl.trim();
     } else {
@@ -149,8 +250,11 @@ export async function POST(req: Request) {
       type,
       message: 'Photo updated successfully',
     });
-  } catch (error) {
-    console.error('Photo replacement error:', error);
-    return NextResponse.json({ success: false, error: 'Internal server error while replacing photo' }, { status: 500 });
+  } catch (err: unknown) {
+    console.error('Admin photos operation error:', err);
+    return NextResponse.json(
+      { success: false, error: 'An error occurred while replacing the photograph.' },
+      { status: 500 }
+    );
   }
 }

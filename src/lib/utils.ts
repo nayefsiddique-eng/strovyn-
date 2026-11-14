@@ -9,7 +9,7 @@ type ClassValue =
   | boolean
   | undefined
   | null
-  | { [key: string]: any }
+  | { [key: string]: boolean | string | number | undefined | null }
   | ClassValue[];
 
 /**

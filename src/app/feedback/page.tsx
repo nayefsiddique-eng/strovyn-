@@ -37,8 +37,9 @@ export default function FeedbackPage() {
       }
 
       setSubmitted(true);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Submission error. Please try again.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Submission error. Please try again.';
+      setErrorMsg(msg);
     } finally {
       setLoading(false);
     }

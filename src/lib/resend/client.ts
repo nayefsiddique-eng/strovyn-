@@ -25,8 +25,9 @@ export const sendNotificationEmail = async ({
       html,
     });
     return { success: true, data };
-  } catch (err: any) {
-    console.error('Failed to send Resend email:', err.message);
-    return { success: false, error: err.message };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Failed to send Resend email:', msg);
+    return { success: false, error: msg };
   }
 };

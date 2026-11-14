@@ -48,7 +48,7 @@ export default async function ArticleDetailPage({ params }: Props) {
         </nav>
 
         <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-4">
-          [ {article.category} // {article.readTime} ]
+          [ {article.category} &mdash; {article.readTime} ]
         </span>
         <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-charcoal leading-[1.15] mb-8">
           {article.title}

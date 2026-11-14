@@ -43,8 +43,9 @@ export default function ContactPage() {
       }
 
       setSubmitted(true);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Submission error. Please verify fields.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Submission error. Please verify fields.';
+      setErrorMsg(msg);
     } finally {
       setLoading(false);
     }

@@ -15,7 +15,6 @@ interface ProjectItem {
 
 export default function AdminPhotosPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [isVerifying, setIsVerifying] = useState<boolean>(true);
   const [accessKey, setAccessKey] = useState('');
   const [authError, setAuthError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -31,12 +30,7 @@ export default function AdminPhotosPage() {
   const [uploadError, setUploadError] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
 
-  // Check existing session
-  useEffect(() => {
-    fetchProjects();
-  }, []);
-
-  const fetchProjects = async () => {
+  const fetchProjects = React.useCallback(async () => {
     try {
       // Check if testing preview mode on localhost
       if (typeof window !== 'undefined') {
@@ -57,8 +51,8 @@ export default function AdminPhotosPage() {
       if (res.ok) {
         const data = await res.json();
         setProjects(data.projects);
-        if (data.projects.length > 0 && !selectedProject) {
-          setSelectedProject(data.projects[0]);
+        if (data.projects.length > 0) {
+          setSelectedProject((prev) => prev || data.projects[0]);
         }
         setIsAuthenticated(true);
       } else {
@@ -67,7 +61,12 @@ export default function AdminPhotosPage() {
     } catch {
       setIsAuthenticated(false);
     }
-  };
+  }, []);
+
+  // Check existing session
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

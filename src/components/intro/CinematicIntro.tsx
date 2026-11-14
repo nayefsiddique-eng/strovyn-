@@ -12,6 +12,16 @@ export const CinematicIntro: React.FC<CinematicIntroProps> = ({ onEnter }) => {
   const [isExiting, setIsExiting] = useState(false);
   const shouldReduceMotion = useReducedMotion();
 
+  const handleTriggerEnter = React.useCallback(() => {
+    if (isExiting) return;
+    setIsExiting(true);
+    // Smooth transition window before unmounting overlay
+    const exitDuration = shouldReduceMotion ? 100 : 700;
+    setTimeout(() => {
+      onEnter();
+    }, exitDuration);
+  }, [isExiting, onEnter, shouldReduceMotion]);
+
   // Escape key triggers entrance
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -21,17 +31,7 @@ export const CinematicIntro: React.FC<CinematicIntroProps> = ({ onEnter }) => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  const handleTriggerEnter = () => {
-    if (isExiting) return;
-    setIsExiting(true);
-    // Smooth transition window before unmounting overlay
-    const exitDuration = shouldReduceMotion ? 100 : 700;
-    setTimeout(() => {
-      onEnter();
-    }, exitDuration);
-  };
+  }, [handleTriggerEnter]);
 
   const handleSkip = (e: React.MouseEvent) => {
     e.stopPropagation();

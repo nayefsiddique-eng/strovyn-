@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { addFeedback } from '@/lib/db/mockData';
 import { sendNotificationEmail } from '@/lib/resend/client';
+import { feedbackSchema } from '@/lib/security/schemas';
+import { escapeHtml } from '@/lib/security/escapeHtml';
+import { checkRateLimit } from '@/lib/security/rateLimiter';
 
-// Disallow GET on public endpoint to prevent exposing client messages or private feedback
 export async function GET() {
   return NextResponse.json(
     { success: false, error: 'Method Not Allowed' },
@@ -12,46 +14,83 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-
-    if (!body.customerName || !body.rating || !body.message) {
+    // 1. Rate Limiting (5 requests per 5 minutes per IP)
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'local-client';
+    const rateCheck = await checkRateLimit(`feedback_${clientIp}`, 5, 300000);
+    if (!rateCheck.allowed) {
       return NextResponse.json(
-        { success: false, error: 'Name, rating and message are required.' },
+        {
+          success: false,
+          error: 'Rate limit exceeded. Please wait a few minutes before submitting another review.',
+        },
+        { status: 429 }
+      );
+    }
+
+    // 2. Parse & Zod Validate
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: 'Invalid JSON request format.' },
         { status: 400 }
       );
     }
 
-    if (typeof body.rating !== 'number' || body.rating < 1 || body.rating > 5) {
+    const parseResult = feedbackSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      const firstError = parseResult.error.issues[0]?.message || 'Invalid feedback provided.';
       return NextResponse.json(
-        { success: false, error: 'Rating must be a number between 1 and 5.' },
+        { success: false, error: firstError },
         { status: 400 }
       );
     }
 
+    const validated = parseResult.data;
+
+    // 3. Persist
     const newFeedback = await addFeedback({
-      customerName: body.customerName,
-      email: body.email,
-      projectReference: body.projectReference,
-      rating: body.rating,
-      message: body.message,
-      permissionToPublish: Boolean(body.permissionToPublish),
+      customerName: validated.customerName,
+      email: validated.email,
+      projectReference: validated.projectReference,
+      rating: validated.rating,
+      message: validated.message,
+      permissionToPublish: validated.permissionToPublish,
     });
 
-    // Notify business of new evaluation
+    // 4. Notify business with escaped values
+    const safeName = escapeHtml(validated.customerName);
+    const safeProject = escapeHtml(validated.projectReference || 'Unspecified');
+    const safeMessage = escapeHtml(validated.message);
+
     await sendNotificationEmail({
-      subject: `New Client Evaluation (${body.rating}/5): ${body.customerName}`,
+      subject: `New Client Evaluation (${validated.rating}/5): ${safeName}`,
       html: `
         <h2>New Strovyn Client Evaluation</h2>
-        <p><strong>Client:</strong> ${body.customerName}</p>
-        <p><strong>Rating:</strong> ${body.rating}/5</p>
-        <p><strong>Project:</strong> ${body.projectReference || 'Unspecified'}</p>
+        <p><strong>Client:</strong> ${safeName}</p>
+        <p><strong>Rating:</strong> ${validated.rating}/5</p>
+        <p><strong>Project:</strong> ${safeProject}</p>
         <p><strong>Message:</strong></p>
-        <p>${body.message}</p>
+        <p>${safeMessage}</p>
       `,
     });
 
-    return NextResponse.json({ success: true, data: { id: newFeedback.id, createdAt: newFeedback.createdAt } }, { status: 201 });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: true,
+        data: { id: newFeedback.id, createdAt: newFeedback.createdAt },
+      },
+      { status: 201 }
+    );
+  } catch (err: unknown) {
+    console.error('Feedback route internal error:', err);
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Unable to submit feedback at this time. Please try again later.',
+      },
+      { status: 500 }
+    );
   }
 }

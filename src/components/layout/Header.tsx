@@ -83,43 +83,36 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   const isHome = pathname === "/";
-  const isSolid = forceSolid || isScrolled || !isHome;
+  const isSolid = true; // Reference design uses clean white background with crisp charcoal links
 
   return (
     <>
       <motion.header
         initial={false}
         animate={{
-          backgroundColor: isSolid ? "#F4F1EA" : "rgba(244, 241, 234, 0)",
-          borderBottomColor: isSolid
-            ? "rgba(184, 181, 174, 0.4)"
-            : "rgba(184, 181, 174, 0)",
+          backgroundColor: isScrolled ? "rgba(255, 255, 255, 0.96)" : "#FFFFFF",
+          borderBottomColor: isScrolled
+            ? "rgba(0, 0, 0, 0.08)"
+            : "rgba(0, 0, 0, 0.04)",
         }}
-        transition={{ duration: 0.35, ease: [0.25, 1, 0.5, 1] }}
+        transition={{ duration: 0.2 }}
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 w-full border-b transition-colors",
+          "fixed top-0 left-0 right-0 z-50 w-full border-b backdrop-blur-sm transition-colors",
           className
         )}
       >
         <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
           <div className="flex items-center justify-between h-16 md:h-20">
-            {/* Left: Brand Logo */}
-            <Link
-              href="/"
-              className="group inline-flex items-start focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bronze"
-              aria-label="Strovyn Painting Co. - Return to homepage"
-            >
-              <div className="w-[100px] sm:w-[120px]">
-                <Image
-                  src="/images/strovyn-logo.png"
-                  alt="Strovyn Painting Co."
-                  width={240}
-                  height={80}
-                  priority
-                  className="w-full h-auto"
-                />
-              </div>
-            </Link>
+              {/* Left: Brand Logo Text / Wordmark as per Reference */}
+              <Link
+                href="/"
+                className="group inline-flex items-center gap-2 focus-visible:outline-none"
+                aria-label="Strovyn Painting Co. - Return to homepage"
+              >
+                <span className="font-display tracking-[0.06em] text-2xl sm:text-3xl text-charcoal font-bold uppercase">
+                  STROVYN<span className="text-brand-red">.</span>
+                </span>
+              </Link>
 
             {/* Center: Desktop Navigation Links */}
             <nav
@@ -165,14 +158,12 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Right: Desktop CTA & Mobile Hamburger */}
             <div className="flex items-center gap-4">
               <div className="hidden sm:block">
-                <Button
+                <Link
                   href="/contact"
-                  variant="primary"
-                  size="sm"
-                  className="tracking-[0.14em] text-xs font-sans"
+                  className="inline-flex items-center justify-center bg-[#111110] hover:bg-black text-white px-6 py-2.5 font-mono text-xs uppercase tracking-[0.18em] font-medium transition-colors"
                 >
-                  Get a Quote
-                </Button>
+                  GET A QUOTE
+                </Link>
               </div>
 
               {/* Mobile Hamburger Trigger (3 thin architectural lines) */}

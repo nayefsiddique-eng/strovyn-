@@ -124,20 +124,20 @@ export async function getQuotes(): Promise<DBQuote[]> {
         .select('*')
         .order('created_at', { ascending: false });
       if (!error && data) {
-        return data.map((d: any) => ({
-          id: d.id,
-          fullName: d.full_name,
-          email: d.email,
-          phone: d.phone,
-          projectLocation: d.project_location,
-          serviceRequired: d.service_required,
-          propertyType: d.property_type,
-          description: d.description,
-          preferredContact: d.preferred_contact,
-          attachmentUrl: d.attachment_url,
-          status: d.status,
-          adminNotes: d.admin_notes,
-          createdAt: d.created_at,
+        return (data as Record<string, unknown>[]).map((d) => ({
+          id: String(d.id || ''),
+          fullName: String(d.full_name || ''),
+          email: String(d.email || ''),
+          phone: String(d.phone || ''),
+          projectLocation: String(d.project_location || ''),
+          serviceRequired: String(d.service_required || ''),
+          propertyType: d.property_type ? String(d.property_type) : undefined,
+          description: String(d.description || ''),
+          preferredContact: String(d.preferred_contact || 'email'),
+          attachmentUrl: d.attachment_url ? String(d.attachment_url) : undefined,
+          status: (d.status as DBQuote['status']) || 'pending',
+          adminNotes: d.admin_notes ? String(d.admin_notes) : undefined,
+          createdAt: String(d.created_at || new Date().toISOString()),
         }));
       }
     } catch (e) {
@@ -188,9 +188,17 @@ export async function addQuote(quote: Omit<DBQuote, 'id' | 'createdAt' | 'status
         status: newQuote.status,
       }).select().single();
       if (!error && data) return newQuote;
+      if (error && process.env.NODE_ENV === 'production') {
+        throw new Error('Database persistence failed');
+      }
     } catch (e) {
-      console.error('Supabase addQuote fallback to persistent disk:', e);
+      console.error('Supabase addQuote error:', e);
+      if (process.env.NODE_ENV === 'production') {
+        throw e;
+      }
     }
+  } else if (process.env.NODE_ENV === 'production') {
+    throw new Error('Supabase database is required in production environment.');
   }
 
   const current = ensureDataFile<DBQuote>('quotes.json', []);
@@ -209,19 +217,19 @@ export async function getApplications(): Promise<DBApplication[]> {
         .select('*')
         .order('created_at', { ascending: false });
       if (!error && data) {
-        return data.map((d: any) => ({
-          id: d.id,
-          fullName: d.applicant_name,
-          email: d.email,
-          phone: d.phone,
-          position: d.position || 'General Applicant',
-          yearsOfExperience: d.years_of_experience || '1+',
-          portfolioUrl: d.portfolio_url,
-          coverLetter: d.cover_letter,
-          resumeUrl: d.cv_url,
-          status: d.status,
-          adminNotes: d.admin_notes,
-          createdAt: d.created_at,
+        return (data as Record<string, unknown>[]).map((d) => ({
+          id: String(d.id || ''),
+          fullName: String(d.applicant_name || ''),
+          email: String(d.email || ''),
+          phone: String(d.phone || ''),
+          position: String(d.position || 'General Applicant'),
+          yearsOfExperience: String(d.years_of_experience || '1+'),
+          portfolioUrl: d.portfolio_url ? String(d.portfolio_url) : undefined,
+          coverLetter: d.cover_letter ? String(d.cover_letter) : undefined,
+          resumeUrl: d.cv_url ? String(d.cv_url) : undefined,
+          status: (d.status as DBApplication['status']) || 'pending',
+          adminNotes: d.admin_notes ? String(d.admin_notes) : undefined,
+          createdAt: String(d.created_at || new Date().toISOString()),
         }));
       }
     } catch (e) {
@@ -268,9 +276,17 @@ export async function addApplication(app: Omit<DBApplication, 'id' | 'createdAt'
         status: newApp.status,
       }).select().single();
       if (!error && data) return newApp;
+      if (error && process.env.NODE_ENV === 'production') {
+        throw new Error('Database persistence failed');
+      }
     } catch (e) {
-      console.error('Supabase addApplication fallback to persistent disk:', e);
+      console.error('Supabase addApplication error:', e);
+      if (process.env.NODE_ENV === 'production') {
+        throw e;
+      }
     }
+  } else if (process.env.NODE_ENV === 'production') {
+    throw new Error('Supabase database is required in production environment.');
   }
 
   const current = ensureDataFile<DBApplication>('applications.json', []);
@@ -289,16 +305,16 @@ export async function getFeedback(): Promise<DBFeedback[]> {
         .select('*')
         .order('created_at', { ascending: false });
       if (!error && data) {
-        return data.map((d: any) => ({
-          id: d.id,
-          customerName: d.name,
-          email: d.email,
-          projectReference: d.project_reference,
-          rating: d.rating,
-          message: d.message,
+        return (data as Record<string, unknown>[]).map((d) => ({
+          id: String(d.id || ''),
+          customerName: String(d.name || ''),
+          email: d.email ? String(d.email) : undefined,
+          projectReference: d.project_reference ? String(d.project_reference) : undefined,
+          rating: typeof d.rating === 'number' ? d.rating : 5,
+          message: String(d.message || ''),
           permissionToPublish: true,
-          status: d.status,
-          createdAt: d.created_at,
+          status: (d.status as DBFeedback['status']) || 'pending',
+          createdAt: String(d.created_at || new Date().toISOString()),
         }));
       }
     } catch (e) {
@@ -342,9 +358,17 @@ export async function addFeedback(fb: Omit<DBFeedback, 'id' | 'createdAt' | 'sta
         status: newFb.status,
       }).select().single();
       if (!error && data) return newFb;
+      if (error && process.env.NODE_ENV === 'production') {
+        throw new Error('Database persistence failed');
+      }
     } catch (e) {
-      console.error('Supabase addFeedback fallback to persistent disk:', e);
+      console.error('Supabase addFeedback error:', e);
+      if (process.env.NODE_ENV === 'production') {
+        throw e;
+      }
     }
+  } else if (process.env.NODE_ENV === 'production') {
+    throw new Error('Supabase database is required in production environment.');
   }
 
   const current = ensureDataFile<DBFeedback>('feedback.json', []);

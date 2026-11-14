@@ -1,23 +1,23 @@
 import { NextResponse } from 'next/server';
+import { aiAssistantSchema } from '@/lib/security/schemas';
+import { checkRateLimit } from '@/lib/security/rateLimiter';
 
-// Strict System Prompt ensuring the AI never fabricates company information
 const STROVYN_AI_SYSTEM_PROMPT = `
-You are the Construction & Painting Assistant for Strovyn Painting Co. (https://strovyn.com/).
+You are VYN, the Project Guide for Strovyn Painting Co. (https://strovyn.com/).
 
 COMPANY PROFILE & SERVICE FOCUS:
-- Premium residential and commercial painting based in Adelaide, South Australia (servicing Glenelg to the Adelaide Hills, and Gawler to McLaren Vale).
-- 5 Core Disciplines: Interior Precision, Exterior Cladding, Commercial & Heritage, Cabinet Refinishing, Woodwork & Joinery.
+- Premium residential and architectural painting based in Adelaide, South Australia.
+- Core Disciplines: Interior Precision, Exterior Facade Restoration, Cabinet Refinishing & Joinery, Artisanal Lime Washes & Plasters, Historic Conservation.
 - Standards: Substrate diagnostics, zero-tolerance surface preparation, dust-controlled mechanical sanding, hand-cut lines, low-VOC coatings, and formal daylight sign-off before handover.
-- Free on-site consultation across metro Adelaide.
+- Free on-site consultation across Greater Adelaide.
 
 STRICT OPERATING PRINCIPLES:
 1. ONLY discuss topics relating to:
    - Architectural and residential painting
    - Surface preparation and substrate diagnosis
-   - Interior precision finishes, woodwork lacquering, exterior cladding
+   - Interior finishes, woodwork lacquering, exterior cladding
    - Low-VOC mineral paints and daylight inspection sign-offs
-   - Booking a free on-site consultation via the Quote Request form (/contact) or WhatsApp
-
+   - Booking an on-site consultation via the Quote Request form (/contact) or WhatsApp
 2. STRICT PROHIBITIONS:
    - NEVER invent or state specific company prices, quotes, or hourly rates. Always direct users to submit their project details on /contact for a free Adelaide on-site assessment.
    - NEVER invent or confirm specific company registration numbers, builder licences, or guarantees that are unverified.
@@ -27,67 +27,82 @@ STRICT OPERATING PRINCIPLES:
 Tone: Professional, measured, craft-focused, concise.
 `;
 
-// Simple in-memory rate limiting map (IP -> timestamps)
-const rateLimitMap = new Map<string, number[]>();
-
 export async function POST(req: Request) {
   try {
-    // Basic Rate Limiting (15 requests per minute per IP/Client)
-    const clientIp = req.headers.get('x-forwarded-for') || 'local-client';
-    const now = Date.now();
-    const timestamps = (rateLimitMap.get(clientIp) || []).filter((t) => now - t < 60000);
-    if (timestamps.length >= 15) {
+    // 1. Rate Limiting (15 requests per minute per IP)
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'local-client';
+    const rateCheck = await checkRateLimit(`ai_${clientIp}`, 15, 60000);
+    if (!rateCheck.allowed) {
       return NextResponse.json(
-        { success: false, error: 'Rate limit exceeded. Please wait a moment before sending more queries.' },
+        {
+          success: false,
+          error: 'Rate limit exceeded. Please wait a moment before sending more queries.',
+        },
         { status: 429 }
       );
     }
-    timestamps.push(now);
-    rateLimitMap.set(clientIp, timestamps);
 
-    const body = await req.json();
-    const message = body?.message;
-
-    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+    // 2. Parse & Zod Validate
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
       return NextResponse.json(
-        { success: false, error: 'A valid text query is required.' },
+        { success: false, error: 'Invalid JSON request format.' },
         { status: 400 }
       );
     }
 
-    if (message.length > 800) {
+    const parseResult = aiAssistantSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      const firstError = parseResult.error.issues[0]?.message || 'Invalid query format.';
       return NextResponse.json(
-        { success: false, error: 'Message exceeds 800 characters limit.' },
+        { success: false, error: firstError },
         { status: 400 }
       );
     }
+
+    const { message, history } = parseResult.data;
+
+    // Sanitize client history: ignore any injected system roles, only allow legitimate assistant/user turns
+    const sanitizedHistory = (history || [])
+      .filter((m) => m.role === 'user' || m.role === 'assistant')
+      .map((m) => ({
+        role: m.role,
+        parts: [{ text: m.content.slice(0, 1000) }],
+      }));
 
     const apiKey = process.env.AI_API_KEY;
+    const model = process.env.AI_MODEL || 'gemini-2.0-flash';
 
-    // If external AI API Key is provided (e.g. Gemini or OpenAI compatible)
-    if (apiKey) {
+    // 3. If external Gemini API is configured: pass API key via header 'x-goog-api-key' (NEVER in URL query string)
+    if (apiKey && apiKey.trim().length > 0) {
       try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [
-                {
-                  role: 'user',
-                  parts: [
-                    { text: `${STROVYN_AI_SYSTEM_PROMPT}\n\nVisitor Question: ${message.trim()}` },
-                  ],
-                },
-              ],
-              generationConfig: {
-                temperature: 0.2,
-                maxOutputTokens: 350,
+        const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+
+        const response = await fetch(geminiEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey.trim(),
+          },
+          body: JSON.stringify({
+            systemInstruction: {
+              parts: [{ text: STROVYN_AI_SYSTEM_PROMPT }],
+            },
+            contents: [
+              ...sanitizedHistory,
+              {
+                role: 'user',
+                parts: [{ text: message }],
               },
-            }),
-          }
-        );
+            ],
+            generationConfig: {
+              temperature: 0.2,
+              maxOutputTokens: 350,
+            },
+          }),
+        });
 
         if (response.ok) {
           const aiData = await response.json();
@@ -99,41 +114,46 @@ export async function POST(req: Request) {
               message: generatedText,
             });
           }
+        } else {
+          console.error('Gemini API returned error status:', response.status);
         }
       } catch (e) {
-        console.error('External AI API failure, engaging fallback:', e);
+        console.error('External AI API failure, engaging architectural fallback:', e);
       }
     }
 
-    // Graceful verified fallback (when AI_API_KEY is not configured or fails)
+    // 4. Verified Architectural Fallback (Without claiming AI or leaking dev messages)
     const queryLower = message.toLowerCase();
     let responseText =
-      'Welcome to Strovyn Painting Co. We provide architectural interior painting, facade restoration, fine cabinetry lacquering, and artisanal mineral plasters.';
+      'Welcome to Strovyn Painting Co. We provide architectural interior painting, facade restoration, fine cabinetry lacquering, and artisanal mineral plasters across Greater Adelaide.';
 
     if (queryLower.includes('level 5') || queryLower.includes('drywall') || queryLower.includes('skim') || queryLower.includes('raking')) {
       responseText =
         'A Level 5 finish requires a continuous skim coat across all plasterboard faces and joints to equalize surface porosity under low-angle raking illumination. We follow strict dual-axis orbital sanding protocols.';
     } else if (queryLower.includes('plaster') || queryLower.includes('venetian') || queryLower.includes('marmorino') || queryLower.includes('lime')) {
       responseText =
-        'Our artisanal plasters utilize natural aged slaked lime (calcium hydroxide) and Carrara marble dust. They cure through natural carbonation, providing a breathable, mold-resistant, zero-VOC mineral finish.';
+        'Our artisanal plasters utilize natural aged slaked lime (calcium hydroxide) and Carrara marble blends. They cure through natural carbonation, providing a breathable, mold-resistant mineral finish.';
     } else if (queryLower.includes('cabinet') || queryLower.includes('joinery') || queryLower.includes('millwork') || queryLower.includes('spray')) {
       responseText =
         'Cabinetry lacquering is executed using catalyzed 2K polyurethane formulations applied under controlled containment or in dedicated spray booths to deliver furniture-grade velvet or satin sheens.';
     } else if (queryLower.includes('price') || queryLower.includes('cost') || queryLower.includes('quote') || queryLower.includes('rate') || queryLower.includes('estimate')) {
       responseText =
-        'Because all commissions depend on substrate condition, ceiling heights, and finish specifications, we do not provide estimated pricing without reviewing plan sets. Please submit your project scope via our Quotation Request page (/contact).';
-    } else if (queryLower.includes('licence') || queryLower.includes('guarantee') || queryLower.includes('insurance')) {
+        'Because all commissions depend on substrate condition, ceiling heights, and finish specifications, we provide confirmed pricing through our Quotation Request page (/contact) for a free Adelaide on-site assessment.';
+    } else if (queryLower.includes('contact') || queryLower.includes('phone') || queryLower.includes('whatsapp') || queryLower.includes('email')) {
       responseText =
-        'Official contractor licence numbers, insurance certificates, and warranty schedules are provided directly with formal tender documentation upon consultation.';
+        'You can reach our Adelaide team directly on 0406 646 061, via WhatsApp, or through contact@strovyn.com.';
     }
 
     return NextResponse.json({
       success: true,
-      connected: Boolean(apiKey),
+      connected: false,
       message: responseText,
-      notice: apiKey ? undefined : 'Live AI model awaiting AI_API_KEY. Serving verified architectural guidelines.',
     });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    console.error('AI assistant route internal error:', err);
+    return NextResponse.json(
+      { success: false, error: 'Unable to process inquiry at this moment.' },
+      { status: 500 }
+    );
   }
 }

@@ -61,7 +61,7 @@ export const FloatingContact: React.FC = () => {
             </div>
 
             <a
-              href="https://wa.me/61406646061?text=Hello%20Strovyn%20Painting%20Co.%20I%20would%20like%20to%20enquire%20about%20a%20painting%20project%20in%20Adelaide."
+              href={WHATSAPP_DETAILS.chatUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 p-3 bg-emerald-700 hover:bg-emerald-600 transition-colors text-xs text-white border border-emerald-500/40"
@@ -69,7 +69,7 @@ export const FloatingContact: React.FC = () => {
               <MessageCircle size={18} className="text-white flex-shrink-0" />
               <div>
                 <span className="font-medium block">Chat on WhatsApp</span>
-                <span className="text-[11px] text-emerald-100 block font-mono">0406 646 061</span>
+                <span className="text-[11px] text-emerald-100 block font-mono">{WHATSAPP_DETAILS.displayNumber}</span>
               </div>
             </a>
 

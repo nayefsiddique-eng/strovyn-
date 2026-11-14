@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
-import path from 'path';
-import fs from 'fs';
 import { isSupabaseConfigured } from '@/lib/db/mockData';
 import { createClient as createSupabaseClient } from '@/lib/supabase/server';
+import { validateUploadFile } from '@/lib/security/fileValidation';
+import { checkRateLimit } from '@/lib/security/rateLimiter';
+import path from 'path';
+import fs from 'fs';
 
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
@@ -15,61 +17,69 @@ const ALLOWED_MIME_TYPES = [
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
 
-// Simple rate limiter: max 10 uploads per IP per 5 minutes
-const uploadRateMap = new Map<string, number[]>();
+export async function GET() {
+  return NextResponse.json({ success: false, error: 'Method Not Allowed' }, { status: 405 });
+}
 
 export async function POST(req: Request) {
   try {
-    const clientIp = req.headers.get('x-forwarded-for') || 'local-client';
-    const now = Date.now();
-    const timestamps = (uploadRateMap.get(clientIp) || []).filter((t) => now - t < 300000);
-    if (timestamps.length >= 10) {
+    // 1. Persistent Rate Limiting (10 uploads per 5 minutes per IP)
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'local-client';
+    const rateCheck = await checkRateLimit(`upload_${clientIp}`, 10, 300000);
+    if (!rateCheck.allowed) {
       return NextResponse.json(
-        { success: false, error: 'Upload rate limit exceeded. Please wait a few minutes.' },
+        {
+          success: false,
+          error: 'Upload rate limit exceeded. Please wait a few minutes before trying again.',
+        },
         { status: 429 }
       );
     }
-    timestamps.push(now);
-    uploadRateMap.set(clientIp, timestamps);
 
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
-    const category = (formData.get('category') as string) === 'resumes' ? 'resumes' : 'documents';
+    const categoryRaw = formData.get('category') as string | null;
 
     if (!file) {
       return NextResponse.json({ success: false, error: 'No file provided.' }, { status: 400 });
     }
 
-    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+    // Customer documents and CVs go to the private bucket 'customer-documents'
+    const category = categoryRaw === 'resumes' ? 'resumes' : 'documents';
+
+    // 2. Validate Extension, Size, and Magic Bytes
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+    const validation = validateUploadFile(
+      fileBuffer,
+      file.name,
+      file.type,
+      ALLOWED_MIME_TYPES,
+      MAX_FILE_SIZE
+    );
+
+    if (!validation.valid || !validation.sanitizedFilename) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Invalid file format. Only PDF, DOC, DOCX, JPEG, PNG, and WebP are accepted.',
+          error: validation.error || 'Invalid file format or corrupted file.',
         },
         { status: 400 }
       );
     }
 
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { success: false, error: 'File size exceeds maximum 15MB limit.' },
-        { status: 400 }
-      );
-    }
+    const uniqueFileName = validation.sanitizedFilename;
 
-    const fileBuffer = Buffer.from(await file.arrayBuffer());
-    const sanitizedOriginalName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const uniqueFileName = `${Date.now()}-${sanitizedOriginalName}`;
-
-    // 1. If Supabase is connected with private storage buckets
+    // 3. Cloud Storage (Supabase Storage: private bucket 'customer-documents')
     if (isSupabaseConfigured()) {
       try {
         const supabase = await createSupabaseClient();
-        const bucket = category === 'resumes' ? 'resumes' : 'documents';
+        const bucket = 'customer-documents';
+        const storagePath = `${category}/${uniqueFileName}`;
+
         const { data, error } = await supabase.storage
           .from(bucket)
-          .upload(`private/${uniqueFileName}`, fileBuffer, {
-            contentType: file.type,
+          .upload(storagePath, fileBuffer, {
+            contentType: validation.detectedType || file.type,
             upsert: false,
           });
 
@@ -78,15 +88,29 @@ export async function POST(req: Request) {
             success: true,
             storage: 'supabase-private',
             fileReference: `supabase://${bucket}/${data.path}`,
-            fileName: sanitizedOriginalName,
+            fileName: uniqueFileName,
           });
         }
+
+        console.error('Supabase private storage error:', error);
       } catch (err) {
-        console.error('Supabase private storage fallback to local private storage:', err);
+        console.error('Supabase private storage upload failed:', err);
       }
     }
 
-    // 2. Local SECURE PRIVATE Storage (OUTSIDE /public/ to prevent direct URL sniffing)
+    // 4. Persistence Fail-Closed Check: In production, local storage is strictly forbidden
+    if (process.env.NODE_ENV === 'production' && !isSupabaseConfigured()) {
+      console.error('CRITICAL: Upload attempted in production without Supabase configured.');
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Secure storage is temporarily unavailable. Please contact us directly.',
+        },
+        { status: 503 }
+      );
+    }
+
+    // 5. Development-Only Local Private Storage (Outside /public/)
     const privateDir = path.join(process.cwd(), 'private_storage', 'uploads', category);
     if (!fs.existsSync(privateDir)) {
       fs.mkdirSync(privateDir, { recursive: true });
@@ -95,20 +119,18 @@ export async function POST(req: Request) {
     const destinationPath = path.join(privateDir, uniqueFileName);
     fs.writeFileSync(destinationPath, fileBuffer);
 
-    // Return a private internal token/reference ID — NEVER a public web link
     return NextResponse.json({
       success: true,
       storage: 'local-private',
       fileReference: `private://${category}/${uniqueFileName}`,
-      fileName: sanitizedOriginalName,
+      fileName: uniqueFileName,
       fileSize: file.size,
     });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: 'An error occurred processing the file.' }, { status: 500 });
+  } catch (err: unknown) {
+    console.error('Upload route internal error:', err);
+    return NextResponse.json(
+      { success: false, error: 'An error occurred while processing the file upload.' },
+      { status: 500 }
+    );
   }
-}
-
-// Disallow GET to prevent directory traversal or file sniffing
-export async function GET() {
-  return NextResponse.json({ success: false, error: 'Method Not Allowed' }, { status: 405 });
 }

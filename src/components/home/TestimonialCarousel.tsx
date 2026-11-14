@@ -98,7 +98,7 @@ export const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
     return () => clearInterval(timer);
   }, [autoPlay, autoPlayInterval, currentIndex]);
 
-  const slideVariants: any = {
+  const slideVariants = {
     enter: (direction: number) => ({
       x: direction > 0 ? 40 : -40,
       opacity: 0,
@@ -108,7 +108,7 @@ export const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
       opacity: 1,
       transition: {
         duration: 0.5,
-        ease: [0.25, 1, 0.5, 1],
+        ease: [0.25, 1, 0.5, 1] as [number, number, number, number],
       },
     },
     exit: (direction: number) => ({
@@ -116,7 +116,7 @@ export const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
       opacity: 0,
       transition: {
         duration: 0.35,
-        ease: [0.25, 1, 0.5, 1],
+        ease: [0.25, 1, 0.5, 1] as [number, number, number, number],
       },
     }),
   };

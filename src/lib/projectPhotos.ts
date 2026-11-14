@@ -32,6 +32,12 @@ export function getPhotoOverrides(): PhotoOverridesMap {
 }
 
 export function savePhotoOverride(slug: string, override: Partial<PhotoOverride>): boolean {
+  if (process.env.NODE_ENV === 'production') {
+    // Local JSON write is disabled in production — Supabase is required
+    console.error('CRITICAL: Local photo override writes are disabled in production.');
+    return false;
+  }
+
   try {
     ensureDirExists(OVERRIDES_FILE);
     const current = getPhotoOverrides();

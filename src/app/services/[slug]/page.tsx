@@ -50,7 +50,7 @@ export default async function ServiceDetailPage({ params }: Props) {
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
           <div className="max-w-3xl">
             <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-3">
-              [ DISCIPLINE {service.number} // {service.category} ]
+              [ DISCIPLINE {service.number} &mdash; {service.category} ]
             </span>
             <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl text-charcoal leading-tight">
               {service.title}

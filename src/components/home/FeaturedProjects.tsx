@@ -21,16 +21,16 @@ export interface ProjectShowcaseItem {
 
 export const showcaseProjects: ProjectShowcaseItem[] = [
   {
-    id: 'north-adelaide-residence',
-    title: 'North Adelaide Villa Residence',
+    id: 'adelaide-residence',
+    title: 'Adelaide Luxury Living & Kitchen Residence',
     slug: 'the-north-adelaide-residence',
     category: 'Architectural Residential',
-    location: 'North Adelaide, SA',
-    specification: 'Level 5 Plasterboard Skim & Mineral Matte',
+    location: 'Adelaide, SA',
+    specification: 'Flawless Level 5 Interior Wall & Ceiling Finish',
     description:
-      'Precision surface preparation across expansive light-filled architectural pavilions. Seamless shadow-line junctions and zero-VOC mineral finish under acute raking sunlight.',
+      'Impeccable surface preparation across expansive open-plan living, dining and kitchen areas. Flawless white planar walls and ceilings capturing natural daylight with zero flash or raking flaws.',
     image:
-      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=85',
+      '/images/projects/adelaide-luxury-residence/living-dining-2.jpg',
     year: '2025',
     span: 'lg:col-span-8',
   },

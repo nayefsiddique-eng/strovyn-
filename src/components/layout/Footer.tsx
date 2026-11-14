@@ -34,11 +34,7 @@ const socialLinks = [
 ];
 
 export const Footer: React.FC<FooterProps> = ({ className }) => {
-  const [currentYear, setCurrentYear] = React.useState(2026);
-
-  React.useEffect(() => {
-    setCurrentYear(new Date().getFullYear());
-  }, []);
+  const currentYear = 2026;
 
   return (
     <footer
