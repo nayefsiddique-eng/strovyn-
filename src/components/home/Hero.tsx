@@ -259,10 +259,8 @@ export const Hero: React.FC<HeroProps> = ({
               ADELAIDE, SOUTH AUSTRALIA
             </span>
           </div>
-          <div className="flex items-center gap-4 text-warm-grey-dark dark:text-[#A8A59E] text-[11px]">
-            <span>LEVEL 5 AS/NZS 2311</span>
-            <span>&bull;</span>
-            <span>EST. ADELAIDE</span>
+          <div className="flex items-center gap-3 text-warm-grey-dark dark:text-[#A8A59E] text-[11px]">
+            <span>GREATER ADELAIDE SPECIALISTS</span>
           </div>
         </div>
         <div className="hero-rule-line h-px w-full bg-warm-grey/35 dark:bg-white/15" />
@@ -323,7 +321,7 @@ export const Hero: React.FC<HeroProps> = ({
               </p>
             </div>
 
-            {/* Action Buttons (Positioned cleanly above bottom-left floating controls) */}
+            {/* Action Buttons (Positioned with generous clearance from viewport edges) */}
             <div className="hero-copy-item flex flex-wrap items-center gap-4 sm:gap-5 pt-1">
               <Link
                 ref={primaryBtnRef}
@@ -359,7 +357,7 @@ export const Hero: React.FC<HeroProps> = ({
               className="relative grid grid-cols-12 gap-3 sm:gap-4 items-stretch"
             >
               {/* Plane 1 (7 Cols): Verified Completed Adelaide Residence Photography */}
-              <div className="hero-visual-plane col-span-12 sm:col-span-7 relative aspect-[16/10] sm:aspect-[16/11] overflow-hidden border border-warm-grey/50 dark:border-white/15 bg-charcoal shadow-xl group">
+              <div className="hero-visual-plane col-span-12 sm:col-span-7 min-w-0 w-full min-h-[220px] sm:min-h-[290px] sm:h-full relative overflow-hidden border border-warm-grey/50 dark:border-white/15 bg-charcoal shadow-xl group">
                 <div
                   ref={primaryPhotoInnerRef}
                   className="absolute inset-[-8%] w-[116%] h-[116%]"
@@ -384,18 +382,18 @@ export const Hero: React.FC<HeroProps> = ({
                   </span>
                 </div>
 
-                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white font-mono text-[10px] uppercase tracking-widest z-10 select-none">
-                  <span className="font-medium drop-shadow-sm">
-                    ADELAIDE RESIDENCE
-                  </span>
-                  <span className="bg-charcoal/85 backdrop-blur-xs px-2 py-0.5 text-white/95 border border-white/20">
+                <div className="absolute bottom-3 left-3 right-3 flex flex-col items-start gap-1.5 text-white font-mono text-[10px] uppercase tracking-[0.14em] z-10 select-none">
+                  <span className="bg-charcoal/90 backdrop-blur-xs px-2 py-0.5 text-[9.5px] leading-tight text-white/95 border border-white/25 whitespace-nowrap">
                     LEVEL 5 FINISH
+                  </span>
+                  <span className="font-medium drop-shadow-sm leading-tight">
+                    ADELAIDE RESIDENCE
                   </span>
                 </div>
               </div>
 
               {/* Plane 2 & 3 (5 Cols Stack): Interactive 3D Raking-Light Plaster Alcove + Pavilion Visualiser Handoff */}
-              <div className="col-span-12 sm:col-span-5 flex flex-col justify-between gap-3">
+              <div className="col-span-12 sm:col-span-5 min-w-0 flex flex-col justify-between gap-3">
                 {/* Plane 2: Live 3D Architectural Plaster & Shadow-Line Reveal Study */}
                 <div
                   ref={alcoveCardRef}
@@ -507,7 +505,7 @@ export const Hero: React.FC<HeroProps> = ({
         <div className="hero-meta-reveal flex items-center justify-between font-mono text-[10px] sm:text-xs uppercase tracking-[0.24em] text-charcoal/60 dark:text-white/50 select-none">
           <div className="flex items-center gap-3">
             <span className="text-bronze dark:text-[#C2AB89] font-semibold">
-              EST. 2026
+              STROVYN PAINTING CO.
             </span>
             <span className="hidden sm:inline">&mdash;</span>
             <span className="hidden sm:inline">ARCHITECTURAL PRACTICE</span>

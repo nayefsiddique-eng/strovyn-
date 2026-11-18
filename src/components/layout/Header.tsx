@@ -138,7 +138,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Center: Desktop Navigation Links */}
             <nav
-              className="hidden lg:flex items-center gap-7 xl:gap-9"
+              className="hidden lg:flex items-center gap-5 xl:gap-8"
               aria-label="Main Navigation"
             >
               {navItems.map((item) => {
@@ -223,10 +223,10 @@ export const Header: React.FC<HeaderProps> = ({
                 </svg>
               </button>
 
-              <div className="hidden sm:block">
+              <div className="hidden sm:block shrink-0">
                 <Link
                   href="/contact"
-                  className="inline-flex items-center justify-center bg-[#111110] hover:bg-black !text-white hover:!text-white px-6 py-2.5 font-mono text-xs uppercase tracking-[0.18em] font-semibold transition-colors shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-red"
+                  className="inline-flex items-center justify-center whitespace-nowrap bg-[#111110] hover:bg-black !text-white hover:!text-white px-4 xl:px-6 py-2.5 font-mono text-xs uppercase tracking-[0.16em] xl:tracking-[0.18em] font-semibold transition-colors shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-red"
                 >
                   <span className="!text-white font-semibold">GET A QUOTE</span>
                 </Link>
@@ -290,8 +290,8 @@ export const Header: React.FC<HeaderProps> = ({
                     <Image
                       src="/images/strovyn-logo.png"
                       alt="Strovyn Painting Co."
-                      width={200}
-                      height={67}
+                      width={636}
+                      height={317}
                       className="w-full h-auto"
                     />
                   </div>

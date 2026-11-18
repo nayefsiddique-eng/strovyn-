@@ -22,6 +22,7 @@ const INITIAL_FORM_STATE = {
 const SERVICE_QUERY_MAP: Record<string, { service: string; scopeNote?: string }> = {
   interior: { service: 'Interior Precision Painting' },
   exterior: { service: 'Exterior Cladding & Facade Protection' },
+  cabinetry: { service: 'Cabinet Refinishing & Spraying' },
   'surface-restoration': {
     service: 'Interior Precision Painting',
     scopeNote: 'Requested focus: Architectural Surface Restoration',
@@ -36,6 +37,7 @@ const SERVICE_QUERY_MAP: Record<string, { service: string; scopeNote?: string }>
 function ContactFormContent() {
   const searchParams = useSearchParams();
   const [formState, setFormState] = useState(INITIAL_FORM_STATE);
+  const idempotencyKeyRef = React.useRef<string>('');
 
   // Prefill query parameters safely without overwriting user-entered text
   useEffect(() => {
@@ -45,8 +47,20 @@ function ContactFormContent() {
     const emailParam = searchParams.get('email')?.trim();
     const phoneParam = searchParams.get('phone')?.trim();
     const serviceParam = searchParams.get('service')?.trim();
+    const locationParam = searchParams.get('location')?.trim();
+    const propertyParam = searchParams.get('propertyType')?.trim();
+    const scopeParam = searchParams.get('scope')?.trim();
 
-    if (!finishParam && !nameParam && !emailParam && !phoneParam && !serviceParam) {
+    if (
+      !finishParam &&
+      !nameParam &&
+      !emailParam &&
+      !phoneParam &&
+      !serviceParam &&
+      !locationParam &&
+      !propertyParam &&
+      !scopeParam
+    ) {
       return;
     }
 
@@ -55,6 +69,8 @@ function ContactFormContent() {
       if (nameParam && !prev.fullName) next.fullName = nameParam;
       if (emailParam && !prev.email) next.email = emailParam;
       if (phoneParam && !prev.phone) next.phone = phoneParam;
+      if (locationParam && !prev.projectLocation) next.projectLocation = locationParam;
+      if (propertyParam) next.propertyType = propertyParam;
 
       let scopeNote: string | undefined;
       if (serviceParam) {
@@ -62,6 +78,8 @@ function ContactFormContent() {
         if (mapped) {
           next.serviceRequired = mapped.service;
           scopeNote = mapped.scopeNote;
+        } else {
+          next.serviceRequired = serviceParam;
         }
       }
 
@@ -75,6 +93,9 @@ function ContactFormContent() {
       }
       if (scopeNote && !prev.description.includes(scopeNote)) {
         prefillLines.push(scopeNote);
+      }
+      if (scopeParam && !prev.description.includes(scopeParam)) {
+        prefillLines.push(scopeParam);
       }
 
       if (prefillLines.length > 0) {
@@ -111,12 +132,25 @@ function ContactFormContent() {
     }
 
     setLoading(true);
+    if (!idempotencyKeyRef.current) {
+      idempotencyKeyRef.current =
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
 
     try {
+      const payload = {
+        ...formState,
+        attachmentUrl: formState.attachmentUrl || undefined,
+      };
       const res = await fetch('/api/quotes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formState),
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKeyRef.current,
+        },
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -124,6 +158,7 @@ function ContactFormContent() {
         throw new Error(data.error || 'Failed to submit quotation request');
       }
 
+      idempotencyKeyRef.current = '';
       setSubmitted(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Submission error. Please verify fields.';
@@ -249,7 +284,7 @@ function ContactFormContent() {
                     <Input
                       label="Full Name"
                       required
-                      placeholder="Julian Vance"
+                      placeholder="Your full name"
                       value={formState.fullName}
                       onChange={(e) => setFormState({ ...formState, fullName: e.target.value })}
                     />
@@ -257,7 +292,7 @@ function ContactFormContent() {
                       label="Email Address"
                       type="email"
                       required
-                      placeholder="j.vance@example.com"
+                      placeholder="you@example.com"
                       value={formState.email}
                       onChange={(e) => setFormState({ ...formState, email: e.target.value })}
                     />
@@ -369,10 +404,12 @@ function ContactFormContent() {
                             body: fd,
                           });
                           const upData = await upRes.json();
-                          if (upData.success) {
-                            setFormState((prev) => ({ ...prev, attachmentUrl: upData.fileUrl }));
-                            setAttachmentName(upData.fileName);
+                          if (upRes.ok && upData.success && typeof upData.fileReference === 'string' && upData.fileReference.length > 0) {
+                            setFormState((prev) => ({ ...prev, attachmentUrl: upData.fileReference }));
+                            setAttachmentName(upData.fileName || file.name);
                           } else {
+                            setFormState((prev) => ({ ...prev, attachmentUrl: '' }));
+                            setAttachmentName('');
                             setErrorMsg(upData.error || 'Failed to upload plan file');
                           }
                         } catch {

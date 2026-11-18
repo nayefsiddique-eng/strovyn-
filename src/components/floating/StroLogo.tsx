@@ -6,8 +6,8 @@ export interface StroLogoProps {
 }
 
 /**
- * STRO — Original architectural geometric monogram derived from the letter "S".
- * Two precision-angled coating planes separated by a clean architectural reveal.
+ * STRO — Bespoke architectural geometric monogram derived from a structured "S" plane
+ * bisected by a crisp bronze reveal datum and signature crimson focal mark.
  */
 export const StroLogo: React.FC<StroLogoProps> = ({
   className = '',
@@ -23,25 +23,31 @@ export const StroLogo: React.FC<StroLogoProps> = ({
       className={className}
       aria-hidden="true"
     >
-      {/* Upper architectural plane forming top half of geometric S */}
+      {/* Perimeter hairline frame */}
+      <rect
+        x="1.5"
+        y="1.5"
+        width="29"
+        height="29"
+        stroke="currentColor"
+        strokeOpacity="0.22"
+        strokeWidth="1"
+      />
+      {/* Upper architectural S-plane */}
       <path
-        d="M8 5H24V10.5H13.5V14H24V15.5H8V5Z"
+        d="M7 6.5H25V10.5H11.5V14.25H25V15.5H7V6.5Z"
         fill="currentColor"
       />
-      {/* Precision diagonal/stepped bronze reveal accent */}
+      {/* Central horizontal bronze architectural shadow-line reveal */}
+      <rect x="7" y="15.5" width="18" height="2" fill="#A78B65" />
+      {/* Lower architectural S-plane */}
       <path
-        d="M8 15.5H24V17.5H8V15.5Z"
-        fill="#A78B65"
-        className="dark:fill-[#C9B28F]"
-      />
-      {/* Lower architectural plane forming bottom half of geometric S */}
-      <path
-        d="M8 17.5H18.5V21.5H8V27H24V17.5H8Z"
+        d="M7 17.5H20.5V21.5H7V25.5H25V17.5H7Z"
         fill="currentColor"
-        opacity="0.92"
+        fillOpacity="0.9"
       />
-      {/* Subtle signature crimson corner point */}
-      <rect x="21" y="24" width="3" height="3" fill="#C41E1E" />
+      {/* Signature crimson architectural datum accent */}
+      <rect x="22" y="22.5" width="3" height="3" fill="#C41E1E" />
     </svg>
   );
 };

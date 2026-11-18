@@ -1,4 +1,6 @@
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 
 export interface SessionPayload {
   role: 'admin';
@@ -6,8 +8,72 @@ export interface SessionPayload {
   jti: string; // Unique token identifier for session rotation / invalidation
 }
 
-// In-memory revoked session JTI set (supplemented by Supabase if configured)
-const revokedSessions = new Set<string>();
+interface RevokedSessionEntry {
+  jti: string;
+  exp: number;
+}
+
+const REVOKED_STORE_FILE = path.join(
+  process.cwd(),
+  'private_storage',
+  'security',
+  'revoked_sessions.json'
+);
+
+/**
+ * Process-local revocation map backed by local disk persistence on writable Node hosts.
+ * NOTE: On horizontally scaled multi-instance serverless hosts without a shared database
+ * service-role store, revoking an active cookie affects the handling instance unless backed
+ * by Redis/Supabase service-role storage. Short session TTLs limit exposure.
+ */
+const revokedSessions = new Map<string, number>();
+let diskLoaded = false;
+
+function pruneExpiredRevocations(now: number): void {
+  for (const [jti, exp] of revokedSessions.entries()) {
+    if (exp <= now) {
+      revokedSessions.delete(jti);
+    }
+  }
+}
+
+function loadRevocationsFromDisk(): void {
+  if (diskLoaded) return;
+  diskLoaded = true;
+  try {
+    if (!fs.existsSync(REVOKED_STORE_FILE)) return;
+    const raw = fs.readFileSync(REVOKED_STORE_FILE, 'utf-8');
+    const parsed = JSON.parse(raw) as RevokedSessionEntry[];
+    const now = Date.now();
+    if (Array.isArray(parsed)) {
+      for (const entry of parsed) {
+        if (entry && typeof entry.jti === 'string' && typeof entry.exp === 'number' && entry.exp > now) {
+          revokedSessions.set(entry.jti, entry.exp);
+        }
+      }
+    }
+  } catch {
+    // Non-fatal in read-only or cold environments
+  }
+}
+
+function persistRevocationsToDisk(): void {
+  const now = Date.now();
+  pruneExpiredRevocations(now);
+  try {
+    const dir = path.dirname(REVOKED_STORE_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    const entries: RevokedSessionEntry[] = [];
+    for (const [jti, exp] of revokedSessions.entries()) {
+      if (exp > now) entries.push({ jti, exp });
+    }
+    fs.writeFileSync(REVOKED_STORE_FILE, JSON.stringify(entries), 'utf-8');
+  } catch {
+    // Non-fatal in read-only serverless filesystems
+  }
+}
 
 export function getAdminKey(): string | null {
   const key = process.env.STROVYN_ADMIN_KEY;
@@ -26,20 +92,17 @@ export function getSessionSecret(): Buffer | null {
 }
 
 /**
- * Validates master admin key using constant-time comparison
+ * Validates master admin key using constant-time SHA-256 digest comparison
+ * so length differences never short-circuit timing.
  */
 export function verifyAdminKey(providedKey: string): boolean {
   const masterKey = getAdminKey();
   if (!masterKey || typeof providedKey !== 'string') return false;
 
-  const masterBuf = Buffer.from(masterKey, 'utf-8');
-  const providedBuf = Buffer.from(providedKey, 'utf-8');
+  const masterDigest = crypto.createHash('sha256').update(masterKey, 'utf-8').digest();
+  const providedDigest = crypto.createHash('sha256').update(providedKey, 'utf-8').digest();
 
-  if (masterBuf.length !== providedBuf.length) {
-    return false;
-  }
-
-  return crypto.timingSafeEqual(masterBuf, providedBuf);
+  return crypto.timingSafeEqual(masterDigest, providedDigest);
 }
 
 /**
@@ -77,7 +140,6 @@ export function verifySessionToken(token: string | undefined | null): SessionPay
   const secret = getSessionSecret();
   if (!secret) return null;
 
-  // Recompute HMAC
   const hmac = crypto.createHmac('sha256', secret);
   hmac.update(payloadB64);
   const expectedSignatureB64 = hmac.digest('base64url');
@@ -97,12 +159,11 @@ export function verifySessionToken(token: string | undefined | null): SessionPay
     const payloadJson = Buffer.from(payloadB64, 'base64url').toString('utf-8');
     const payload: SessionPayload = JSON.parse(payloadJson);
 
-    // Check expiry
     if (typeof payload.exp !== 'number' || Date.now() > payload.exp) {
       return null;
     }
 
-    // Check revocation
+    loadRevocationsFromDisk();
     if (payload.jti && revokedSessions.has(payload.jti)) {
       return null;
     }
@@ -118,12 +179,14 @@ export function verifySessionToken(token: string | undefined | null): SessionPay
 }
 
 /**
- * Explicitly invalidates a session token
+ * Explicitly invalidates a session token and records its JTI until expiration.
  */
 export function invalidateSession(token: string | undefined | null): boolean {
   const payload = verifySessionToken(token);
   if (payload && payload.jti) {
-    revokedSessions.add(payload.jti);
+    loadRevocationsFromDisk();
+    revokedSessions.set(payload.jti, payload.exp);
+    persistRevocationsToDisk();
     return true;
   }
   return false;

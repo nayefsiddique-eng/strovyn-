@@ -125,7 +125,7 @@ export default function AboutPage() {
               <span className="font-mono text-xs text-bronze uppercase tracking-widest block mb-4">PHASE 04</span>
               <h3 className="font-serif text-xl text-charcoal mb-3">Quality Audit &amp; Handover</h3>
               <p className="font-sans text-sm text-charcoal/75 leading-relaxed">
-                500-lumen raking light verification, zero-defect defect logging, and white-glove archival touch-up kit delivery.
+                500-lumen raking light verification, documented defect logging, and white-glove archival touch-up kit delivery.
               </p>
             </div>
             <div className="mt-6 pt-4 border-t border-warm-grey/20 text-xs text-warm-grey-dark">

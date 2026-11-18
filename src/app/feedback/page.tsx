@@ -19,16 +19,34 @@ export default function FeedbackPage() {
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  const idempotencyKeyRef = React.useRef<string>('');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setErrorMsg('');
 
+    if (!idempotencyKeyRef.current) {
+      idempotencyKeyRef.current =
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+
     try {
+      const payload = {
+        ...formState,
+        email: formState.email.trim() || undefined,
+        projectReference: formState.projectReference.trim() || undefined,
+      };
       const res = await fetch('/api/feedback', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formState),
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKeyRef.current,
+        },
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -36,6 +54,7 @@ export default function FeedbackPage() {
         throw new Error(data.error || 'Failed to submit feedback');
       }
 
+      idempotencyKeyRef.current = '';
       setSubmitted(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Submission error. Please try again.';
@@ -80,14 +99,14 @@ export default function FeedbackPage() {
                 <Input
                   label="Client Name *"
                   required
-                  placeholder="Marcus Sterling"
+                  placeholder="Your full name"
                   value={formState.customerName}
                   onChange={(e) => setFormState({ ...formState, customerName: e.target.value })}
                 />
                 <Input
                   label="Email (Optional)"
                   type="email"
-                  placeholder="m.sterling@example.com"
+                  placeholder="you@example.com"
                   value={formState.email}
                   onChange={(e) => setFormState({ ...formState, email: e.target.value })}
                 />
@@ -96,7 +115,7 @@ export default function FeedbackPage() {
               <Input
                 label="Project Reference / Suburb *"
                 required
-                placeholder="e.g. Toorak Private Residence or Woollahra Restoration"
+                placeholder="e.g. Norwood Interior Repaint or Adelaide Residence"
                 value={formState.projectReference}
                 onChange={(e) => setFormState({ ...formState, projectReference: e.target.value })}
               />

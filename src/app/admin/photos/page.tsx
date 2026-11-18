@@ -32,21 +32,6 @@ export default function AdminPhotosPage() {
 
   const fetchProjects = React.useCallback(async () => {
     try {
-      // Check if testing preview mode on localhost
-      if (typeof window !== 'undefined') {
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('preview') === 'workspace') {
-          const res = await fetch('/api/projects');
-          const data = await res.json();
-          setProjects(data.projects);
-          if (data.projects.length > 0) {
-            setSelectedProject(data.projects[0]);
-          }
-          setIsAuthenticated(true);
-          return;
-        }
-      }
-
       const res = await fetch('/api/admin/photos');
       if (res.ok) {
         const data = await res.json();

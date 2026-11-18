@@ -1,17 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { addQuote } from '@/lib/db/mockData';
-import { sendNotificationEmail } from '@/lib/resend/client';
 import { quoteRequestSchema } from '@/lib/security/schemas';
 import { escapeHtml } from '@/lib/security/escapeHtml';
-import {
-  checkRateLimit,
-  getRecentSubmissionRecord,
-  saveSubmissionRecord,
-  withSubmissionLock,
-} from '@/lib/security/rateLimiter';
+import { checkRateLimit } from '@/lib/security/rateLimiter';
+import { readJsonBodyWithLimit } from '@/lib/security/requestLimits';
+import { executeIdempotentSubmission } from '@/lib/security/submissionHandler';
 
-const QUOTE_DEDUP_TTL_MS = 15 * 60 * 1000; // 15-minute idempotency window
+const QUOTE_DEDUP_TTL_MS = 15 * 60 * 1000;
 
 function buildQuoteEmailPayload(validated: {
   fullName: string;
@@ -47,7 +43,7 @@ function buildQuoteEmailPayload(validated: {
       <p><strong>Service:</strong> ${safeService}</p>
       <p><strong>Property Type:</strong> ${safePropertyType}</p>
       <p><strong>Preferred Contact:</strong> ${safePreferred}</p>
-      <p><strong>Attachment:</strong> ${safeAttachment || 'None'}</p>
+      <p><strong>Attachment Reference:</strong> ${safeAttachment || 'None'}</p>
       <p><strong>Scope:</strong></p>
       <p>${safeDescription}</p>
     `,
@@ -68,8 +64,6 @@ function buildQuoteDedupKey(
     attachmentUrl?: string;
   }
 ): string {
-  // Always include the full normalized enquiry payload so two genuinely different
-  // enquiries from the same customer never collide, even if an Idempotency-Key header is reused.
   const payloadParts = [
     validated.fullName.trim().toLowerCase(),
     validated.email.trim().toLowerCase(),
@@ -96,7 +90,6 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    // 1. Rate Limiting (5 requests per 5 minutes per IP)
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'local-client';
     const rateCheck = await checkRateLimit(`quote_${clientIp}`, 5, 300000);
     if (!rateCheck.allowed) {
@@ -109,18 +102,15 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Parse & Zod Validate
-    let rawBody: unknown;
-    try {
-      rawBody = await req.json();
-    } catch {
+    const bodyResult = await readJsonBodyWithLimit(req, 32 * 1024);
+    if (!bodyResult.ok) {
       return NextResponse.json(
-        { success: false, error: 'Invalid JSON request format.' },
-        { status: 400 }
+        { success: false, error: bodyResult.error || 'Invalid request format.' },
+        { status: bodyResult.status || 400 }
       );
     }
 
-    const parseResult = quoteRequestSchema.safeParse(rawBody);
+    const parseResult = quoteRequestSchema.safeParse(bodyResult.data);
     if (!parseResult.success) {
       const firstError = parseResult.error.issues[0]?.message || 'Invalid quotation details provided.';
       return NextResponse.json(
@@ -133,76 +123,24 @@ export async function POST(req: Request) {
     const dedupKey = buildQuoteDedupKey(req.headers.get('idempotency-key'), validated);
     const emailPayload = buildQuoteEmailPayload(validated);
 
-    // 3. Concurrent-Safe Duplicate Suppression + Persist-Once
-    // Coalesces concurrent requests on the same key and persists the dedup record
-    // immediately after addQuote() succeeds (so email failure never causes a duplicate row).
-    const outcome = await withSubmissionLock(dedupKey, async () => {
-      const existingRecord = getRecentSubmissionRecord(dedupKey, QUOTE_DEDUP_TTL_MS);
-      if (existingRecord) {
-        let notified = existingRecord.notified;
-        if (!notified) {
-          const retryNotify = await sendNotificationEmail(emailPayload);
-          notified = Boolean(retryNotify.success);
-          if (notified) {
-            saveSubmissionRecord(dedupKey, { ...existingRecord, notified: true });
-          }
-        }
-        return {
-          status: 200,
-          id: existingRecord.id,
-          createdAt: existingRecord.createdAt,
-          notified,
-          deduplicated: true,
-        };
-      }
-
-      // Persist once (fails closed in production if Supabase is missing/failing,
-      // in which case this throws before saving any dedup record).
-      const newQuote = await addQuote({
-        fullName: validated.fullName,
-        email: validated.email,
-        phone: validated.phone,
-        projectLocation: validated.projectLocation || 'Metro Adelaide, SA',
-        serviceRequired: validated.serviceRequired,
-        propertyType: validated.propertyType,
-        description: validated.description,
-        preferredContact: validated.preferredContact,
-        attachmentUrl: validated.attachmentUrl,
-      });
-
-      const baseRecord = {
-        id: newQuote.id,
-        createdAt: newQuote.createdAt,
-        notified: false,
-        storedAt: Date.now(),
-      };
-      saveSubmissionRecord(dedupKey, baseRecord);
-
-      let notified = false;
-      try {
-        const notifyResult = await sendNotificationEmail(emailPayload);
-        notified = Boolean(notifyResult.success);
-        if (notified) {
-          saveSubmissionRecord(dedupKey, { ...baseRecord, notified: true });
-        } else {
-          console.warn(
-            `Quote ${newQuote.id} persisted, but owner email notification was not delivered (configured=${Boolean(notifyResult.configured)}).`
-          );
-        }
-      } catch (notifyErr) {
-        console.warn(
-          `Quote ${newQuote.id} persisted, but email notification threw unexpectedly:`,
-          notifyErr instanceof Error ? notifyErr.message : 'Unknown error'
-        );
-      }
-
-      return {
-        status: 201,
-        id: newQuote.id,
-        createdAt: newQuote.createdAt,
-        notified,
-        deduplicated: false,
-      };
+    const outcome = await executeIdempotentSubmission({
+      dedupKey,
+      logLabel: 'Quote',
+      ttlMs: QUOTE_DEDUP_TTL_MS,
+      emailPayload,
+      persistFn: (idempotencyKey) =>
+        addQuote({
+          fullName: validated.fullName,
+          email: validated.email,
+          phone: validated.phone,
+          projectLocation: validated.projectLocation || 'Metro Adelaide, SA',
+          serviceRequired: validated.serviceRequired,
+          propertyType: validated.propertyType,
+          description: validated.description,
+          preferredContact: validated.preferredContact,
+          attachmentUrl: validated.attachmentUrl,
+          idempotencyKey,
+        }),
     });
 
     return NextResponse.json(

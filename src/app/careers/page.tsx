@@ -50,16 +50,35 @@ export default function CareersPage() {
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  const idempotencyKeyRef = React.useRef<string>('');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading || uploadingResume) return;
     setLoading(true);
     setErrorMsg('');
 
+    if (!idempotencyKeyRef.current) {
+      idempotencyKeyRef.current =
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+
     try {
+      const payload = {
+        ...formState,
+        portfolioUrl: formState.portfolioUrl.trim() || undefined,
+        coverLetter: formState.coverLetter.trim() || undefined,
+        resumeUrl: formState.resumeUrl.trim() || undefined,
+      };
       const res = await fetch('/api/applications', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formState),
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKeyRef.current,
+        },
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -67,6 +86,7 @@ export default function CareersPage() {
         throw new Error(data.error || 'Failed to submit application');
       }
 
+      idempotencyKeyRef.current = '';
       setSubmitted(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Submission failed. Please try again.';
@@ -186,7 +206,7 @@ export default function CareersPage() {
                 <Input
                   label="Full Name *"
                   required
-                  placeholder="e.g. Marcus Vance"
+                  placeholder="Your full name"
                   value={formState.fullName}
                   onChange={(e) => setFormState({ ...formState, fullName: e.target.value })}
                 />
@@ -194,7 +214,7 @@ export default function CareersPage() {
                   label="Email Address *"
                   type="email"
                   required
-                  placeholder="marcus@example.com"
+                  placeholder="you@example.com"
                   value={formState.email}
                   onChange={(e) => setFormState({ ...formState, email: e.target.value })}
                 />
@@ -265,10 +285,12 @@ export default function CareersPage() {
                         body: fd,
                       });
                       const upData = await upRes.json();
-                      if (upData.success) {
-                        setFormState((prev) => ({ ...prev, resumeUrl: upData.fileUrl }));
-                        setResumeFileName(upData.fileName);
+                      if (upRes.ok && upData.success && typeof upData.fileReference === 'string' && upData.fileReference.length > 0) {
+                        setFormState((prev) => ({ ...prev, resumeUrl: upData.fileReference }));
+                        setResumeFileName(upData.fileName || file.name);
                       } else {
+                        setFormState((prev) => ({ ...prev, resumeUrl: '' }));
+                        setResumeFileName('');
                         setErrorMsg(upData.error || 'Failed to upload CV file');
                       }
                     } catch {

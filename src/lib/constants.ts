@@ -12,7 +12,6 @@ export const COMPANY_INFO: CompanySettings = {
   description:
     'Premium residential and commercial painters in Adelaide, South Australia. Substrate diagnostics, zero-tolerance prep, dust-controlled sanding, hand-cut lines, and daylight sign-off.',
   contact: {
-    email: 'contact@strovyn.com',
     phone: '0406 646 061',
     address: {
       street: 'Adelaide, South Australia',
@@ -22,15 +21,10 @@ export const COMPANY_INFO: CompanySettings = {
       country: 'Australia',
     },
   },
-  businessHours: 'Monday – Saturday: 7:00 AM – 5:00 PM | Sunday: Closed',
+  businessHours: 'Consultations by appointment across Greater Adelaide',
   licenseNumber: '[Licence details available upon written tender enquiry]',
   serviceArea: 'Adelaide, South Australia',
-  socialMedia: {
-    instagram: 'https://instagram.com/strovyn',
-    linkedin: 'https://linkedin.com/company/strovyn',
-    pinterest: 'https://pinterest.com/strovyn',
-    facebook: 'https://facebook.com/strovyn',
-  },
+  socialMedia: {},
   meta: {
     title: 'Strovyn Painting Co. | Premium Painters Adelaide, South Australia',
     description:

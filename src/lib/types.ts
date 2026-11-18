@@ -174,11 +174,11 @@ export interface CompanySettings {
   tagline: string;
   description: string;
   contact: {
-    email: string;
+    email?: string;
     phone: string;
     address: CompanyAddress;
   };
-  businessHours: string;
+  businessHours?: string;
   licenseNumber?: string;
   serviceArea?: string;
   socialMedia: {

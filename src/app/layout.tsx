@@ -59,6 +59,16 @@ export default function RootLayout({
                 } else {
                   document.documentElement.classList.remove('dark');
                 }
+                if (window.location.pathname === '/') {
+                  var seen = sessionStorage.getItem('strovyn_intro_seen');
+                  var rm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                  if (seen !== 'true' && !rm) {
+                    document.documentElement.setAttribute('data-intro-pending', 'true');
+                    setTimeout(function(){
+                      document.documentElement.removeAttribute('data-intro-pending');
+                    }, 1500);
+                  }
+                }
               } catch(e) {}
             })();`,
           }}

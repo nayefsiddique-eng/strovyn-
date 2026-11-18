@@ -4,7 +4,6 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import {
-  attachMagneticInteraction,
   ensureGsapRegistered,
   gsap,
   prefersReducedMotion,
@@ -24,6 +23,8 @@ export interface CinematicIntroProps {
 
 export function CinematicIntro({ onEnter }: CinematicIntroProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const headerRailRef = useRef<HTMLDivElement>(null);
+  const skipButtonRef = useRef<HTMLButtonElement>(null);
   const logoStageRef = useRef<HTMLDivElement>(null);
   const logoBezelRef = useRef<HTMLDivElement>(null);
   const logoSheenRef = useRef<HTMLDivElement>(null);
@@ -36,18 +37,25 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
   const headlineLine1Ref = useRef<HTMLSpanElement>(null);
   const headlineLine2Ref = useRef<HTMLSpanElement>(null);
   const bodyCopyRef = useRef<HTMLParagraphElement>(null);
-  const ctaWrapRef = useRef<HTMLDivElement>(null);
-  const enterButtonRef = useRef<HTMLButtonElement>(null);
+  const signatureWrapRef = useRef<HTMLDivElement>(null);
+  const signatureRuleRef = useRef<HTMLSpanElement>(null);
   const footerMetaRef = useRef<HTMLDivElement>(null);
 
   const pointerRef = useRef({ x: 0, y: 0 });
   const actProgressRef = useRef(0);
   const isExitingRef = useRef(false);
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
+  const exitTimelineRef = useRef<gsap.core.Timeline | null>(null);
+  const onEnterRef = useRef(onEnter);
+
+  useEffect(() => {
+    onEnterRef.current = onEnter;
+  }, [onEnter]);
 
   const [isDark, setIsDark] = useState<boolean>(false);
   const [reducedMotion, setReducedMotion] = useState<boolean>(false);
   const [isActive, setIsActive] = useState<boolean>(true);
+  const [isExiting, setIsExiting] = useState<boolean>(false);
   const [actPhase, setActPhase] = useState<'I' | 'II' | 'III'>('I');
 
   // Sync dark/light theme reactively from root <html> class
@@ -59,30 +67,42 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
     const observer = new MutationObserver(syncTheme);
     observer.observe(root, { attributes: true, attributeFilter: ['class'] });
 
-    const rm = prefersReducedMotion();
-    setReducedMotion(rm);
-    if (rm) {
-      actProgressRef.current = 2.2;
-      setActPhase('III');
-    }
+    setReducedMotion(prefersReducedMotion());
 
     return () => observer.disconnect();
   }, []);
 
   // Lock page scrolling behind intro until dismissed
   useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
     document.body.style.overflow = 'hidden';
     return () => {
-      document.body.style.overflow = previousOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
     };
   }, []);
 
+  const finishIntro = useCallback(() => {
+    try {
+      sessionStorage.setItem('strovyn_intro_seen', 'true');
+    } catch {
+      // Ignore private browsing storage blocks
+    }
+    setIsActive(false);
+    onEnterRef.current();
+  }, []);
+
   const handleDismiss = useCallback(
-    (mode: 'enter' | 'skip' | 'instant' = 'enter') => {
-      if (isExitingRef.current) return;
+    (mode: 'auto' | 'skip' | 'instant' = 'auto') => {
+      // Allow Escape ('instant') to interrupt an active fade-out immediately
+      if (isExitingRef.current && mode !== 'instant') return;
       isExitingRef.current = true;
+      setIsExiting(true);
+
       timelineRef.current?.kill();
+      timelineRef.current = null;
 
       try {
         sessionStorage.setItem('strovyn_intro_seen', 'true');
@@ -91,25 +111,24 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
       }
 
       if (mode === 'instant' || prefersReducedMotion()) {
-        setIsActive(false);
-        onEnter();
+        exitTimelineRef.current?.kill();
+        exitTimelineRef.current = null;
+        finishIntro();
         return;
       }
 
       const container = containerRef.current;
       if (!container) {
-        setIsActive(false);
-        onEnter();
+        finishIntro();
         return;
       }
 
-      const dur = mode === 'skip' ? 0.24 : 0.56;
+      const dur = mode === 'skip' ? 0.28 : 0.64;
+      exitTimelineRef.current?.kill();
       const exitTl = gsap.timeline({
-        onComplete: () => {
-          setIsActive(false);
-          onEnter();
-        },
+        onComplete: finishIntro,
       });
+      exitTimelineRef.current = exitTl;
 
       const progressProxy = { val: actProgressRef.current };
       exitTl.to(
@@ -117,7 +136,7 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
         {
           val: 3.0,
           duration: dur,
-          ease: 'power3.inOut',
+          ease: 'power2.inOut',
           onUpdate: () => {
             actProgressRef.current = progressProxy.val;
           },
@@ -125,47 +144,73 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
         0
       );
 
+      if (mode === 'auto') {
+        exitTl.to(
+          [
+            headerRailRef.current,
+            act3ContentRef.current,
+            logoStageRef.current,
+            footerMetaRef.current,
+            draftingBottomRef.current,
+            draftingAxisRef.current,
+          ],
+          {
+            opacity: 0,
+            y: -6,
+            duration: 0.28,
+            ease: 'power2.in',
+          },
+          0
+        );
+      }
+
       exitTl.to(
         container,
         {
           opacity: 0,
-          scale: mode === 'skip' ? 1.015 : 1.035,
+          scale: mode === 'skip' ? 1.014 : 1.024,
           duration: dur,
-          ease: 'power3.inOut',
+          ease: 'power2.inOut',
         },
-        0.02
+        mode === 'auto' ? 0.14 : 0.04
       );
     },
-    [onEnter]
+    [finishIntro]
   );
 
-  // Keyboard Escape dismissal (works immediately from frame 0)
+  // Keyboard accessibility: Escape dismisses immediately; Tab remains on Skip Intro
   useEffect(() => {
+    containerRef.current?.focus({ preventScroll: true });
+
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         handleDismiss('instant');
+        return;
+      }
+      if (e.key === 'Tab' && !isExitingRef.current) {
+        const skipBtn = skipButtonRef.current;
+        if (skipBtn && document.activeElement !== skipBtn) {
+          e.preventDefault();
+          skipBtn.focus();
+        }
       }
     };
+
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [handleDismiss]);
 
-  // Subtle magnetic pull on ENTER WEBSITE platen
-  useEffect(() => {
-    if (reducedMotion) return;
-    return attachMagneticInteraction(enterButtonRef.current, 0.16);
-  }, [reducedMotion]);
-
-  // Pointer parallax tracking for both R3F backdrop and architectural frame
+  // Pointer parallax tracking for R3F architectural backdrop
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    const nx = (e.clientX / window.innerWidth) * 2 - 1;
-    const ny = (e.clientY / window.innerHeight) * 2 - 1;
+    if (isExitingRef.current) return;
+    const nx = (e.clientX / Math.max(1, window.innerWidth)) * 2 - 1;
+    const ny = (e.clientY / Math.max(1, window.innerHeight)) * 2 - 1;
     pointerRef.current.x = Math.max(-1, Math.min(1, nx));
     pointerRef.current.y = Math.max(-1, Math.min(1, ny));
   }, []);
 
-  // 3-Act GSAP Choreography (wall-clock exact pacing via lagSmoothing(0))
+  // 3-Act GSAP Choreography with automatic resolution into the homepage
   useLayoutEffect(() => {
     ensureGsapRegistered();
 
@@ -173,10 +218,8 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
     const logoStage = logoStageRef.current;
     if (!container || !logoStage) return;
 
-    const rm = prefersReducedMotion();
-    if (rm) {
-      actProgressRef.current = 2.2;
-      setActPhase('III');
+    if (prefersReducedMotion()) {
+      handleDismiss('instant');
       return;
     }
 
@@ -193,7 +236,7 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
       const targetCenterX = vw / 2 - (rect.left + rect.width / 2);
       const targetCenterY = vh / 2 - (rect.top + rect.height / 2);
 
-      const maxCenterWidth = Math.min(vw * 0.78, 430);
+      const maxCenterWidth = Math.min(vw * 0.76, 430);
       const centerScale =
         rect.width > 0
           ? Math.min(1.5, Math.max(1.06, maxCenterWidth / rect.width))
@@ -211,7 +254,7 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
       gsap.set(logoStage, {
         x: targetCenterX,
         y: targetCenterY,
-        scale: centerScale * 1.07,
+        scale: centerScale * 1.06,
         opacity: 0,
       });
       gsap.set(logoBezelRef.current, { opacity: 0, scale: 0.94 });
@@ -224,25 +267,32 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
         opacity: 0,
       });
       gsap.set(bodyCopyRef.current, { opacity: 0, y: 14 });
-      gsap.set(ctaWrapRef.current, { opacity: 0, y: 12 });
+      gsap.set(signatureWrapRef.current, { opacity: 0, y: 10 });
+      gsap.set(signatureRuleRef.current, {
+        scaleX: 0,
+        transformOrigin: 'left center',
+      });
       gsap.set(footerMetaRef.current, { opacity: 0, y: 8 });
 
       const actProxy = { value: 0 };
       const tl = gsap.timeline({
         paused: true,
         defaults: { ease: 'power3.out' },
+        onComplete: () => {
+          handleDismiss('auto');
+        },
       });
       timelineRef.current = tl;
 
       // ------------------------------------------------------------------
-      // ACT I (0.00s -> 0.75s): ATMOSPHERE — ARCHITECTURAL SPACE AWAKENS
+      // ACT I (0.00s -> 0.85s): ATMOSPHERE — ARCHITECTURAL SPACE AWAKENS
       // ------------------------------------------------------------------
       tl.addLabel('act1', 0)
         .to(
           actProxy,
           {
             value: 1.0,
-            duration: 0.78,
+            duration: 0.82,
             ease: 'power2.inOut',
             onUpdate: () => {
               actProgressRef.current = actProxy.value;
@@ -252,35 +302,35 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
         )
         .to(
           [draftingTopRef.current, draftingBottomRef.current],
-          { scaleX: 1, duration: 0.65, stagger: 0.06, ease: 'power3.inOut' },
+          { scaleX: 1, duration: 0.68, stagger: 0.06, ease: 'power3.inOut' },
           'act1+=0.05'
         )
         .to(
           draftingAxisRef.current,
-          { scaleY: 1, duration: 0.6, ease: 'power3.inOut' },
+          { scaleY: 1, duration: 0.62, ease: 'power3.inOut' },
           'act1+=0.1'
         )
         .to(
           prologueTagRef.current,
-          { opacity: 1, y: 0, duration: 0.34 },
+          { opacity: 1, y: 0, duration: 0.36 },
           'act1+=0.08'
         )
         .to(
           prologueTagRef.current,
-          { opacity: 0, y: -6, duration: 0.22 },
-          'act1+=0.54'
+          { opacity: 0, y: -6, duration: 0.24 },
+          'act1+=0.56'
         );
 
       // ------------------------------------------------------------------
-      // ACT II (0.76s -> 1.85s): THE STROVYN IDENTITY — CENTERPIECE LOCKUP
+      // ACT II (0.85s -> 2.25s): THE STROVYN IDENTITY — CENTERPIECE LOCKUP
       // ------------------------------------------------------------------
-      tl.addLabel('act2', 0.76)
+      tl.addLabel('act2', 0.85)
         .call(() => setActPhase('II'), [], 'act2')
         .to(
           actProxy,
           {
             value: 2.0,
-            duration: 1.05,
+            duration: 1.25,
             ease: 'power2.out',
             onUpdate: () => {
               actProgressRef.current = actProxy.value;
@@ -293,41 +343,41 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
           {
             opacity: 1,
             scale: centerScale,
-            duration: 0.72,
+            duration: 0.78,
             ease: 'power3.out',
           },
           'act2'
         )
         .to(
           logoBezelRef.current,
-          { opacity: 1, scale: 1, duration: 0.55, ease: 'power2.out' },
+          { opacity: 1, scale: 1, duration: 0.56, ease: 'power2.out' },
           'act2+=0.14'
         )
         .to(
           act2CaptionRef.current,
-          { opacity: 1, y: 0, duration: 0.38 },
-          'act2+=0.26'
+          { opacity: 1, y: 0, duration: 0.42 },
+          'act2+=0.24'
         )
         .to(
           logoSheenRef.current,
-          { opacity: 1, duration: 0.12 },
+          { opacity: 1, duration: 0.14 },
           'act2+=0.30'
         )
         .to(
           logoSheenRef.current,
-          { xPercent: 140, duration: 0.68, ease: 'power2.inOut' },
+          { xPercent: 140, duration: 0.72, ease: 'power2.inOut' },
           'act2+=0.32'
         )
         .to(
           logoSheenRef.current,
-          { opacity: 0, duration: 0.16 },
-          'act2+=0.86'
+          { opacity: 0, duration: 0.18 },
+          'act2+=0.92'
         );
 
       // ------------------------------------------------------------------
-      // ACT III (1.86s -> 2.75s): ENTER THE STROVYN WORLD — HAVEN COMPOSITION
+      // ACT III (2.25s -> 3.95s): ARCHITECTURAL COMPOSITION & RESOLUTION
       // ------------------------------------------------------------------
-      tl.addLabel('act3', 1.86)
+      tl.addLabel('act3', 2.25)
         .call(() => setActPhase('III'), [], 'act3')
         .to(
           act2CaptionRef.current,
@@ -337,8 +387,8 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
         .to(
           actProxy,
           {
-            value: 2.28,
-            duration: 0.82,
+            value: 2.42,
+            duration: 0.9,
             ease: 'power3.inOut',
             onUpdate: () => {
               actProgressRef.current = actProxy.value;
@@ -352,7 +402,7 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
             x: 0,
             y: 0,
             scale: 1,
-            duration: 0.7,
+            duration: 0.78,
             ease: 'power3.inOut',
             clearProps: 'transform',
           },
@@ -360,35 +410,42 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
         )
         .to(
           act3ContentRef.current,
-          { opacity: 1, duration: 0.3 },
-          'act3+=0.20'
+          { opacity: 1, duration: 0.34 },
+          'act3+=0.18'
         )
         .to(
           [headlineLine1Ref.current, headlineLine2Ref.current],
           {
             yPercent: 0,
             opacity: 1,
-            duration: 0.64,
-            stagger: 0.1,
+            duration: 0.68,
+            stagger: 0.11,
             ease: 'power4.out',
           },
-          'act3+=0.24'
+          'act3+=0.22'
         )
         .to(
           bodyCopyRef.current,
-          { opacity: 1, y: 0, duration: 0.5 },
+          { opacity: 1, y: 0, duration: 0.54 },
           'act3+=0.40'
         )
         .to(
-          ctaWrapRef.current,
-          { opacity: 1, y: 0, duration: 0.46 },
-          'act3+=0.50'
+          signatureWrapRef.current,
+          { opacity: 1, y: 0, duration: 0.44 },
+          'act3+=0.52'
+        )
+        .to(
+          signatureRuleRef.current,
+          { scaleX: 1, duration: 0.85, ease: 'power2.inOut' },
+          'act3+=0.60'
         )
         .to(
           footerMetaRef.current,
-          { opacity: 1, y: 0, duration: 0.4 },
-          'act3+=0.56'
-        );
+          { opacity: 1, y: 0, duration: 0.44 },
+          'act3+=0.54'
+        )
+        // Brief poised architectural beat before automatic cross-dissolve into homepage
+        .to({}, { duration: 0.25 }, 'act3+=1.45');
     }, container);
 
     raf1 = window.requestAnimationFrame(() => {
@@ -403,22 +460,28 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
       window.cancelAnimationFrame(raf1);
       window.cancelAnimationFrame(raf2);
       gsap.ticker.lagSmoothing(500, 33);
+      timelineRef.current?.kill();
+      timelineRef.current = null;
+      exitTimelineRef.current?.kill();
+      exitTimelineRef.current = null;
       ctx.revert();
     };
-  }, []);
+  }, [handleDismiss]);
 
   return (
     <div
       ref={containerRef}
+      tabIndex={-1}
       onPointerMove={handlePointerMove}
       role="dialog"
       aria-modal="true"
       aria-label="Strovyn Painting Co. Brand Introduction"
       data-testid="cinematic-intro"
       data-act-phase={actPhase}
-      className={`fixed inset-0 z-[100] flex h-[100dvh] w-full flex-col justify-between overflow-hidden select-none transition-colors duration-500 ${
-        isDark ? 'bg-[#161715] text-[#FAF8F5]' : 'bg-[#EAE4D8] text-[#20211F]'
-      }`}
+      data-intro-exiting={isExiting ? 'true' : 'false'}
+      className={`fixed inset-0 z-[100] flex h-[100dvh] w-full flex-col justify-between overflow-hidden select-none outline-none transition-colors duration-500 ${
+        isExiting ? 'pointer-events-none' : 'pointer-events-auto'
+      } ${isDark ? 'bg-[#161715] text-[#FAF8F5]' : 'bg-[#EAE4D8] text-[#20211F]'}`}
     >
       {/* Dynamic R3F Sunlit Architectural Plaster Backdrop + Non-WebGL Fallback */}
       <IntroArchitecturalBackdrop
@@ -438,10 +501,13 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
         }`}
       />
 
-      {/* Top Editorial Utility Rail — Interactive from frame 0, single-line on mobile */}
-      <header className="relative z-20 mx-auto w-full max-w-[1440px] px-5 pt-4 sm:px-10 sm:pt-7 lg:px-14">
+      {/* Top Editorial Utility Rail — Interactive from frame 0 */}
+      <div
+        ref={headerRailRef}
+        className="relative z-20 mx-auto w-full max-w-[1440px] px-5 pt-4 sm:px-10 sm:pt-7 lg:px-14"
+      >
         <div className="flex items-center justify-between gap-3 pb-3 sm:pb-4">
-          <div className="flex min-w-0 items-center gap-2.5 text-[10px] font-medium tracking-[0.2em] uppercase sm:text-[11px]">
+          <div className="flex min-w-0 items-center gap-2 text-[9.5px] font-medium tracking-[0.11em] uppercase sm:gap-2.5 sm:text-[11px] sm:tracking-[0.2em]">
             <span
               className="inline-block h-1.5 w-1.5 shrink-0 bg-[#7E6340] dark:bg-[#C9B28F]"
               aria-hidden="true"
@@ -457,13 +523,15 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
           </div>
 
           <button
+            ref={skipButtonRef}
             type="button"
             onClick={() => handleDismiss('skip')}
+            aria-label="Skip Intro"
             data-testid="intro-skip-btn"
-            className={`group inline-flex min-h-[36px] shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-xs px-3 py-1.5 text-[11px] font-medium tracking-[0.18em] uppercase transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7E6340] ${
+            className={`group inline-flex min-h-[44px] shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap px-3.5 py-2 text-[11px] font-medium tracking-[0.18em] uppercase transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${
               isDark
-                ? 'bg-[#252623]/85 text-[#FAF8F5]/95 hover:bg-[#FAF8F5]/15 hover:text-white'
-                : 'bg-[#FAF8F5]/85 text-[#20211F]/90 hover:bg-[#20211F]/10 hover:text-[#20211F]'
+                ? 'bg-[#252623]/85 text-[#FAF8F5]/95 hover:bg-[#FAF8F5]/15 hover:text-white focus-visible:outline-[#C9B28F]'
+                : 'bg-[#FAF8F5]/85 text-[#20211F]/90 hover:bg-[#20211F]/10 hover:text-[#20211F] focus-visible:outline-[#7E6340]'
             }`}
           >
             <span>Skip Intro</span>
@@ -483,10 +551,10 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
             isDark ? 'bg-[#FAF8F5]/16' : 'bg-[#20211F]/14'
           }`}
         />
-      </header>
+      </div>
 
-      {/* Center Stage: Seamlessly bridges Act II Centerpiece Ident -> Act III Haven Editorial Split */}
-      <main className="relative z-20 mx-auto flex w-full max-w-[1440px] flex-1 items-center px-5 py-2 sm:px-10 sm:py-6 lg:px-14">
+      {/* Center Stage: Seamlessly bridges Act II Centerpiece Ident -> Act III Architectural Composition */}
+      <div className="relative z-20 mx-auto flex w-full max-w-[1440px] flex-1 items-center px-5 py-2 sm:px-10 sm:py-6 lg:px-14">
         {/* Act I Prologue Subtle Caption — fades cleanly out before Act II logo appears */}
         <div
           ref={prologueTagRef}
@@ -510,7 +578,7 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
               className="relative flex w-fit flex-col items-center will-change-transform"
               data-testid="intro-logo-stage"
             >
-              {/* Tight w-fit wrapper around ONLY the official 2:1 logo banner & corner frame */}
+              {/* Tight w-fit wrapper around ONLY the official 2:1 logo plate & corner frame */}
               <div className="relative inline-block w-fit">
                 <div
                   ref={logoBezelRef}
@@ -541,15 +609,15 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
                   />
                 </div>
 
-                {/* Official Strovyn Brand Banner — exact original proportions & colors */}
-                <div className="relative w-fit overflow-hidden shadow-[0_24px_60px_-15px_rgba(0,0,0,0.45)]">
+                {/* Official Strovyn Brand Plate — exact original proportions & colors */}
+                <div className="relative w-fit overflow-hidden shadow-[0_24px_64px_-14px_rgba(0,0,0,0.45)]">
                   <Image
                     src="/images/strovyn-logo.png"
                     alt="Strovyn Painting Co. — A New Standard In Innovation"
-                    width={760}
-                    height={380}
+                    width={636}
+                    height={317}
                     priority
-                    className="block h-auto w-[196px] object-contain sm:w-[250px] lg:w-[295px]"
+                    className="block h-auto w-[184px] object-contain sm:w-[250px] lg:w-[295px]"
                   />
                   {/* Controlled Specular Studio Sweep Across Plate */}
                   <div
@@ -564,19 +632,19 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
                 </div>
               </div>
 
-              {/* Act II Centerpiece Colophon — positioned outside tight bezel so box size is exact */}
+              {/* Act II Centerpiece Colophon — positioned outside flow box so center math tracks the exact logo */}
               <p
                 ref={act2CaptionRef}
-                className={`mt-4 text-center text-[9px] font-medium tracking-[0.26em] uppercase whitespace-nowrap sm:text-[10px] ${
+                className={`pointer-events-none absolute top-full left-1/2 mt-4 -translate-x-1/2 text-center text-[9px] font-medium tracking-[0.26em] uppercase whitespace-nowrap sm:text-[10px] ${
                   isDark ? 'text-[#C9B28F]' : 'text-[#6B5335]'
                 }`}
               >
-                Master Painters &middot; Adelaide SA
+                Architectural Painting &middot; Adelaide SA
               </p>
             </div>
           </div>
 
-          {/* Right Architectural Column: Act III Editorial Title, Copy & Enter Control */}
+          {/* Right Architectural Column: Act III Editorial Title, Copy & Closing Datum */}
           <div
             ref={act3ContentRef}
             className="flex flex-col items-start lg:col-span-7 lg:pl-6"
@@ -593,7 +661,7 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
               Bespoke Interiors &amp; Heritage Exteriors
             </span>
 
-            <h1 className="font-serif text-[clamp(1.7rem,6.5vw,4.05rem)] leading-[1.03] font-normal tracking-[-0.02em] uppercase">
+            <h1 className="font-serif text-[clamp(1.6rem,6vw,3.4rem)] leading-[1.04] font-normal tracking-[-0.02em] uppercase lg:text-[clamp(2.35rem,4.05vw,3.95rem)]">
               <span className="block overflow-hidden pb-0.5">
                 <span ref={headlineLine1Ref} className="block">
                   Transforming Spaces.
@@ -622,46 +690,35 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
               preparation and refined surface finishes.
             </p>
 
-            {/* Integrated Architectural Enter Control */}
+            {/* Quiet Architectural Signature Datum (no click required) */}
             <div
-              ref={ctaWrapRef}
-              className="mt-5 flex w-full flex-col items-start gap-3 sm:mt-7 sm:w-auto sm:flex-row sm:items-center sm:gap-6"
+              ref={signatureWrapRef}
+              className="mt-5 flex w-full flex-wrap items-center gap-x-4 gap-y-2 sm:mt-7"
             >
-              <button
-                ref={enterButtonRef}
-                type="button"
-                onClick={() => handleDismiss('enter')}
-                data-testid="intro-enter-btn"
-                className={`group relative inline-flex min-h-[48px] w-full cursor-pointer items-center justify-between gap-5 overflow-hidden border px-6 py-3.5 text-[11px] font-medium tracking-[0.24em] uppercase transition-all duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7E6340] sm:w-auto sm:justify-start ${
-                  isDark
-                    ? 'border-[#C9B28F]/60 bg-[#FAF8F5] text-[#141513] hover:border-[#FAF8F5] hover:bg-[#FFFFFF]'
-                    : 'border-[#20211F] bg-[#20211F] text-[#FAF8F5] hover:border-[#6B5335] hover:bg-[#312D28]'
+              <span
+                ref={signatureRuleRef}
+                aria-hidden="true"
+                className={`inline-block h-px w-14 sm:w-20 ${
+                  isDark ? 'bg-[#C9B28F]/70' : 'bg-[#7E6340]/70'
                 }`}
-              >
-                <span>Enter Website</span>
-                <span
-                  aria-hidden="true"
-                  className="inline-flex items-center gap-1.5 transition-transform duration-300 group-hover:translate-x-1"
-                >
-                  <span className="inline-block h-px w-4 bg-current transition-all duration-300 group-hover:w-6" />
-                  <span>&rarr;</span>
-                </span>
-              </button>
-
+              />
               <span
                 className={`text-[10px] font-medium tracking-[0.2em] uppercase sm:text-[11px] ${
-                  isDark ? 'text-[#B8B5AE]/85' : 'text-[#595651]/85'
+                  isDark ? 'text-[#B8B5AE]/90' : 'text-[#595651]/90'
                 }`}
               >
-                Est. Adelaide, South Australia
+                Adelaide, South Australia
               </span>
             </div>
           </div>
         </div>
-      </main>
+      </div>
 
       {/* Bottom Haven-Inspired Architectural Datum Footer */}
-      <footer className="relative z-20 mx-auto w-full max-w-[1440px] px-5 pb-4 sm:px-10 sm:pb-6 lg:px-14">
+      <div
+        data-intro-footer="true"
+        className="relative z-20 mx-auto w-full max-w-[1440px] px-5 pb-4 sm:px-10 sm:pb-6 lg:px-14"
+      >
         <div
           ref={draftingBottomRef}
           aria-hidden="true"
@@ -679,7 +736,7 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
           <span className="hidden sm:inline">34.9285&deg; S &middot; 138.6007&deg; E</span>
           <span>A New Standard In Innovation</span>
         </div>
-      </footer>
+      </div>
     </div>
   );
 }

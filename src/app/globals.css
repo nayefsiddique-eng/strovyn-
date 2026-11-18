@@ -493,3 +493,16 @@ html.dark footer .text-warm-grey {
 html.dark footer a:hover {
   color: #FFFFFF !important;
 }
+
+/* Pre-hydration intro veil to prevent a 1-frame homepage flash on initial session load of / */
+html[data-intro-pending="true"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+  background-color: #EAE4D8;
+  pointer-events: none;
+}
+html.dark[data-intro-pending="true"] body::before {
+  background-color: #161715;
+}

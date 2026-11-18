@@ -98,9 +98,10 @@ export async function POST(req: Request) {
       }
     }
 
-    // 4. Persistence Fail-Closed Check: In production, local storage is strictly forbidden
-    if (process.env.NODE_ENV === 'production' && !isSupabaseConfigured()) {
-      console.error('CRITICAL: Upload attempted in production without Supabase configured.');
+    // 4. Persistence Fail-Closed Check: In production, local disk storage is strictly forbidden
+    // (whether Supabase is unconfigured or a Supabase upload attempt failed).
+    if (process.env.NODE_ENV === 'production') {
+      console.error('CRITICAL: Production upload could not be persisted to cloud storage.');
       return NextResponse.json(
         {
           success: false,

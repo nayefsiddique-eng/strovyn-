@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { FileText } from 'lucide-react';
 import { WHATSAPP_DETAILS } from '@/lib/constants';
 
-const WhatsAppGlyph: React.FC<{ className?: string }> = ({ className = 'w-6 h-6' }) => (
+const WhatsAppGlyph: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
   <svg
     className={`${className} fill-current`}
     viewBox="0 0 24 24"
@@ -15,6 +15,10 @@ const WhatsAppGlyph: React.FC<{ className?: string }> = ({ className = 'w-6 h-6'
   </svg>
 );
 
+/**
+ * FloatingContact — Coordinated bottom-right WhatsApp channel on md+ screens
+ * (paired cleanly beneath STRO) and docked sticky action bar on < 768px phones.
+ */
 export const FloatingContact: React.FC = () => {
   const [labelVisible, setLabelVisible] = useState(false);
 
@@ -22,22 +26,21 @@ export const FloatingContact: React.FC = () => {
 
   return (
     <>
-      {/* Desktop & Tablet Floating WhatsApp Control (Bottom Right) */}
+      {/* Desktop & Tablet Floating WhatsApp Control (Bottom Right anchor below STRO) */}
       <aside
         aria-label="WhatsApp Direct Contact"
-        className="fixed bottom-6 right-6 z-40 hidden md:flex items-center gap-3 font-sans"
+        data-floating-whatsapp="true"
+        className="fixed bottom-5 right-5 z-40 hidden md:flex items-center gap-3 font-sans"
       >
-        {/* Restrained Hover / Focus Label */}
         <span
-          className={`px-3 py-1.5 text-[11px] font-mono uppercase tracking-[0.16em] bg-ivory-light dark:bg-[#1E1F1D] text-charcoal dark:text-[#F4F1EA] border border-warm-grey/50 dark:border-white/15 shadow-md pointer-events-none transition-all duration-200 ${
+          className={`px-3 py-1.5 text-[11px] font-mono uppercase tracking-[0.16em] bg-ivory-light dark:bg-[#1E1F1D] text-charcoal dark:text-[#F4F1EA] border border-warm-grey/50 dark:border-white/15 shadow-md pointer-events-none transition-all duration-200 whitespace-nowrap ${
             labelVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-1'
           }`}
           aria-hidden="true"
         >
-          Chat with Strovyn
+          WhatsApp &middot; {WHATSAPP_DETAILS.displayNumber}
         </span>
 
-        {/* Refined Circular WhatsApp Control */}
         <a
           href={whatsappHref}
           target="_blank"
@@ -46,17 +49,18 @@ export const FloatingContact: React.FC = () => {
           onMouseLeave={() => setLabelVisible(false)}
           onFocus={() => setLabelVisible(true)}
           onBlur={() => setLabelVisible(false)}
-          aria-label="Chat with Strovyn on WhatsApp"
-          className="w-13 h-13 rounded-full bg-[#1B8A4B] hover:bg-[#16733E] text-white flex items-center justify-center shadow-lg hover:shadow-xl border border-white/25 dark:border-white/15 transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bronze focus-visible:ring-offset-2"
+          aria-label={`Chat with Strovyn on WhatsApp (${WHATSAPP_DETAILS.displayNumber})`}
+          className="h-11 w-11 rounded-full bg-[#1B8A4B] hover:bg-[#16733E] text-white flex items-center justify-center shadow-[0_10px_28px_-6px_rgba(0,0,0,0.35)] hover:shadow-[0_14px_34px_-6px_rgba(0,0,0,0.45)] border border-white/25 dark:border-white/15 transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bronze focus-visible:ring-offset-2"
         >
-          <WhatsAppGlyph className="w-6 h-6" />
+          <WhatsAppGlyph className="w-5 h-5" />
         </a>
       </aside>
 
       {/* Mobile Sticky Contact Bar (Phones < 768px) */}
       <nav
         aria-label="Mobile Contact Bar"
-        className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-ivory-light/95 dark:bg-[#181917]/95 backdrop-blur-md border-t border-warm-grey/40 dark:border-white/15 px-3 py-2 flex items-center justify-between gap-2 shadow-lg"
+        data-mobile-contact-bar="true"
+        className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-ivory-light/95 dark:bg-[#181917]/95 backdrop-blur-md border-t border-warm-grey/40 dark:border-white/15 px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] flex items-center justify-between gap-2 shadow-lg"
       >
         <Link
           href="/contact"

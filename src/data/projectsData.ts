@@ -32,7 +32,7 @@ export const PROJECTS_DATA: ProjectData[] = [
     location: 'North Adelaide, SA',
     year: '2025',
     architect: 'Strovyn Architectural Finishing',
-    builder: 'Strovyn Master Painters & Finishes',
+    builder: 'Strovyn Painting Co.',
     heroImage: '/images/projects/adelaide-luxury-residence/living-dining-2.jpg',
     galleryImages: [
       '/images/projects/adelaide-luxury-residence/living-kitchen-1.jpg',

@@ -5,18 +5,20 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui";
 
+import { WHATSAPP_DETAILS } from "@/lib/constants";
+
 export interface FooterProps {
   className?: string;
 }
 
 const servicesLinks = [
-  { label: "Interior Painting", href: "/services#interior" },
-  { label: "Exterior Painting", href: "/services#exterior" },
-  { label: "Architectural Finishes", href: "/services#architectural" },
-  { label: "Commercial Painting", href: "/services#commercial" },
-  { label: "Color Consultation", href: "/services#consultation" },
+  { label: "Interior Architectural Painting", href: "/services/interior-architectural-painting" },
+  { label: "Exterior Facade Restoration", href: "/services/exterior-facade-restoration" },
+  { label: "Fine Cabinetry & Millwork", href: "/services/fine-cabinetry-millwork" },
+  { label: "Artisanal Plasters & Lime", href: "/services/artisanal-plasters-lime-washes" },
+  { label: "Historic & Heritage Conservation", href: "/services/historic-heritage-conservation" },
+  { label: "Commercial & Hospitality", href: "/services/commercial-hospitality-finishes" },
   { label: "Wall Colour Visualiser", href: "/visualiser" },
-  { label: "Surface Restoration", href: "/services#restoration" },
 ];
 
 const companyLinks = [
@@ -25,13 +27,6 @@ const companyLinks = [
   { label: "Insights", href: "/insights" },
   { label: "Careers", href: "/careers" },
   { label: "Contact", href: "/contact" },
-];
-
-const socialLinks = [
-  { label: "Instagram", href: "https://instagram.com" },
-  { label: "LinkedIn", href: "https://linkedin.com" },
-  { label: "Pinterest", href: "https://pinterest.com" },
-  { label: "Facebook", href: "https://facebook.com" },
 ];
 
 export const Footer: React.FC<FooterProps> = ({ className }) => {
@@ -65,7 +60,7 @@ export const Footer: React.FC<FooterProps> = ({ className }) => {
               </h2>
               <p className="mt-5 text-warm-grey text-base sm:text-lg max-w-2xl font-light leading-relaxed">
                 From curated private residences to expansive commercial spaces,
-                our master painters bring architectural precision, refined
+                our finishing specialists bring architectural precision, refined
                 craftsmanship, and enduring beauty to every surface.
               </p>
             </div>
@@ -102,8 +97,8 @@ export const Footer: React.FC<FooterProps> = ({ className }) => {
                     <Image
                       src="/images/strovyn-logo.png"
                       alt="Strovyn Painting Co."
-                      width={280}
-                      height={93}
+                      width={636}
+                      height={317}
                       className="w-full h-auto"
                     />
                   </div>
@@ -115,26 +110,35 @@ export const Footer: React.FC<FooterProps> = ({ className }) => {
                 </p>
               </div>
 
-              {/* Social Links (text-only, no icons) */}
+              {/* Verified Direct Channels (No unverified social profiles) */}
               <div className="mt-8 pt-6 border-t border-warm-grey/10">
                 <span className="block text-[11px] uppercase tracking-[0.16em] text-white font-sans font-medium mb-3">
-                  Connect
+                  Direct Channels
                 </span>
                 <nav
-                  aria-label="Social media links"
+                  aria-label="Direct contact links"
                   className="flex flex-wrap gap-x-6 gap-y-2"
                 >
-                  {socialLinks.map((social) => (
-                    <a
-                      key={social.label}
-                      href={social.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs uppercase tracking-[0.12em] text-warm-grey hover:text-bronze transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bronze"
-                    >
-                      {social.label}
-                    </a>
-                  ))}
+                  <a
+                    href={WHATSAPP_DETAILS.chatUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs uppercase tracking-[0.12em] text-warm-grey hover:text-bronze transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bronze"
+                  >
+                    WhatsApp ({WHATSAPP_DETAILS.displayNumber})
+                  </a>
+                  <Link
+                    href="/contact"
+                    className="text-xs uppercase tracking-[0.12em] text-warm-grey hover:text-bronze transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bronze"
+                  >
+                    Quote Form
+                  </Link>
+                  <Link
+                    href="/visualiser"
+                    className="text-xs uppercase tracking-[0.12em] text-warm-grey hover:text-bronze transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bronze"
+                  >
+                    Wall Visualiser
+                  </Link>
                 </nav>
               </div>
             </div>
@@ -177,7 +181,7 @@ export const Footer: React.FC<FooterProps> = ({ className }) => {
               </ul>
             </div>
 
-            {/* Column 4: Contact Info (All labeled as [PLACEHOLDER]) */}
+            {/* Column 4: Contact Info */}
             <div className="lg:col-span-3">
               <h3 className="text-xs uppercase tracking-[0.16em] text-white font-sans font-medium mb-6">
                 Contact
@@ -193,6 +197,20 @@ export const Footer: React.FC<FooterProps> = ({ className }) => {
                   >
                     Book On-Site Adelaide Assessment &rarr;
                   </Link>
+                </div>
+
+                <div>
+                  <span className="block text-[10px] uppercase tracking-[0.14em] text-warm-grey-dark mb-1 font-normal">
+                    WhatsApp Business
+                  </span>
+                  <a
+                    href={WHATSAPP_DETAILS.chatUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-mono text-xs text-warm-grey hover:text-bronze transition-colors block focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bronze"
+                  >
+                    {WHATSAPP_DETAILS.internationalDisplay}
+                  </a>
                 </div>
 
                 <div>

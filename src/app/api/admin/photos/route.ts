@@ -18,17 +18,56 @@ import { createClient as createSupabaseClient } from '@/lib/supabase/server';
 const SESSION_COOKIE_NAME = 'strovyn_admin_session';
 
 /**
- * Validates Origin/Host for CSRF defense on state mutations
+ * Validates Origin/Host fail-closed for CSRF defense on state mutations.
  */
 function verifyCsrf(req: Request): boolean {
   const origin = req.headers.get('origin');
   const host = req.headers.get('host');
-  if (!origin || !host) return true; // Non-browser / same-origin relative
+  if (!origin || !host) {
+    return false;
+  }
   try {
     const originUrl = new URL(origin);
     return originUrl.host === host;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Validates admin-supplied image URLs against safe local `/images/` paths
+ * or approved HTTPS hosts (Unsplash / configured Supabase host).
+ */
+function validateDirectPhotoUrl(rawUrl: string): string | null {
+  const trimmed = rawUrl.trim();
+  if (!trimmed || trimmed.length > 1000) return null;
+
+  if (trimmed.startsWith('/images/')) {
+    if (trimmed.includes('..') || /[\s"'<>\\]/.test(trimmed)) return null;
+    return trimmed;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'https:') return null;
+
+    const allowedHosts = new Set<string>(['images.unsplash.com']);
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (supabaseUrl) {
+      try {
+        allowedHosts.add(new URL(supabaseUrl).hostname);
+      } catch {
+        // Ignore invalid env URL
+      }
+    }
+
+    if (!allowedHosts.has(parsed.hostname)) {
+      return null;
+    }
+
+    return parsed.toString();
+  } catch {
+    return null;
   }
 }
 
@@ -221,7 +260,18 @@ export async function POST(req: Request) {
         finalImageUrl = `/images/projects/${cleanFileName}`;
       }
     } else if (directUrl) {
-      finalImageUrl = directUrl.trim();
+      const safeDirectUrl = validateDirectPhotoUrl(directUrl);
+      if (!safeDirectUrl) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              'Invalid image URL. Only relative /images/ paths or HTTPS URLs from approved hosts are permitted.',
+          },
+          { status: 400 }
+        );
+      }
+      finalImageUrl = safeDirectUrl;
     } else {
       return NextResponse.json({ success: false, error: 'No image file or URL provided' }, { status: 400 });
     }

@@ -1,103 +1,163 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { X, Send, MessageCircle, FileText, RotateCcw } from 'lucide-react';
+import {
+  ArrowUpRight,
+  CheckCircle2,
+  ClipboardList,
+  MessageCircle,
+  Paintbrush,
+  Palette,
+  RefreshCw,
+  Send,
+  ShieldCheck,
+  X,
+} from 'lucide-react';
 import { WHATSAPP_DETAILS } from '@/lib/constants';
 import { StroLogo } from './StroLogo';
 
-interface ChatMessage {
-  sender: 'user' | 'assistant';
-  text: string;
-  showHandoff?: boolean;
-  isError?: boolean;
+interface ActionChip {
+  type: 'open_quote_builder' | 'link' | 'whatsapp';
+  label: string;
+  href?: string;
+  prefillService?: string;
 }
 
-const INITIAL_GREETING: ChatMessage = {
-  sender: 'assistant',
-  text: "Welcome to Strovyn. I'm STRO, your digital assistant. I can help you explore our painting services, understand finishes and get your project enquiry started.",
-  showHandoff: false,
-};
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  actions?: ActionChip[];
+  isError?: boolean;
+  retryPrompt?: string;
+}
 
-const SUGGESTED_ACTIONS = [
+interface QuoteDraft {
+  serviceRequired: string;
+  projectLocation: string;
+  scopeSummary: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  preferredContact: 'email' | 'phone' | 'whatsapp';
+}
+
+const QUICK_PROMPTS = [
   {
-    label: 'Explore Painting Services',
-    query: 'What painting services does Strovyn Painting Co. offer?',
-  },
-  {
-    label: 'Understand Paint Finishes',
-    query: 'How should I choose between paint finishes and sheen levels?',
-  },
-  {
+    id: 'quote',
     label: 'Request a Quote',
-    query: 'I would like to start a quote enquiry for my project.',
+    icon: ClipboardList,
+    mode: 'quote_builder' as const,
+    prompt: 'I would like to request a quote for my painting project.',
   },
   {
-    label: 'Contact Strovyn',
-    query: 'How can I contact Strovyn directly in Adelaide?',
+    id: 'finishes',
+    label: 'Finishes & Sheen',
+    icon: Paintbrush,
+    mode: 'chat' as const,
+    prompt: 'What paint finishes and sheen levels do you recommend for Adelaide homes?',
+  },
+  {
+    id: 'visualiser',
+    label: 'Wall Visualiser',
+    icon: Palette,
+    mode: 'chat' as const,
+    prompt: 'How does the Wall Colour Visualiser work?',
+  },
+  {
+    id: 'prep',
+    label: 'Prep & Process',
+    icon: ShieldCheck,
+    mode: 'chat' as const,
+    prompt: 'What surface preparation steps do you follow before painting?',
   },
 ];
 
+const SERVICE_OPTIONS = [
+  'Interior Precision Painting',
+  'Exterior Cladding & Facade Protection',
+  'Cabinet Refinishing & Spraying',
+  'Woodwork & Architectural Trim',
+  'Commercial & Heritage Painting',
+];
+
+const INITIAL_ASSISTANT_GREETING: ChatMessage = {
+  role: 'assistant',
+  content:
+    'Welcome to Strovyn. I’m STRO — your guide to finishes, surface preparation, and getting your project started.',
+};
+
+const INITIAL_QUOTE_DRAFT: QuoteDraft = {
+  serviceRequired: 'Interior Precision Painting',
+  projectLocation: '',
+  scopeSummary: '',
+  fullName: '',
+  email: '',
+  phone: '',
+  preferredContact: 'email',
+};
+
+/**
+ * AIAssistant (STRO) — Redesigned Strovyn Digital Assistant & Guided Quote Handoff.
+ * Coordinated cleanly in the bottom-right stack directly above the WhatsApp button
+ * on tablet/desktop, and cleanly above the sticky action bar on phones (< 768px).
+ */
 export const AIAssistant: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_GREETING]);
-  const [inputVal, setInputVal] = useState('');
+  const [panelView, setPanelView] = useState<'chat' | 'quote'>('chat');
+  const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [statusLabel, setStatusLabel] = useState<'Digital Assistant' | 'Live AI Connected' | 'Offline Fallback'>('Digital Assistant');
+  const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_ASSISTANT_GREETING]);
 
-  const shouldReduceMotion = useReducedMotion();
-  const launcherRef = useRef<HTMLButtonElement>(null);
+  const [quoteDraft, setQuoteDraft] = useState<QuoteDraft>(INITIAL_QUOTE_DRAFT);
+  const [quoteSubmitting, setQuoteSubmitting] = useState(false);
+  const [quoteError, setQuoteError] = useState('');
+  const [quoteReceipt, setQuoteReceipt] = useState<{
+    id: string;
+    notified: boolean;
+  } | null>(null);
+
+  const launcherBtnRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const idempotencyKeyRef = useRef<string>('');
 
+  // Auto-scroll newest reply into view
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: shouldReduceMotion ? 'auto' : 'smooth' });
-  }, [messages, loading, isOpen, shouldReduceMotion]);
-
-  useEffect(() => {
-    if (isOpen) {
-      const t = setTimeout(() => inputRef.current?.focus(), 120);
-      return () => clearTimeout(t);
+    if (isOpen && panelView === 'chat') {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
-  }, [isOpen]);
+  }, [messages, loading, isOpen, panelView]);
 
+  // Escape closes STRO and restores keyboard focus to launcher
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
         setIsOpen(false);
-        launcherRef.current?.focus();
+        launcherBtnRef.current?.focus();
       }
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
-  const handleReset = () => {
-    if (loading) return;
-    setMessages([INITIAL_GREETING]);
-    setStatusLabel('Digital Assistant');
-    inputRef.current?.focus();
-  };
+  const sendMessage = async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed || loading) return;
 
-  const handleSend = async (e?: React.FormEvent, directPrompt?: string) => {
-    if (e) e.preventDefault();
-    const query = (directPrompt ?? inputVal).trim();
-    if (!query || loading) return;
-
-    if (!directPrompt) setInputVal('');
-
-    // Build last 6 turns for multi-turn continuity (excluding initial greeting)
     const historyPayload = messages
-      .slice(1)
-      .slice(-6)
+      .filter((m) => !m.isError)
+      .slice(-8)
       .map((m) => ({
-        role: m.sender,
-        content: m.text.slice(0, 1000),
+        role: m.role,
+        content: m.content,
       }));
 
-    setMessages((prev) => [...prev, { sender: 'user', text: query }]);
+    setMessages((prev) => [...prev, { role: 'user', content: trimmed }]);
+    setInput('');
     setLoading(true);
+    setPanelView('chat');
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 12000);
@@ -108,48 +168,50 @@ export const AIAssistant: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
         body: JSON.stringify({
-          message: query,
+          message: trimmed,
           history: historyPayload,
         }),
       });
-
       clearTimeout(timeoutId);
-      const data = await res.json();
 
-      if (res.ok && data.success && data.message) {
-        setStatusLabel(data.connected ? 'Live AI Connected' : 'Digital Assistant');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success || typeof data.message !== 'string') {
+        const errMsg =
+          res.status === 429
+            ? data.error || 'Too many requests right now. Please pause a moment and try again.'
+            : data.error || 'STRO could not respond just now. You can retry or contact our Adelaide team on WhatsApp.';
         setMessages((prev) => [
           ...prev,
           {
-            sender: 'assistant',
-            text: data.message,
-            showHandoff: true,
+            role: 'assistant',
+            content: errMsg,
+            isError: true,
+            retryPrompt: trimmed,
           },
         ]);
       } else {
-        setStatusLabel('Offline Fallback');
+        const responseActions = Array.isArray(data.actions)
+          ? (data.actions as ActionChip[])
+          : undefined;
         setMessages((prev) => [
           ...prev,
           {
-            sender: 'assistant',
-            text:
-              data?.error ||
-              'STRO is temporarily unable to process that request. You can submit your project details via /contact or message our Adelaide team on WhatsApp (+61 406 646 061).',
-            showHandoff: true,
-            isError: true,
+            role: 'assistant',
+            content: data.message,
+            actions: responseActions,
           },
         ]);
       }
     } catch {
       clearTimeout(timeoutId);
-      setStatusLabel('Offline Fallback');
       setMessages((prev) => [
         ...prev,
         {
-          sender: 'assistant',
-          text: 'Connection was interrupted. You can try again, or reach our Adelaide team directly via WhatsApp (+61 406 646 061) or the quote form (/contact).',
-          showHandoff: true,
+          role: 'assistant',
+          content:
+            'Unable to reach STRO due to a temporary network issue. Please retry below or message our team directly on WhatsApp (+61 406 646 061).',
           isError: true,
+          retryPrompt: trimmed,
         },
       ]);
     } finally {
@@ -157,211 +219,652 @@ export const AIAssistant: React.FC = () => {
     }
   };
 
-  const whatsappHref = `${WHATSAPP_DETAILS.chatUrl}?text=${WHATSAPP_DETAILS.defaultEnquiryMessage}`;
+  const openQuoteBuilder = (prefillService?: string) => {
+    setQuoteError('');
+    if (prefillService && SERVICE_OPTIONS.includes(prefillService)) {
+      setQuoteDraft((prev) => ({ ...prev, serviceRequired: prefillService }));
+    }
+    setPanelView('quote');
+  };
+
+  const buildFullFormHref = (): string => {
+    const params = new URLSearchParams();
+    params.set('service', quoteDraft.serviceRequired);
+    if (quoteDraft.projectLocation.trim()) {
+      params.set('location', quoteDraft.projectLocation.trim());
+    }
+    if (quoteDraft.scopeSummary.trim()) {
+      params.set('scope', quoteDraft.scopeSummary.trim());
+    }
+    if (quoteDraft.fullName.trim()) {
+      params.set('name', quoteDraft.fullName.trim());
+    }
+    if (quoteDraft.email.trim()) {
+      params.set('email', quoteDraft.email.trim());
+    }
+    if (quoteDraft.phone.trim()) {
+      params.set('phone', quoteDraft.phone.trim());
+    }
+    return `/contact?${params.toString()}`;
+  };
+
+  const buildWhatsAppQuoteHref = (): string => {
+    const lines = [
+      'Hello Strovyn Painting Co., I would like to discuss a project enquiry from STRO:',
+      `• Service: ${quoteDraft.serviceRequired}`,
+      quoteDraft.projectLocation.trim()
+        ? `• Suburb: ${quoteDraft.projectLocation.trim()}`
+        : null,
+      quoteDraft.scopeSummary.trim()
+        ? `• Scope: ${quoteDraft.scopeSummary.trim()}`
+        : null,
+      quoteDraft.fullName.trim() ? `• Name: ${quoteDraft.fullName.trim()}` : null,
+    ].filter(Boolean);
+    return `${WHATSAPP_DETAILS.chatUrl}?text=${encodeURIComponent(lines.join('\n'))}`;
+  };
+
+  const handleQuoteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (quoteSubmitting) return;
+    setQuoteError('');
+
+    if (quoteDraft.fullName.trim().length < 2) {
+      setQuoteError('Please enter your full name (at least 2 characters).');
+      return;
+    }
+    if (!quoteDraft.email.includes('@')) {
+      setQuoteError('Please enter a valid email address.');
+      return;
+    }
+    if (quoteDraft.phone.trim().length < 6) {
+      setQuoteError('Please enter a valid contact phone number.');
+      return;
+    }
+    if (quoteDraft.scopeSummary.trim().length < 10) {
+      setQuoteError('Please share a brief scope description (at least 10 characters).');
+      return;
+    }
+
+    if (!idempotencyKeyRef.current) {
+      idempotencyKeyRef.current =
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+
+    setQuoteSubmitting(true);
+    try {
+      const res = await fetch('/api/quotes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKeyRef.current,
+        },
+        body: JSON.stringify({
+          fullName: quoteDraft.fullName.trim(),
+          email: quoteDraft.email.trim(),
+          phone: quoteDraft.phone.trim(),
+          projectLocation: quoteDraft.projectLocation.trim() || 'Greater Adelaide, SA',
+          serviceRequired: quoteDraft.serviceRequired,
+          description: quoteDraft.scopeSummary.trim(),
+          preferredContact: quoteDraft.preferredContact,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success || !data.data?.id) {
+        throw new Error(data.error || 'Unable to submit quote request right now.');
+      }
+
+      idempotencyKeyRef.current = '';
+      setQuoteReceipt({
+        id: String(data.data.id),
+        notified: Boolean(data.data.notified),
+      });
+    } catch (err: unknown) {
+      setQuoteError(
+        err instanceof Error
+          ? err.message
+          : 'Connection error while submitting enquiry. Please try again or use WhatsApp.'
+      );
+    } finally {
+      setQuoteSubmitting(false);
+    }
+  };
+
+  const resetAssistant = () => {
+    setMessages([INITIAL_ASSISTANT_GREETING]);
+    setQuoteDraft(INITIAL_QUOTE_DRAFT);
+    setQuoteReceipt(null);
+    setQuoteError('');
+    setPanelView('chat');
+    idempotencyKeyRef.current = '';
+  };
+
+  const whatsappDirectHref = `${WHATSAPP_DETAILS.chatUrl}?text=${WHATSAPP_DETAILS.defaultEnquiryMessage}`;
 
   return (
     <>
-      {/* STRO Floating Launcher (Bottom-Left; sits above mobile contact bar on <768px) */}
-      <aside
-        aria-label="STRO Digital Assistant Launcher"
-        className="fixed bottom-16 left-4 md:bottom-6 md:left-6 z-40 font-sans"
+      {/* Coordinated Bottom-Right Concierge Trigger (directly above WhatsApp on md+, above mobile bar on < md) */}
+      <div
+        data-floating-stro="true"
+        className="fixed right-3.5 bottom-[calc(4.15rem+env(safe-area-inset-bottom))] md:right-5 md:bottom-[72px] z-40 font-sans"
       >
         <button
-          ref={launcherRef}
+          ref={launcherBtnRef}
           type="button"
-          onClick={() => setIsOpen((prev) => !prev)}
+          onClick={() => {
+            const next = !isOpen;
+            setIsOpen(next);
+            if (next) {
+              setTimeout(() => inputRef.current?.focus(), 60);
+            }
+          }}
           aria-expanded={isOpen}
           aria-controls="stro-assistant-dialog"
-          aria-label={isOpen ? 'Close STRO assistant' : 'Open STRO assistant'}
-          className="group h-12 px-3.5 bg-ivory-light dark:bg-[#1E1F1D] hover:bg-white dark:hover:bg-[#262724] text-charcoal dark:text-[#F4F1EA] border border-warm-grey/70 dark:border-white/20 flex items-center gap-3 shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bronze focus-visible:ring-offset-2"
+          aria-label={
+            isOpen
+              ? 'Close STRO Digital Assistant'
+              : 'Open STRO — Strovyn Digital Assistant'
+          }
+          className={`group flex items-center gap-2.5 h-11 px-3.5 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.32)] border transition-[transform,border-color] duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bronze ${
+            isOpen
+              ? 'bg-[#20211F] text-[#F4F1EA] border-bronze/70 dark:bg-[#F4F1EA] dark:text-[#20211F] dark:border-bronze'
+              : 'bg-ivory-light/98 dark:bg-[#1E1F1D]/98 text-charcoal dark:text-[#F4F1EA] border-charcoal/25 dark:border-white/20 hover:border-bronze hover:-translate-y-0.5'
+          }`}
         >
-          <div className="w-7 h-7 bg-ivory dark:bg-[#141513] border border-warm-grey/50 dark:border-white/15 flex items-center justify-center shrink-0">
-            <StroLogo size={20} className="text-charcoal dark:text-[#F4F1EA]" />
-          </div>
-          <div className="flex flex-col text-left leading-tight">
-            <span className="font-mono text-xs uppercase tracking-[0.2em] font-bold text-charcoal dark:text-[#F4F1EA] group-hover:text-bronze dark:group-hover:text-[#C9B28F] transition-colors">
+          <StroLogo size={20} className="shrink-0" />
+          <div className="flex flex-col items-start text-left leading-none">
+            <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.2em]">
               STRO
             </span>
-            <span className="text-[10px] font-sans text-warm-grey-dark dark:text-[#B5B2AA] hidden sm:block">
-              Digital Assistant
+            <span
+              className={`hidden sm:block text-[9.5px] font-sans tracking-wide mt-0.5 ${
+                isOpen
+                  ? 'text-[#B8B5AE] dark:text-[#20211F]/70'
+                  : 'text-warm-grey-dark dark:text-[#B8B5AE]'
+              }`}
+            >
+              Finish Guide
             </span>
           </div>
+          <span
+            className="w-1.5 h-1.5 bg-[#C41E1E] shrink-0"
+            aria-hidden="true"
+          />
         </button>
-      </aside>
+      </div>
 
-      {/* STRO Conversational Dialog */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            id="stro-assistant-dialog"
-            role="dialog"
-            aria-modal="false"
-            aria-label="STRO — Strovyn Digital Assistant"
-            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 12, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.98 }}
-            transition={{ duration: shouldReduceMotion ? 0.1 : 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed bottom-32 left-4 md:bottom-21 md:left-6 z-50 w-[calc(100vw-2rem)] sm:w-[400px] max-h-[min(560px,calc(100dvh-9rem))] md:max-h-[min(580px,calc(100dvh-7rem))] bg-ivory-light dark:bg-[#1A1B19] text-charcoal dark:text-[#F4F1EA] border border-warm-grey/70 dark:border-white/20 shadow-2xl flex flex-col font-sans overflow-hidden"
-          >
-            {/* Header */}
-            <div className="px-4 py-3.5 border-b border-warm-grey/40 dark:border-white/15 flex items-center justify-between bg-white dark:bg-[#141513] shrink-0">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 bg-ivory dark:bg-[#20211F] border border-warm-grey/50 dark:border-white/15 flex items-center justify-center shrink-0">
-                  <StroLogo size={22} className="text-charcoal dark:text-[#F4F1EA]" />
+      {/* Redesigned Compact Architectural Dialogue Window */}
+      {isOpen && (
+        <div
+          id="stro-assistant-dialog"
+          role="dialog"
+          aria-modal="false"
+          aria-label="STRO — Strovyn's Digital Assistant"
+          className="fixed left-3 right-3 bottom-[calc(7.6rem+env(safe-area-inset-bottom))] md:left-auto md:right-5 md:bottom-[124px] z-50 md:w-[392px] max-h-[min(560px,calc(100dvh-8.8rem))] md:max-h-[min(560px,calc(100dvh-148px))] bg-ivory-light dark:bg-[#191A18] border border-warm-grey/60 dark:border-white/20 shadow-[0_24px_64px_-12px_rgba(0,0,0,0.42)] flex flex-col overflow-hidden text-charcoal dark:text-[#F4F1EA]"
+        >
+          {/* Architectural Header Plate (div rather than <header> so dark globals rules never override) */}
+          <div className="shrink-0 bg-charcoal dark:bg-[#121311] text-[#F4F1EA] px-4 py-3 border-b border-white/12 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3 min-w-0">
+              <StroLogo size={24} className="text-[#F4F1EA] shrink-0" />
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  <span className="font-mono text-xs uppercase tracking-[0.22em] font-semibold text-white">
+                    STRO
+                  </span>
+                  <span className="w-1.5 h-1.5 bg-[#C41E1E]" aria-hidden="true" />
+                  <span className="font-sans text-[11px] font-medium tracking-wide text-[#C9B28F]">
+                    Strovyn&apos;s Digital Assistant
+                  </span>
                 </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs uppercase tracking-[0.22em] font-bold text-charcoal dark:text-white">
-                      STRO
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 text-[10px] font-mono text-warm-grey-dark dark:text-[#B5B2AA]">
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full inline-block ${
-                          statusLabel === 'Offline Fallback'
-                            ? 'bg-amber-600 dark:bg-amber-400'
-                            : 'bg-bronze dark:bg-[#C9B28F]'
-                        }`}
-                        aria-hidden="true"
-                      />
-                      <span>{statusLabel}</span>
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-warm-grey-dark dark:text-[#B5B2AA] truncate">
-                    Your guide to better finishes.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1 shrink-0">
-                {messages.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={handleReset}
-                    disabled={loading}
-                    title="New conversation"
-                    aria-label="Reset conversation"
-                    className="p-1.5 text-warm-grey-dark dark:text-[#B5B2AA] hover:text-charcoal dark:hover:text-white transition-colors cursor-pointer disabled:opacity-40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bronze"
-                  >
-                    <RotateCcw size={14} />
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsOpen(false);
-                    launcherRef.current?.focus();
-                  }}
-                  aria-label="Close STRO assistant"
-                  className="p-1.5 text-warm-grey-dark dark:text-[#B5B2AA] hover:text-charcoal dark:hover:text-white transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bronze"
-                >
-                  <X size={16} />
-                </button>
+                <p className="text-[11px] text-[#B8B5AE] font-light mt-0.5">
+                  Your guide to better finishes.
+                </p>
               </div>
             </div>
 
-            {/* Suggested Actions Bar */}
-            <div className="px-3 py-2.5 bg-ivory dark:bg-[#161715] border-b border-warm-grey/30 dark:border-white/10 flex flex-wrap gap-1.5 shrink-0">
-              {SUGGESTED_ACTIONS.map((action) => (
+            <div className="flex items-center gap-1 shrink-0">
+              {(messages.length > 1 || panelView === 'quote') && (
                 <button
-                  key={action.label}
                   type="button"
-                  disabled={loading}
-                  onClick={() => handleSend(undefined, action.query)}
-                  className="text-[10px] font-mono uppercase tracking-[0.08em] bg-white dark:bg-[#242523] hover:bg-bronze dark:hover:bg-[#7E6340] text-charcoal dark:text-[#F4F1EA] hover:text-white border border-warm-grey/50 dark:border-white/15 px-2.5 py-1 transition-colors cursor-pointer disabled:opacity-50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bronze"
+                  onClick={resetAssistant}
+                  aria-label="Reset conversation"
+                  title="New conversation"
+                  className="p-1.5 text-[#B8B5AE] hover:text-white transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bronze"
                 >
-                  {action.label}
+                  <RefreshCw size={14} aria-hidden="true" />
                 </button>
-              ))}
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                  launcherBtnRef.current?.focus();
+                }}
+                aria-label="Close STRO assistant"
+                className="p-1.5 text-[#B8B5AE] hover:text-white transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bronze"
+              >
+                <X size={16} aria-hidden="true" />
+              </button>
             </div>
+          </div>
 
-            {/* Message Stream */}
-            <div
-              id="ai-assistant-messages"
-              className="p-4 flex-1 overflow-y-auto space-y-3.5 text-xs sm:text-[13px] leading-relaxed"
-              aria-live="polite"
+          {/* Mode Tabs: Ask STRO / Quick Quote Brief */}
+          <div className="shrink-0 grid grid-cols-2 border-b border-warm-grey/35 dark:border-white/10 bg-ivory dark:bg-[#1E1F1D] text-[11px] font-mono uppercase tracking-[0.14em]">
+            <button
+              type="button"
+              onClick={() => setPanelView('chat')}
+              className={`py-2 px-3 text-center transition-colors cursor-pointer border-b-2 ${
+                panelView === 'chat'
+                  ? 'border-[#C41E1E] text-charcoal dark:text-white font-semibold bg-ivory-light dark:bg-[#191A18]'
+                  : 'border-transparent text-warm-grey-dark dark:text-[#A8A59E] hover:text-charcoal dark:hover:text-white'
+              }`}
             >
-              {messages.map((m, i) => (
-                <div
-                  key={i}
-                  className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}
-                >
+              Ask STRO
+            </button>
+            <button
+              type="button"
+              onClick={() => setPanelView('quote')}
+              className={`py-2 px-3 text-center transition-colors cursor-pointer border-b-2 flex items-center justify-center gap-1.5 ${
+                panelView === 'quote'
+                  ? 'border-[#C41E1E] text-charcoal dark:text-white font-semibold bg-ivory-light dark:bg-[#191A18]'
+                  : 'border-transparent text-warm-grey-dark dark:text-[#A8A59E] hover:text-charcoal dark:hover:text-white'
+              }`}
+            >
+              <span>Quote Brief</span>
+            </button>
+          </div>
+
+          {panelView === 'chat' ? (
+            <>
+              {/* Conversation Viewport */}
+              <div className="flex-1 min-h-[210px] overflow-y-auto p-4 space-y-3.5 text-xs bg-ivory-light dark:bg-[#191A18]">
+                {messages.map((msg, idx) => (
                   <div
-                    className={`p-3 max-w-[88%] ${
-                      m.sender === 'user'
-                        ? 'bg-charcoal dark:bg-[#F4F1EA] text-white dark:text-charcoal'
-                        : m.isError
-                        ? 'bg-rose-50 dark:bg-rose-950/30 text-charcoal dark:text-[#F4F1EA] border border-rose-300 dark:border-rose-700/50'
-                        : 'bg-white dark:bg-[#242523] text-charcoal dark:text-[#F4F1EA] border border-warm-grey/40 dark:border-white/10'
+                    key={idx}
+                    className={`flex flex-col ${
+                      msg.role === 'user' ? 'items-end' : 'items-start'
                     }`}
                   >
-                    <p className="leading-relaxed whitespace-pre-wrap">{m.text}</p>
+                    <div
+                      className={`max-w-[90%] px-3.5 py-2.5 leading-relaxed ${
+                        msg.role === 'user'
+                          ? 'bg-charcoal text-white dark:bg-[#F4F1EA] dark:text-[#20211F]'
+                          : msg.isError
+                          ? 'bg-red-50 dark:bg-[#2A1616] border border-red-300 dark:border-red-700/60 text-red-900 dark:text-red-200'
+                          : 'bg-white dark:bg-[#222320] border border-warm-grey/40 dark:border-white/12 text-charcoal dark:text-[#F4F1EA] shadow-xs'
+                      }`}
+                    >
+                      <p className="whitespace-pre-line">{msg.content}</p>
 
-                    {m.showHandoff && m.sender === 'assistant' && (
-                      <div className="mt-3 pt-2.5 border-t border-warm-grey/30 dark:border-white/15 flex flex-wrap gap-2 text-[10px] font-mono uppercase tracking-wider">
-                        <Link
-                          href="/contact"
-                          onClick={() => setIsOpen(false)}
-                          className="inline-flex items-center gap-1.5 bg-charcoal dark:bg-[#F4F1EA] hover:bg-black dark:hover:bg-white text-white dark:text-charcoal px-2.5 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bronze"
+                      {msg.retryPrompt && (
+                        <button
+                          type="button"
+                          onClick={() => sendMessage(msg.retryPrompt!)}
+                          className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider underline hover:opacity-80 cursor-pointer"
                         >
-                          <FileText size={12} aria-hidden="true" />
-                          <span>Request a Quote</span>
-                        </Link>
-                        <a
-                          href={whatsappHref}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 bg-[#1B7A43] hover:bg-[#156336] text-white px-2.5 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bronze"
-                        >
-                          <MessageCircle size={12} aria-hidden="true" />
-                          <span>WhatsApp</span>
-                        </a>
+                          <RefreshCw size={11} aria-hidden="true" />
+                          <span>Retry Question</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Contextual Handoff Actions */}
+                    {msg.actions && msg.actions.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2 max-w-[92%]">
+                        {msg.actions.map((action, actionIdx) => {
+                          if (action.type === 'open_quote_builder') {
+                            return (
+                              <button
+                                key={actionIdx}
+                                type="button"
+                                onClick={() => openQuoteBuilder(action.prefillService)}
+                                className="px-2.5 py-1.5 bg-bronze hover:bg-bronze-hover text-white font-mono text-[10px] uppercase tracking-wider inline-flex items-center gap-1 transition-colors cursor-pointer"
+                              >
+                                <ClipboardList size={11} aria-hidden="true" />
+                                <span>{action.label}</span>
+                              </button>
+                            );
+                          }
+                          if (action.type === 'whatsapp') {
+                            return (
+                              <a
+                                key={actionIdx}
+                                href={whatsappDirectHref}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2.5 py-1.5 bg-[#1B7A43] hover:bg-[#156336] text-white font-mono text-[10px] uppercase tracking-wider inline-flex items-center gap-1 transition-colors"
+                              >
+                                <MessageCircle size={11} aria-hidden="true" />
+                                <span>{action.label}</span>
+                              </a>
+                            );
+                          }
+                          return (
+                            <Link
+                              key={actionIdx}
+                              href={action.href || '/contact'}
+                              onClick={() => setIsOpen(false)}
+                              className="px-2.5 py-1.5 bg-ivory dark:bg-[#232421] border border-warm-grey/50 dark:border-white/20 hover:border-bronze text-charcoal dark:text-[#F4F1EA] font-mono text-[10px] uppercase tracking-wider inline-flex items-center gap-1 transition-colors"
+                            >
+                              <span>{action.label}</span>
+                              <ArrowUpRight size={11} aria-hidden="true" />
+                            </Link>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
-                </div>
-              ))}
+                ))}
 
-              {loading && (
-                <div className="flex items-start">
-                  <div className="px-3 py-2.5 bg-white dark:bg-[#242523] border border-warm-grey/40 dark:border-white/10 text-[11px] font-mono text-warm-grey-dark dark:text-[#B5B2AA]">
-                    STRO is preparing a response...
+                {/* Initial Quick-Action Architectural Grid */}
+                {messages.length === 1 && !loading && (
+                  <div className="pt-1 space-y-2">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-warm-grey-dark dark:text-[#B8B5AE] block">
+                      Quick Actions
+                    </span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {QUICK_PROMPTS.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() =>
+                              item.mode === 'quote_builder'
+                                ? openQuoteBuilder()
+                                : sendMessage(item.prompt)
+                            }
+                            className="flex items-center gap-2 p-2.5 text-left text-[11px] bg-white dark:bg-[#222320] border border-warm-grey/40 dark:border-white/12 hover:border-bronze dark:hover:border-bronze text-charcoal dark:text-[#F4F1EA] transition-colors cursor-pointer"
+                          >
+                            <Icon
+                              size={13}
+                              className="text-bronze dark:text-[#C9B28F] shrink-0"
+                              aria-hidden="true"
+                            />
+                            <span className="font-medium leading-tight">
+                              {item.label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <a
+                      href={whatsappDirectHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between px-3 py-2 bg-[#1B7A43]/10 dark:bg-[#1B7A43]/20 border border-[#1B7A43]/35 text-[#145D32] dark:text-[#8EE0AD] text-[11px] hover:bg-[#1B7A43]/15 transition-colors"
+                    >
+                      <span className="flex items-center gap-2 font-medium">
+                        <MessageCircle size={13} aria-hidden="true" />
+                        <span>Direct WhatsApp ({WHATSAPP_DETAILS.displayNumber})</span>
+                      </span>
+                      <ArrowUpRight size={13} aria-hidden="true" />
+                    </a>
+                  </div>
+                )}
+
+                {loading && (
+                  <div className="flex justify-start">
+                    <div className="bg-white dark:bg-[#222320] border border-warm-grey/40 dark:border-white/12 px-3 py-2 text-warm-grey-dark dark:text-[#B8B5AE] font-mono text-[11px]">
+                      Reviewing specification&hellip;
+                    </div>
+                  </div>
+                )}
+
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Chat Composer */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  sendMessage(input);
+                }}
+                className="shrink-0 p-3 bg-white dark:bg-[#1E1F1D] border-t border-warm-grey/35 dark:border-white/12 flex items-center gap-2"
+              >
+                <label htmlFor="stro-chat-input" className="sr-only">
+                  Ask STRO about finishes, preparation, visualiser or quotes
+                </label>
+                <input
+                  ref={inputRef}
+                  id="stro-chat-input"
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  maxLength={800}
+                  placeholder="Ask about finishes, prep, visualiser or quotes..."
+                  className="flex-1 min-w-0 text-xs px-3 py-2 border border-warm-grey/50 dark:border-white/15 bg-ivory-light dark:bg-[#141513] text-charcoal dark:text-[#F4F1EA] placeholder:text-warm-grey-dark dark:placeholder:text-[#8E8B82] focus:outline-none focus:border-bronze"
+                />
+                <button
+                  type="submit"
+                  disabled={!input.trim() || loading}
+                  aria-label="Send message to STRO"
+                  className="p-2.5 bg-charcoal dark:bg-[#F4F1EA] hover:bg-bronze dark:hover:bg-bronze text-white dark:text-[#20211F] dark:hover:text-white transition-colors disabled:opacity-40 cursor-pointer shrink-0"
+                >
+                  <Send size={14} aria-hidden="true" />
+                </button>
+              </form>
+            </>
+          ) : (
+            /* Guided Quote Intake & Verified Backend Handoff View */
+            <div className="flex-1 min-h-[240px] overflow-y-auto p-4 bg-ivory-light dark:bg-[#191A18] text-xs space-y-3">
+              {quoteReceipt ? (
+                <div role="status" className="p-4 bg-white dark:bg-[#222320] border border-bronze/50 space-y-3">
+                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-mono text-[11px] uppercase tracking-wider font-semibold">
+                    <CheckCircle2 size={16} aria-hidden="true" />
+                    <span>Quotation Request Logged</span>
+                  </div>
+                  <p className="text-charcoal/85 dark:text-[#F4F1EA]/85 leading-relaxed">
+                    Your enquiry has been recorded in Strovyn&apos;s consultation queue (Ref:{' '}
+                    <code className="font-mono text-[11px]">{quoteReceipt.id.slice(0, 8)}</code>).
+                    {!quoteReceipt.notified &&
+                      ' You can also share a copy directly on WhatsApp below for immediate attention.'}
+                  </p>
+                  <div className="flex flex-col gap-2 pt-1">
+                    <a
+                      href={buildWhatsAppQuoteHref()}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-2.5 px-3 bg-[#1B7A43] hover:bg-[#156336] text-white font-mono text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <MessageCircle size={13} aria-hidden="true" />
+                      <span>Follow Up on WhatsApp</span>
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuoteReceipt(null);
+                        setQuoteDraft(INITIAL_QUOTE_DRAFT);
+                      }}
+                      className="w-full py-2 px-3 border border-warm-grey/50 dark:border-white/20 text-charcoal dark:text-[#F4F1EA] font-mono text-[10px] uppercase tracking-wider hover:border-bronze transition-colors cursor-pointer"
+                    >
+                      Prepare Another Brief
+                    </button>
                   </div>
                 </div>
+              ) : (
+                <form onSubmit={handleQuoteSubmit} className="space-y-3">
+                  <div className="space-y-1">
+                    <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-bronze dark:text-[#C9B28F] font-semibold">
+                      Guided Project Intake
+                    </p>
+                    <p className="text-[11px] text-charcoal/75 dark:text-[#B8B5AE] leading-relaxed">
+                      Submit your project brief directly or carry these details into the full{' '}
+                      <code className="font-mono text-[10px]">/contact</code> portal (if attaching plans).
+                    </p>
+                  </div>
+
+                  {quoteError && (
+                    <div
+                      role="alert"
+                      className="p-2.5 bg-red-50 dark:bg-[#2A1616] border border-red-300 dark:border-red-700/60 text-[11px] text-red-900 dark:text-red-200"
+                    >
+                      {quoteError}
+                    </div>
+                  )}
+
+                  <div>
+                    <label
+                      htmlFor="stro-quote-service"
+                      className="block font-mono text-[10px] uppercase tracking-wider text-warm-grey-dark dark:text-[#B8B5AE] mb-1"
+                    >
+                      Discipline Required
+                    </label>
+                    <select
+                      id="stro-quote-service"
+                      value={quoteDraft.serviceRequired}
+                      onChange={(e) =>
+                        setQuoteDraft((p) => ({ ...p, serviceRequired: e.target.value }))
+                      }
+                      className="w-full px-2.5 py-2 text-xs border border-warm-grey/50 dark:border-white/15 bg-white dark:bg-[#141513] text-charcoal dark:text-[#F4F1EA] focus:outline-none focus:border-bronze"
+                    >
+                      {SERVICE_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label
+                        htmlFor="stro-quote-location"
+                        className="block font-mono text-[10px] uppercase tracking-wider text-warm-grey-dark dark:text-[#B8B5AE] mb-1"
+                      >
+                        Adelaide Suburb
+                      </label>
+                      <input
+                        id="stro-quote-location"
+                        type="text"
+                        placeholder="e.g. Norwood, Unley"
+                        value={quoteDraft.projectLocation}
+                        onChange={(e) =>
+                          setQuoteDraft((p) => ({ ...p, projectLocation: e.target.value }))
+                        }
+                        className="w-full px-2.5 py-2 text-xs border border-warm-grey/50 dark:border-white/15 bg-white dark:bg-[#141513] text-charcoal dark:text-[#F4F1EA] focus:outline-none focus:border-bronze"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="stro-quote-name"
+                        className="block font-mono text-[10px] uppercase tracking-wider text-warm-grey-dark dark:text-[#B8B5AE] mb-1"
+                      >
+                        Full Name *
+                      </label>
+                      <input
+                        id="stro-quote-name"
+                        type="text"
+                        required
+                        placeholder="Your name"
+                        value={quoteDraft.fullName}
+                        onChange={(e) =>
+                          setQuoteDraft((p) => ({ ...p, fullName: e.target.value }))
+                        }
+                        className="w-full px-2.5 py-2 text-xs border border-warm-grey/50 dark:border-white/15 bg-white dark:bg-[#141513] text-charcoal dark:text-[#F4F1EA] focus:outline-none focus:border-bronze"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label
+                        htmlFor="stro-quote-email"
+                        className="block font-mono text-[10px] uppercase tracking-wider text-warm-grey-dark dark:text-[#B8B5AE] mb-1"
+                      >
+                        Email *
+                      </label>
+                      <input
+                        id="stro-quote-email"
+                        type="email"
+                        required
+                        placeholder="you@example.com"
+                        value={quoteDraft.email}
+                        onChange={(e) =>
+                          setQuoteDraft((p) => ({ ...p, email: e.target.value }))
+                        }
+                        className="w-full px-2.5 py-2 text-xs border border-warm-grey/50 dark:border-white/15 bg-white dark:bg-[#141513] text-charcoal dark:text-[#F4F1EA] focus:outline-none focus:border-bronze"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="stro-quote-phone"
+                        className="block font-mono text-[10px] uppercase tracking-wider text-warm-grey-dark dark:text-[#B8B5AE] mb-1"
+                      >
+                        Phone *
+                      </label>
+                      <input
+                        id="stro-quote-phone"
+                        type="tel"
+                        required
+                        placeholder="0400 000 000"
+                        value={quoteDraft.phone}
+                        onChange={(e) =>
+                          setQuoteDraft((p) => ({ ...p, phone: e.target.value }))
+                        }
+                        className="w-full px-2.5 py-2 text-xs border border-warm-grey/50 dark:border-white/15 bg-white dark:bg-[#141513] text-charcoal dark:text-[#F4F1EA] focus:outline-none focus:border-bronze"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="stro-quote-scope"
+                      className="block font-mono text-[10px] uppercase tracking-wider text-warm-grey-dark dark:text-[#B8B5AE] mb-1"
+                    >
+                      Project Scope &amp; Rooms *
+                    </label>
+                    <textarea
+                      id="stro-quote-scope"
+                      rows={3}
+                      required
+                      placeholder="e.g. 3 bedrooms + hallway interior walls & ceilings, plaster repair around window reveals..."
+                      value={quoteDraft.scopeSummary}
+                      onChange={(e) =>
+                        setQuoteDraft((p) => ({ ...p, scopeSummary: e.target.value }))
+                      }
+                      className="w-full px-2.5 py-2 text-xs border border-warm-grey/50 dark:border-white/15 bg-white dark:bg-[#141513] text-charcoal dark:text-[#F4F1EA] focus:outline-none focus:border-bronze"
+                    />
+                  </div>
+
+                  <div className="space-y-2 pt-1">
+                    <button
+                      type="submit"
+                      disabled={quoteSubmitting}
+                      className="w-full py-2.5 px-3 bg-bronze hover:bg-bronze-hover text-white font-mono text-[11px] uppercase tracking-[0.16em] font-medium transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      {quoteSubmitting ? 'Submitting Brief...' : 'Submit Quick Enquiry'}
+                    </button>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <Link
+                        href={buildFullFormHref()}
+                        onClick={() => setIsOpen(false)}
+                        className="py-2 px-2.5 border border-warm-grey/50 dark:border-white/20 text-center font-mono text-[10px] uppercase tracking-wider text-charcoal dark:text-[#F4F1EA] hover:border-bronze transition-colors flex items-center justify-center gap-1"
+                      >
+                        <span>Full Form + Files</span>
+                        <ArrowUpRight size={11} aria-hidden="true" />
+                      </Link>
+                      <a
+                        href={buildWhatsAppQuoteHref()}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="py-2 px-2.5 bg-[#1B7A43] hover:bg-[#156336] text-white text-center font-mono text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center gap-1"
+                      >
+                        <MessageCircle size={11} aria-hidden="true" />
+                        <span>WhatsApp Brief</span>
+                      </a>
+                    </div>
+                  </div>
+                </form>
               )}
-
-              <div ref={messagesEndRef} />
             </div>
-
-            {/* Input Form */}
-            <form
-              onSubmit={(e) => handleSend(e)}
-              className="p-3 border-t border-warm-grey/40 dark:border-white/15 bg-white dark:bg-[#141513] flex gap-2 shrink-0"
-            >
-              <label htmlFor="stro-assistant-input" className="sr-only">
-                Ask STRO a question
-              </label>
-              <input
-                ref={inputRef}
-                id="stro-assistant-input"
-                type="text"
-                value={inputVal}
-                onChange={(e) => setInputVal(e.target.value)}
-                disabled={loading}
-                placeholder="Ask about services, finishes, or your project..."
-                className="flex-1 min-w-0 bg-ivory-light dark:bg-[#242523] border border-warm-grey/60 dark:border-white/20 px-3 py-2 text-xs text-charcoal dark:text-white focus:outline-none focus:border-bronze dark:focus:border-[#C9B28F] disabled:opacity-60"
-              />
-              <button
-                type="submit"
-                disabled={loading || !inputVal.trim()}
-                className="px-3.5 bg-bronze hover:bg-bronze-hover disabled:opacity-40 text-white flex items-center justify-center transition-colors cursor-pointer disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bronze"
-                aria-label="Send message to STRO"
-              >
-                <Send size={14} aria-hidden="true" />
-              </button>
-            </form>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </div>
+      )}
     </>
   );
 };

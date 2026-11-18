@@ -1,16 +1,19 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { prefersReducedMotion } from '@/lib/motion/gsapConfig';
 import { CinematicIntro } from './CinematicIntro';
+
+const useIsomorphicLayoutEffect =
+  typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 /**
  * IntroWrapper — Server-layout-safe client shell.
  *
- * Displays the architectural editorial opening once per browser session on `/`.
- * Exit animation runs cleanly inside CinematicIntro via GSAP before unmounting,
- * so there is zero Framer Motion / GSAP overlap and zero SSR blocking.
- * Internal routes render immediately without any interruption.
+ * Plays the architectural cinematic opening automatically once per browser session on `/`.
+ * Reduced-motion visitors receive the homepage immediately without delay.
+ * Internal routes render immediately without interruption.
  */
 export const IntroWrapper = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
@@ -18,8 +21,10 @@ export const IntroWrapper = ({ children }: { children: React.ReactNode }) => {
 
   const [showIntro, setShowIntro] = useState<boolean>(false);
 
-  useEffect(() => {
-    if (!isHomepage) {
+  useIsomorphicLayoutEffect(() => {
+    document.documentElement.removeAttribute('data-intro-pending');
+
+    if (!isHomepage || prefersReducedMotion()) {
       setShowIntro(false);
       return;
     }
@@ -32,14 +37,15 @@ export const IntroWrapper = ({ children }: { children: React.ReactNode }) => {
     }
   }, [isHomepage]);
 
-  const handleEnter = () => {
+  const handleEnter = useCallback(() => {
     try {
       sessionStorage.setItem('strovyn_intro_seen', 'true');
     } catch {
       // ignore private storage restrictions
     }
+    document.documentElement.removeAttribute('data-intro-pending');
     setShowIntro(false);
-  };
+  }, []);
 
   return (
     <>
