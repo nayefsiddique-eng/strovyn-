@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 
 interface PaletteOption {
   name: string;
-  category: 'Architectural Mineral' | 'Warm Editorial' | 'Heritage Limewash';
+  category: 'Architectural Mineral' | 'Warm Editorial' | 'Artisanal Limewash';
   hex: string;
   sheen: string;
   recommendedSubstrate: string;
@@ -22,7 +23,7 @@ const PALETTES: PaletteOption[] = [
   },
   {
     name: 'Raw Limestone Chalk',
-    category: 'Heritage Limewash',
+    category: 'Artisanal Limewash',
     hex: '#EBE7DF',
     sheen: 'Dead Flat (1%)',
     recommendedSubstrate: 'Internal Masonry, Bluestone, & Sandstone Accents',
@@ -97,6 +98,25 @@ export const FinishExplorer: React.FC = () => {
               ))}
             </div>
           </div>
+
+          {/* Wall Colour Visualiser Entry Point (Approach B) */}
+          <div className="pt-4 mt-4 border-t border-warm-grey/30 space-y-3">
+            <div>
+              <h3 className="font-serif text-lg text-charcoal">
+                Preview finishes on your own walls
+              </h3>
+              <p className="font-sans text-xs sm:text-sm text-charcoal/75 leading-relaxed mt-1">
+                Explore how a selected finish could look in your own room using the Strovyn Wall Colour Visualiser.
+              </p>
+            </div>
+            <Link
+              href={`/visualiser?finish=${encodeURIComponent(selected.name)}`}
+              className="inline-flex items-center justify-center gap-2.5 px-5 py-3 bg-bronze hover:bg-bronze-hover text-white font-mono text-xs uppercase tracking-[0.16em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bronze focus-visible:ring-offset-2"
+            >
+              <span>TRY THE WALL VISUALISER</span>
+              <span aria-hidden="true">&rarr;</span>
+            </Link>
+          </div>
         </div>
 
         {/* Right Column: Interactive Swatch Display */}
@@ -142,8 +162,27 @@ export const FinishExplorer: React.FC = () => {
             </div>
           </div>
 
+          {/* Contextual Action: Discuss this finish */}
+          <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-warm-grey/20">
+            <div>
+              <span className="font-mono text-[10px] text-bronze uppercase tracking-widest block font-medium">
+                FINISH ENQUIRY
+              </span>
+              <span className="font-sans text-xs text-charcoal/80 block">
+                Discuss this finish with Strovyn
+              </span>
+            </div>
+            <Link
+              href={`/contact?finish=${encodeURIComponent(selected.name)}`}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-charcoal hover:bg-black text-white font-mono text-xs uppercase tracking-[0.16em] transition-colors shrink-0"
+            >
+              <span>Discuss This Finish</span>
+              <span aria-hidden="true">&rarr;</span>
+            </Link>
+          </div>
+
           {/* Disclaimer regarding real-world variance */}
-          <div className="pt-2 text-[10px] text-warm-grey-dark italic border-t border-warm-grey/20">
+          <div className="pt-2 text-[10px] text-warm-grey-dark italic">
             * Please Note: Digital on-screen colour and sheen representations may vary from actual painted finishes due to individual device display profiles, room orientation, and in-situ substrate porosity. Physical drawdown swatches are verified during our free on-site Adelaide consultation.
           </div>
         </div>

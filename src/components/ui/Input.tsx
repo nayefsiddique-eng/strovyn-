@@ -39,7 +39,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
     const variantStyles = {
       bordered: cn(
-        "w-full bg-white text-charcoal text-sm font-sans placeholder:text-warm-grey",
+        "w-full bg-white text-charcoal text-sm font-sans placeholder:text-warm-grey-dark",
         "border border-warm-grey/60 px-4 py-3 rounded-none shadow-none",
         "transition-colors duration-200 ease-out",
         "focus:outline-none focus:border-bronze focus:ring-1 focus:ring-bronze",
@@ -48,7 +48,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         rightElement && "pr-11"
       ),
       underline: cn(
-        "w-full bg-transparent text-charcoal text-sm font-sans placeholder:text-warm-grey",
+        "w-full bg-transparent text-charcoal text-sm font-sans placeholder:text-warm-grey-dark",
         "border-0 border-b border-warm-grey/60 px-0 py-3 rounded-none shadow-none",
         "transition-colors duration-200 ease-out",
         "focus:outline-none focus:border-bronze focus:border-b-2",

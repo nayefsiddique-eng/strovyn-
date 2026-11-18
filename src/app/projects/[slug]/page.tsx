@@ -54,8 +54,16 @@ export default async function ProjectDetailPage({ params }: Props) {
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
           <div className="max-w-3xl">
             <div className="flex items-center gap-3 mb-3">
-              <Badge variant={project.lifecycle === 'Completed' ? 'bronze' : 'warning'}>
-                {project.lifecycle}
+              <Badge
+                variant={
+                  project.isDemonstrationSpec
+                    ? 'warning'
+                    : project.lifecycle === 'Completed'
+                    ? 'bronze'
+                    : 'warning'
+                }
+              >
+                {project.isDemonstrationSpec ? 'Demonstration Study' : project.lifecycle}
               </Badge>
               <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium">
                 {project.category} &mdash; {project.location}

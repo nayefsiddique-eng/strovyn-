@@ -5,48 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { motion, useReducedMotion } from 'framer-motion';
 import Button from '@/components/ui/Button';
-
-export interface EditorialArticle {
-  slug: string;
-  category: string;
-  title: string;
-  introduction: string;
-  readingTime: string;
-  image: string;
-}
-
-export const editorialArticles: EditorialArticle[] = [
-  {
-    slug: 'achieving-as-nzs-2311-level-5-surface-standards',
-    category: 'SURFACE SCIENCE',
-    title: 'Why Surface Preparation Determines the Final Paint Finish.',
-    introduction:
-      'Over 70% of finish quality is decided before topcoat mobilization. Discover how substrate moisture diagnostics, planar tolerance checks, and dual-axis dustless sanding prevent raking light imperfections.',
-    readingTime: '5 min read',
-    image:
-      'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&w=1200&q=80',
-  },
-  {
-    slug: 'chemistry-of-potassium-silicate-mineral-coatings',
-    category: 'MATERIAL CHEMISTRY',
-    title: 'Choosing the Right Paint Finish for Different Interior Spaces.',
-    introduction:
-      'From dead-flat mineral silicates that diffuse northern raking light to durable catalyzed 2K polyurethanes for bespoke joinery, understand the aesthetic and tactile behavior of modern architectural finishes.',
-    readingTime: '6 min read',
-    image:
-      'https://images.unsplash.com/photo-1562259949-e8e7689d7828?auto=format&fit=crop&w=1200&q=80',
-  },
-  {
-    slug: 'heritage-restoration-bluestone-lime-wash-adelaide',
-    category: 'PROJECT GUIDANCE',
-    title: 'What to Consider Before Starting a Painting Project.',
-    introduction:
-      'Substrate moisture equilibrium, architectural daylight audits, dust containment strategies, and contractor scheduling milestones essential for seamless residential and commercial execution.',
-    readingTime: '4 min read',
-    image:
-      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
-  },
-];
+import { getLatestArticles } from '@/data/articlesData';
 
 const tickerWords = [
   'PREPARATION',
@@ -69,6 +28,7 @@ export interface InsightsArticlesProps {
 
 export const InsightsArticles: React.FC<InsightsArticlesProps> = ({ className = '' }) => {
   const shouldReduce = useReducedMotion();
+  const articles = getLatestArticles(3);
 
   return (
     <section
@@ -146,7 +106,7 @@ export const InsightsArticles: React.FC<InsightsArticlesProps> = ({ className = 
 
         {/* 3 Editorial Article Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10">
-          {editorialArticles.map((article, idx) => (
+          {articles.map((article, idx) => (
             <motion.article
               key={article.slug}
               initial={{ opacity: 0, y: 24 }}
@@ -166,7 +126,7 @@ export const InsightsArticles: React.FC<InsightsArticlesProps> = ({ className = 
                   className="relative aspect-[16/10] w-full overflow-hidden bg-charcoal block cursor-pointer"
                 >
                   <Image
-                    src={article.image}
+                    src={article.coverImage}
                     alt={article.title}
                     fill
                     sizes="(max-width: 768px) 100vw, 33vw"
@@ -183,7 +143,7 @@ export const InsightsArticles: React.FC<InsightsArticlesProps> = ({ className = 
                 <div className="p-6 sm:p-8 flex flex-col gap-3">
                   <div className="flex items-center justify-between text-xs font-mono text-warm-grey-dark">
                     <span>{article.category}</span>
-                    <span>{article.readingTime}</span>
+                    <span>{article.readTime}</span>
                   </div>
 
                   <h3 className="font-serif text-2xl text-charcoal group-hover:text-bronze transition-colors">
@@ -193,7 +153,7 @@ export const InsightsArticles: React.FC<InsightsArticlesProps> = ({ className = 
                   </h3>
 
                   <p className="font-sans text-xs sm:text-sm text-charcoal-muted leading-relaxed font-light">
-                    {article.introduction}
+                    {article.excerpt}
                   </p>
                 </div>
               </div>

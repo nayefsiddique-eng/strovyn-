@@ -50,7 +50,7 @@ export const servicesData: ServiceItem[] = [
     shortDescription:
       'Breathable mineral silicates and protective elastomeric systems built for extreme weather.',
     fullDescription:
-      'Architectural envelope coatings utilizing potassium silicate and micro-porous resins that crystallize into masonry substrates. Guarantees moisture breathability, UV color stability, and crack-bridging longevity.',
+      'Architectural envelope coatings utilizing potassium silicate and micro-porous resins that crystallize into masonry substrates. Formulated for moisture breathability, UV color stability, and crack-bridging durability.',
     specifications: [
       'Potassium Silicate Masonry Systems',
       'Elastomeric Weatherproofing & Crack Bridging',

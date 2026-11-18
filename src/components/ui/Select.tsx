@@ -48,14 +48,14 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
 
     const variantStyles = {
       bordered: cn(
-        "w-full bg-white text-charcoal text-sm font-sans appearance-none",
+        "w-full bg-white text-charcoal text-sm font-sans appearance-none [-webkit-appearance:none] [-moz-appearance:none]",
         "border border-warm-grey/60 px-4 py-3 pr-10 rounded-none shadow-none cursor-pointer",
         "transition-colors duration-200 ease-out",
         "focus:outline-none focus:border-bronze focus:ring-1 focus:ring-bronze",
         error && "border-red-600 focus:border-red-600 focus:ring-red-600"
       ),
       underline: cn(
-        "w-full bg-transparent text-charcoal text-sm font-sans appearance-none",
+        "w-full bg-transparent text-charcoal text-sm font-sans appearance-none [-webkit-appearance:none] [-moz-appearance:none]",
         "border-0 border-b border-warm-grey/60 px-0 py-3 pr-8 rounded-none shadow-none cursor-pointer",
         "transition-colors duration-200 ease-out",
         "focus:outline-none focus:border-bronze focus:border-b-2",

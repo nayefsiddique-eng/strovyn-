@@ -82,22 +82,44 @@ export const Header: React.FC<HeaderProps> = ({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    setIsDark(document.documentElement.classList.contains("dark"));
+  }, []);
+
+  const toggleTheme = () => {
+    const willBeDark = !document.documentElement.classList.contains("dark");
+    if (willBeDark) {
+      document.documentElement.classList.add("dark");
+      try {
+        localStorage.setItem("strovyn-theme", "dark");
+      } catch {
+        // Fallback for private browsing storage restrictions
+      }
+      setIsDark(true);
+    } else {
+      document.documentElement.classList.remove("dark");
+      try {
+        localStorage.setItem("strovyn-theme", "light");
+      } catch {
+        // Fallback for private browsing storage restrictions
+      }
+      setIsDark(false);
+    }
+  };
+
   const isHome = pathname === "/";
   const isSolid = true; // Reference design uses clean white background with crisp charcoal links
 
   return (
     <>
-      <motion.header
-        initial={false}
-        animate={{
-          backgroundColor: isScrolled ? "rgba(255, 255, 255, 0.96)" : "#FFFFFF",
-          borderBottomColor: isScrolled
-            ? "rgba(0, 0, 0, 0.08)"
-            : "rgba(0, 0, 0, 0.04)",
-        }}
-        transition={{ duration: 0.2 }}
+      <header
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 w-full border-b backdrop-blur-sm transition-colors",
+          "fixed top-0 left-0 right-0 z-50 w-full border-b backdrop-blur-sm",
+          isScrolled
+            ? "bg-white/96 border-black/[0.08] dark:bg-[#181917]/96 dark:border-white/[0.08]"
+            : "bg-white border-black/[0.04] dark:bg-[#181917] dark:border-white/[0.06]",
           className
         )}
       >
@@ -155,14 +177,58 @@ export const Header: React.FC<HeaderProps> = ({
               })}
             </nav>
 
-            {/* Right: Desktop CTA & Mobile Hamburger */}
-            <div className="flex items-center gap-4">
+            {/* Right: Theme Toggle, Desktop CTA & Mobile Hamburger */}
+            <div className="flex items-center gap-3 sm:gap-4">
+              {/* Theme Toggle Button (40x40px Minimal Circular Toggle) */}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+                className="w-10 h-10 rounded-full border border-warm-grey/40 dark:border-white/20 hover:border-bronze dark:hover:border-bronze flex items-center justify-center transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-bronze cursor-pointer bg-transparent"
+              >
+                {/* Moon Icon for Light Mode (hidden in Dark Mode) */}
+                <svg
+                  className="w-4 h-4 text-charcoal transition-transform duration-300 motion-safe:hover:-rotate-12 block dark:hidden"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+
+                {/* Sun Icon for Dark Mode (hidden in Light Mode) */}
+                <svg
+                  className="w-4 h-4 text-white transition-transform duration-300 motion-safe:hover:rotate-45 hidden dark:block"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="5" />
+                  <line x1="12" y1="1" x2="12" y2="3" />
+                  <line x1="12" y1="21" x2="12" y2="23" />
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                  <line x1="1" y1="12" x2="3" y2="12" />
+                  <line x1="21" y1="12" x2="23" y2="12" />
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                </svg>
+              </button>
+
               <div className="hidden sm:block">
                 <Link
                   href="/contact"
-                  className="inline-flex items-center justify-center bg-[#111110] hover:bg-black text-white px-6 py-2.5 font-mono text-xs uppercase tracking-[0.18em] font-medium transition-colors"
+                  className="inline-flex items-center justify-center bg-[#111110] hover:bg-black !text-white hover:!text-white px-6 py-2.5 font-mono text-xs uppercase tracking-[0.18em] font-semibold transition-colors shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-red"
                 >
-                  GET A QUOTE
+                  <span className="!text-white font-semibold">GET A QUOTE</span>
                 </Link>
               </div>
 
@@ -196,7 +262,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
         </div>
-      </motion.header>
+      </header>
 
       {/* Fullscreen Mobile Navigation Menu */}
       <AnimatePresence>
@@ -323,9 +389,14 @@ export const Header: React.FC<HeaderProps> = ({
                   Get a Quote
                 </Button>
                 <div className="flex flex-col sm:flex-row items-center justify-between text-xs tracking-[0.1em] text-charcoal-muted uppercase font-sans gap-2 text-center sm:text-left pt-2">
-                  <span>Mon – Sat 7:00 AM – 5:00 PM ACST</span>
-                  <a href="mailto:contact@strovyn.com" className="hover:text-bronze transition-colors">
-                    contact@strovyn.com
+                  <span>Adelaide, South Australia</span>
+                  <a
+                    href="https://wa.me/61406646061"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-charcoal transition-colors"
+                  >
+                    WhatsApp: +61 406 646 061
                   </a>
                 </div>
               </div>

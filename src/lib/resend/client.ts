@@ -11,23 +11,36 @@ export const sendNotificationEmail = async ({
   subject: string;
   html: string;
 }) => {
+  const recipientEmail =
+    process.env.NOTIFICATION_EMAIL || process.env.ADMIN_EMAIL;
+
   if (!resend) {
     console.info(`[RESEND NOTICE: Integration ready, awaiting RESEND_API_KEY] Subject: ${subject}`);
     return { success: false, configured: false };
   }
 
+  if (!recipientEmail) {
+    console.warn(`[RESEND NOTICE: Missing NOTIFICATION_EMAIL destination] Subject: ${subject}`);
+    return { success: false, configured: false, error: 'Notification recipient not configured' };
+  }
+
   try {
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@strovynpainting.com';
-    const data = await resend.emails.send({
-      from: 'Strovyn Notifications <notifications@strovynpainting.com>',
-      to: [adminEmail],
+    const fromEmail =
+      process.env.RESEND_FROM_EMAIL || 'Strovyn Notifications <notifications@strovyn.com>';
+    const result = await resend.emails.send({
+      from: fromEmail,
+      to: [recipientEmail],
       subject,
       html,
     });
-    return { success: true, data };
+    if (result.error) {
+      console.error('Resend API returned error:', result.error.message);
+      return { success: false, configured: true, error: result.error.message };
+    }
+    return { success: true, configured: true, data: result.data };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     console.error('Failed to send Resend email:', msg);
-    return { success: false, error: msg };
+    return { success: false, configured: true, error: msg };
   }
 };

@@ -4,6 +4,7 @@ import { playfair, inter, bebasNeue } from '@/styles/fonts';
 import { Header, Footer } from '@/components/layout';
 import { FloatingContact } from '@/components/floating/FloatingContact';
 import { AIAssistant } from '@/components/floating/AIAssistant';
+import { IntroWrapper } from '@/components/intro';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -41,14 +42,34 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${playfair.variable} ${inter.variable} ${bebasNeue.variable} h-full`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){
+              try {
+                var key = 'strovyn-theme';
+                var saved = localStorage.getItem(key);
+                var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                var isDark = saved === 'dark' || (!saved && prefersDark);
+                if (isDark) {
+                  document.documentElement.classList.add('dark');
+                } else {
+                  document.documentElement.classList.remove('dark');
+                }
+              } catch(e) {}
+            })();`,
+          }}
+        />
+      </head>
       <body className="min-h-full bg-ivory text-charcoal font-sans antialiased flex flex-col">
         <React.Suspense fallback={<div className="h-20" />}>
           <Header />
         </React.Suspense>
         <div className="flex-1">
-          {children}
+          <IntroWrapper>{children}</IntroWrapper>
         </div>
         <Footer />
         <FloatingContact />

@@ -25,8 +25,8 @@ export const processStages: ProcessStep[] = [
     title: 'Prepare',
     subtitle: 'Zero-Deflection Substrate Engineering',
     description:
-      'Over 70% of coating longevity is won in preparation. We execute multi-pass skim coating, structural joint tape bedding, and dual-axis HEPA machine sanding under 1000-lumen inspection lights.',
-    action: 'Level 5 AS/NZS 2311 Micro-Skim & Sand',
+      'The vast majority of finish quality is won in preparation. We execute multi-pass skim coating, structural joint tape bedding, and dual-axis HEPA machine sanding under 1000-lumen inspection lights.',
+    action: 'Precision Substrate Micro-Skim & Sand',
   },
   {
     number: '03',
@@ -163,9 +163,9 @@ export const StrovynApproach: React.FC<StrovynApproachProps> = ({ className = ''
           </div>
 
           <div className="shrink-0 flex items-center gap-4 text-xs font-mono text-white/60 uppercase tracking-wider">
-            <span>FULLY LICENSED &amp; INSURED</span>
+            <span>ADELAIDE ARCHITECTURAL SPECIALISTS</span>
             <span className="text-bronze">|</span>
-            <span>$20M PUBLIC LIABILITY</span>
+            <span>WRITTEN SCOPE SCHEDULES</span>
           </div>
         </div>
       </div>

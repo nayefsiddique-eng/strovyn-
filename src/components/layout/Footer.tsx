@@ -15,7 +15,8 @@ const servicesLinks = [
   { label: "Architectural Finishes", href: "/services#architectural" },
   { label: "Commercial Painting", href: "/services#commercial" },
   { label: "Color Consultation", href: "/services#consultation" },
-  { label: "Restoration & Heritage", href: "/services#restoration" },
+  { label: "Wall Colour Visualiser", href: "/visualiser" },
+  { label: "Surface Restoration", href: "/services#restoration" },
 ];
 
 const companyLinks = [
@@ -35,6 +36,12 @@ const socialLinks = [
 
 export const Footer: React.FC<FooterProps> = ({ className }) => {
   const currentYear = 2026;
+  // Temporary honest disclosure state until approved legal copy is provided for /privacy, /terms, /cookies
+  const [legalNotice, setLegalNotice] = React.useState<'privacy' | 'terms' | 'cookies' | null>(null);
+
+  const toggleNotice = (key: 'privacy' | 'terms' | 'cookies') => {
+    setLegalNotice((prev) => (prev === key ? null : key));
+  };
 
   return (
     <footer
@@ -102,8 +109,8 @@ export const Footer: React.FC<FooterProps> = ({ className }) => {
                   </div>
                 </Link>
                 <p className="mt-6 text-sm text-warm-grey leading-relaxed max-w-sm font-light">
-                  Specialized in premium architectural painting, heritage
-                  restoration, and bespoke surface treatments. Built on an
+                  Specialized in premium architectural painting, surface
+                  restoration, and bespoke finishes. Built on an
                   uncompromising dedication to craft and quiet luxury.
                 </p>
               </div>
@@ -178,18 +185,6 @@ export const Footer: React.FC<FooterProps> = ({ className }) => {
               <div className="space-y-4 text-sm font-light text-warm-grey">
                 <div>
                   <span className="block text-[10px] uppercase tracking-[0.14em] text-warm-grey-dark mb-1 font-normal">
-                    Email Inquiries
-                  </span>
-                  <a
-                    href="mailto:contact@strovyn.com"
-                    className="hover:text-bronze transition-colors block text-warm-grey break-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bronze"
-                  >
-                    contact@strovyn.com
-                  </a>
-                </div>
-
-                <div>
-                  <span className="block text-[10px] uppercase tracking-[0.14em] text-warm-grey-dark mb-1 font-normal">
                     Free Consultations
                   </span>
                   <Link
@@ -202,11 +197,11 @@ export const Footer: React.FC<FooterProps> = ({ className }) => {
 
                 <div>
                   <span className="block text-[10px] uppercase tracking-[0.14em] text-warm-grey-dark mb-1 font-normal">
-                    Service Region &amp; Hours
+                    Location &amp; Service Region
                   </span>
                   <address className="not-italic text-warm-grey leading-relaxed text-xs">
-                    Greater Adelaide Metropolitan, South Australia<br />
-                    Mon–Sat: 7:00 AM – 5:00 PM ACST
+                    Adelaide, South Australia<br />
+                    Serving Greater Adelaide Metropolitan
                   </address>
                 </div>
               </div>
@@ -215,42 +210,95 @@ export const Footer: React.FC<FooterProps> = ({ className }) => {
         </div>
       </section>
 
-      {/* Bottom Bar: Thin top border, copyright, legal links */}
-      <div className="border-t border-warm-grey/15 py-8">
+      {/* Bottom Bar: Thin top border, copyright, temporary honest legal notice triggers, and mobile bar clearance */}
+      <div className="border-t border-warm-grey/15 pt-8 pb-32 md:pb-10">
         <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
+          {legalNotice && (
+            <div
+              id="footer-legal-notice"
+              role="region"
+              aria-label="Legal policy status notice"
+              className="mb-6 p-4 border border-warm-grey/25 bg-[#1B1C1A] text-xs text-warm-grey flex flex-col sm:flex-row sm:items-start justify-between gap-4"
+            >
+              <div className="space-y-1 max-w-3xl leading-relaxed">
+                <p className="font-mono text-[11px] uppercase tracking-wider text-bronze font-semibold">
+                  {legalNotice === "privacy" && "Privacy Policy — Formal Document Pending Publication"}
+                  {legalNotice === "terms" && "Terms of Service — Formal Document Pending Publication"}
+                  {legalNotice === "cookies" && "Cookie & Browser Storage Notice"}
+                </p>
+                {legalNotice === "privacy" && (
+                  <p>
+                    Strovyn Painting Co. is preparing formal Privacy Policy documentation for website publication. Information submitted through our{" "}
+                    <Link href="/contact" className="underline hover:text-white">
+                      quotation form
+                    </Link>{" "}
+                    is used to respond to project enquiries. Please contact our Adelaide team directly for written privacy details prior to engagement.
+                  </p>
+                )}
+                {legalNotice === "terms" && (
+                  <p>
+                    Strovyn Painting Co. is preparing formal website Terms of Service for publication. Project scopes, coatings specifications, and pricing are established only in written quotations following an on-site Adelaide inspection. Digital visualiser colours are illustrative previews only.
+                  </p>
+                )}
+                {legalNotice === "cookies" && (
+                  <p>
+                    This site stores an optional display preference (<code className="font-mono text-white">strovyn-theme</code>) in local browser storage and processes Wall Colour Visualiser photos locally inside your browser without automatic uploads. Formal cookie documentation is pending business sign-off.
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setLegalNotice(null)}
+                className="self-start px-3 py-1 border border-warm-grey/30 text-[11px] font-mono uppercase tracking-wider text-warm-grey hover:text-white hover:border-white/50 cursor-pointer shrink-0"
+              >
+                Close
+              </button>
+            </div>
+          )}
+
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-light text-warm-grey-dark">
             <p>
               &copy; {currentYear} Strovyn Painting Co. All rights reserved.
             </p>
 
+            {/* Future approved legal routes: /privacy, /terms, /cookies */}
             <nav
               aria-label="Legal navigation"
-              className="flex items-center gap-6"
+              className="flex flex-wrap items-center justify-center gap-4 sm:gap-6"
             >
-              <Link
-                href="/privacy"
-                className="hover:text-bronze transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bronze"
+              <button
+                type="button"
+                onClick={() => toggleNotice("privacy")}
+                aria-expanded={legalNotice === "privacy"}
+                aria-controls="footer-legal-notice"
+                className="hover:text-bronze transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bronze cursor-pointer"
               >
                 Privacy Policy
-              </Link>
-              <span className="text-warm-grey/30" aria-hidden="true">
+              </button>
+              <span className="text-warm-grey" aria-hidden="true">
                 /
               </span>
-              <Link
-                href="/terms"
-                className="hover:text-bronze transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bronze"
+              <button
+                type="button"
+                onClick={() => toggleNotice("terms")}
+                aria-expanded={legalNotice === "terms"}
+                aria-controls="footer-legal-notice"
+                className="hover:text-bronze transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bronze cursor-pointer"
               >
                 Terms of Service
-              </Link>
-              <span className="text-warm-grey/30" aria-hidden="true">
+              </button>
+              <span className="text-warm-grey" aria-hidden="true">
                 /
               </span>
-              <Link
-                href="/cookies"
-                className="hover:text-bronze transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bronze"
+              <button
+                type="button"
+                onClick={() => toggleNotice("cookies")}
+                aria-expanded={legalNotice === "cookies"}
+                aria-controls="footer-legal-notice"
+                className="hover:text-bronze transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bronze cursor-pointer"
               >
                 Cookie Preferences
-              </Link>
+              </button>
             </nav>
           </div>
         </div>

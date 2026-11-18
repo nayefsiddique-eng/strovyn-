@@ -58,7 +58,7 @@ export const EditorialStatement: React.FC<EditorialStatementProps> = ({ classNam
 
               <div className="space-y-4 font-sans text-base text-charcoal/80 leading-relaxed border-l-2 border-bronze pl-6 my-8">
                 <p>
-                  At Strovyn Painting Co., we treat architectural coatings not as cosmetic coverage, but as the critical tactile skin of a built environment. Our craftsmen execute exacting Level 5 finishes with zero substrate deflection, laser-straight shadow lines, and dust-controlled HEPA extraction on-site.
+                  At Strovyn Painting Co., we treat architectural coatings not as cosmetic coverage, but as the critical tactile skin of a built environment. Our craftsmen execute exacting premium finishes with zero substrate deflection, laser-straight shadow lines, and dust-controlled HEPA extraction on-site.
                 </p>
                 <p className="text-sm text-warm-grey-dark italic">
                   Calibrated against natural South Australian northern and southern light transitions to preserve visual depth throughout changing hours.
@@ -115,10 +115,10 @@ export const EditorialStatement: React.FC<EditorialStatementProps> = ({ classNam
             {/* Architectural Spec Stamp */}
             <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between text-white font-mono text-xs z-10">
               <span className="uppercase tracking-widest font-medium">
-                SURFACE DETAIL // LEVEL 5 SPEC
+                SURFACE DETAIL // ARCHITECTURAL FINISH
               </span>
               <span className="border border-white/40 bg-black/40 px-2 py-0.5 text-[10px]">
-                AS/NZS 2311
+                ADELAIDE SA
               </span>
             </div>
           </motion.div>

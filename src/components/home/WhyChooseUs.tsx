@@ -177,9 +177,9 @@ export const WhyChooseUs: React.FC<WhyChooseUsProps> = ({ className }) => {
           </div>
 
           <div className="shrink-0 flex items-center gap-4 text-xs font-mono text-warm-grey-dark uppercase tracking-wider">
-            <span>FULLY LICENSED &amp; INSURED</span>
+            <span>ADELAIDE ARCHITECTURAL SPECIALISTS</span>
             <span className="text-bronze">|</span>
-            <span>PUBLIC LIABILITY $20M</span>
+            <span>WRITTEN SCOPE SCHEDULES</span>
           </div>
         </div>
       </div>

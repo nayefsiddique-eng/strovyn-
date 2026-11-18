@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { randomUUID } from 'crypto';
 import { createClient as createSupabaseClient } from '@/lib/supabase/server';
 
 export interface DBQuote {
@@ -166,7 +167,7 @@ export async function getQuotes(): Promise<DBQuote[]> {
 export async function addQuote(quote: Omit<DBQuote, 'id' | 'createdAt' | 'status'>): Promise<DBQuote> {
   const newQuote: DBQuote = {
     ...quote,
-    id: `qt-${Date.now().toString(36)}`,
+    id: randomUUID(),
     status: 'pending',
     createdAt: new Date().toISOString(),
   };
@@ -174,21 +175,26 @@ export async function addQuote(quote: Omit<DBQuote, 'id' | 'createdAt' | 'status
   if (isSupabaseConfigured()) {
     try {
       const supabase = await createSupabaseClient();
-      const { data, error } = await supabase.from('quote_requests').insert({
+      const persistedDescription = newQuote.propertyType
+        ? `[Property Type: ${newQuote.propertyType}]\n${newQuote.description}`
+        : newQuote.description;
+
+      // Schema (001_initial_schema.sql) grants anonymous INSERT only (no SELECT policy),
+      // so do not chain .select().single() under anon RLS.
+      const { error } = await supabase.from('quote_requests').insert({
         id: newQuote.id,
         full_name: newQuote.fullName,
         email: newQuote.email,
         phone: newQuote.phone,
         project_location: newQuote.projectLocation,
         service_required: newQuote.serviceRequired,
-        property_type: newQuote.propertyType,
-        description: newQuote.description,
+        description: persistedDescription,
         preferred_contact: newQuote.preferredContact,
         attachment_url: newQuote.attachmentUrl,
         status: newQuote.status,
-      }).select().single();
-      if (!error && data) return newQuote;
-      if (error && process.env.NODE_ENV === 'production') {
+      });
+      if (!error) return newQuote;
+      if (process.env.NODE_ENV === 'production') {
         throw new Error('Database persistence failed');
       }
     } catch (e) {

@@ -63,14 +63,14 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
     const variantStyles = {
       bordered: cn(
-        "w-full bg-white text-charcoal text-sm font-sans placeholder:text-warm-grey",
+        "w-full bg-white text-charcoal text-sm font-sans placeholder:text-warm-grey-dark",
         "border border-warm-grey/60 p-4 rounded-none shadow-none resize-y",
         "transition-colors duration-200 ease-out",
         "focus:outline-none focus:border-bronze focus:ring-1 focus:ring-bronze",
         error && "border-red-600 focus:border-red-600 focus:ring-red-600"
       ),
       underline: cn(
-        "w-full bg-transparent text-charcoal text-sm font-sans placeholder:text-warm-grey",
+        "w-full bg-transparent text-charcoal text-sm font-sans placeholder:text-warm-grey-dark",
         "border-0 border-b border-warm-grey/60 px-0 py-3 rounded-none shadow-none resize-y",
         "transition-colors duration-200 ease-out",
         "focus:outline-none focus:border-bronze focus:border-b-2",

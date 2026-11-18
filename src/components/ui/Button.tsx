@@ -30,7 +30,7 @@ export type ButtonProps = ButtonBaseProps &
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    "bg-bronze text-white border border-bronze hover:bg-[#967B56] hover:border-[#967B56] active:bg-[#856C4A]",
+    "bg-bronze text-white border border-bronze hover:bg-bronze-hover hover:border-bronze-hover active:bg-[#5A452C]",
   secondary:
     "bg-charcoal text-white border border-charcoal hover:bg-[#2D2E2B] hover:border-[#2D2E2B] active:bg-[#1A1B19]",
   outline:

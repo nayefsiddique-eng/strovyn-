@@ -1,23 +1,90 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
 
-export default function ContactPage() {
-  const [formState, setFormState] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    projectLocation: '',
-    serviceRequired: 'Interior Architectural Painting',
-    propertyType: 'Residential Luxury',
-    preferredContact: 'email',
-    description: '',
-    attachmentUrl: '',
-  });
+const INITIAL_FORM_STATE = {
+  fullName: '',
+  email: '',
+  phone: '',
+  projectLocation: '',
+  serviceRequired: 'Interior Precision Painting',
+  propertyType: 'Residential Villa / Home',
+  preferredContact: 'email',
+  description: '',
+  attachmentUrl: '',
+};
+
+const SERVICE_QUERY_MAP: Record<string, { service: string; scopeNote?: string }> = {
+  interior: { service: 'Interior Precision Painting' },
+  exterior: { service: 'Exterior Cladding & Facade Protection' },
+  'surface-restoration': {
+    service: 'Interior Precision Painting',
+    scopeNote: 'Requested focus: Architectural Surface Restoration',
+  },
+  plaster: {
+    service: 'Interior Precision Painting',
+    scopeNote: 'Requested focus: Bespoke Artisan Plasters',
+  },
+  commercial: { service: 'Commercial & Heritage Painting' },
+};
+
+function ContactFormContent() {
+  const searchParams = useSearchParams();
+  const [formState, setFormState] = useState(INITIAL_FORM_STATE);
+
+  // Prefill query parameters safely without overwriting user-entered text
+  useEffect(() => {
+    const finishParam = searchParams.get('finish')?.trim();
+    const hexParam = searchParams.get('hex')?.trim();
+    const nameParam = searchParams.get('name')?.trim();
+    const emailParam = searchParams.get('email')?.trim();
+    const phoneParam = searchParams.get('phone')?.trim();
+    const serviceParam = searchParams.get('service')?.trim();
+
+    if (!finishParam && !nameParam && !emailParam && !phoneParam && !serviceParam) {
+      return;
+    }
+
+    setFormState((prev) => {
+      const next = { ...prev };
+      if (nameParam && !prev.fullName) next.fullName = nameParam;
+      if (emailParam && !prev.email) next.email = emailParam;
+      if (phoneParam && !prev.phone) next.phone = phoneParam;
+
+      let scopeNote: string | undefined;
+      if (serviceParam) {
+        const mapped = SERVICE_QUERY_MAP[serviceParam];
+        if (mapped) {
+          next.serviceRequired = mapped.service;
+          scopeNote = mapped.scopeNote;
+        }
+      }
+
+      const prefillLines: string[] = [];
+      if (finishParam) {
+        const hexSuffix = hexParam ? ` (${hexParam})` : '';
+        const finishLine = `Enquiry regarding finish: ${finishParam}${hexSuffix}`;
+        if (!prev.description.includes(finishParam)) {
+          prefillLines.push(finishLine);
+        }
+      }
+      if (scopeNote && !prev.description.includes(scopeNote)) {
+        prefillLines.push(scopeNote);
+      }
+
+      if (prefillLines.length > 0) {
+        const prefix = prefillLines.join('\n');
+        next.description = prev.description ? `${prefix}\n\n${prev.description}` : prefix;
+      }
+
+      return next;
+    });
+  }, [searchParams]);
 
   const [uploading, setUploading] = useState(false);
   const [attachmentName, setAttachmentName] = useState('');
@@ -27,8 +94,23 @@ export default function ContactPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    if (loading || uploading) return;
     setErrorMsg('');
+
+    if (formState.fullName.trim().length < 2) {
+      setErrorMsg('Please enter your full name (at least 2 characters).');
+      return;
+    }
+    if (formState.phone.trim().length < 6) {
+      setErrorMsg('Please enter a valid contact phone number.');
+      return;
+    }
+    if (formState.description.trim().length < 10) {
+      setErrorMsg('Please provide a brief project scope description (at least 10 characters).');
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const res = await fetch('/api/quotes', {
@@ -86,11 +168,9 @@ export default function ContactPage() {
             <div className="p-6 bg-white border border-warm-grey/40 space-y-6 text-sm">
               <div>
                 <span className="font-mono text-xs uppercase text-bronze tracking-wider block mb-1">
-                  OFFICIAL CORRESPONDENCE
+                  DIRECT CONTACT
                 </span>
-                <a href="mailto:contact@strovyn.com" className="font-sans font-medium text-charcoal hover:text-bronze">
-                  contact@strovyn.com
-                </a>
+                <p className="font-sans text-charcoal/70 text-sm">Use WhatsApp below for fastest response.</p>
               </div>
 
               <div className="pt-4 border-t border-warm-grey/20">
@@ -101,7 +181,7 @@ export default function ContactPage() {
                   href="https://wa.me/61406646061?text=Hello%20Strovyn%20Painting%20Co.%20I%20would%20like%20to%20enquire%20about%20a%20painting%20project%20in%20Adelaide."
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-mono text-sm font-semibold text-emerald-800 hover:text-emerald-600 flex items-center gap-2"
+                  className="font-mono text-sm font-semibold text-emerald-800 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-300 flex items-center gap-2"
                 >
                   <span>0406 646 061</span>
                   <span className="text-xs font-sans font-normal text-warm-grey-dark">(Click to chat)</span>
@@ -110,11 +190,11 @@ export default function ContactPage() {
 
               <div className="pt-4 border-t border-warm-grey/20">
                 <span className="font-mono text-xs uppercase text-bronze tracking-wider block mb-1">
-                  LOCATION &amp; OPERATING HOURS
+                  LOCATION &amp; SERVICE REGION
                 </span>
                 <p className="font-sans text-charcoal/80">
                   Adelaide, South Australia<br />
-                  <span className="text-xs text-warm-grey-dark">Monday – Saturday: 7:00 AM – 5:00 PM ACST</span>
+                  <span className="text-xs text-warm-grey-dark">Serving Greater Adelaide Metropolitan</span>
                 </p>
               </div>
             </div>
@@ -140,7 +220,7 @@ export default function ContactPage() {
               </h2>
 
               {submitted ? (
-                <div className="p-8 bg-ivory border border-bronze text-center space-y-4">
+                <div role="status" className="p-8 bg-ivory border border-bronze text-center space-y-4">
                   <span className="font-serif text-2xl text-charcoal block">Quotation Request Logged</span>
                   <p className="font-sans text-sm text-charcoal/80 max-w-md mx-auto">
                     Your project details have been successfully recorded in our management queue. An estimating director will review your requirements and reach out via your preferred contact method.
@@ -149,17 +229,7 @@ export default function ContactPage() {
                     onClick={() => {
                       setSubmitted(false);
                       setAttachmentName('');
-                      setFormState({
-                        fullName: '',
-                        email: '',
-                        phone: '',
-                        projectLocation: '',
-                        serviceRequired: 'Interior Architectural Painting',
-                        propertyType: 'Residential Luxury',
-                        preferredContact: 'email',
-                        description: '',
-                        attachmentUrl: '',
-                      });
+                      setFormState(INITIAL_FORM_STATE);
                     }}
                     variant="outline"
                     size="sm"
@@ -170,21 +240,21 @@ export default function ContactPage() {
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {errorMsg && (
-                    <div className="p-4 bg-red-50 border border-red-300 text-xs text-red-800">
+                    <div role="alert" className="p-4 bg-red-50 border border-red-300 text-xs text-red-800">
                       {errorMsg}
                     </div>
                   )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <Input
-                      label="Full Name *"
+                      label="Full Name"
                       required
                       placeholder="Julian Vance"
                       value={formState.fullName}
                       onChange={(e) => setFormState({ ...formState, fullName: e.target.value })}
                     />
                     <Input
-                      label="Email Address *"
+                      label="Email Address"
                       type="email"
                       required
                       placeholder="j.vance@example.com"
@@ -195,7 +265,7 @@ export default function ContactPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <Input
-                      label="Telephone *"
+                      label="Telephone"
                       type="tel"
                       required
                       placeholder="0400 000 000"
@@ -203,7 +273,7 @@ export default function ContactPage() {
                       onChange={(e) => setFormState({ ...formState, phone: e.target.value })}
                     />
                     <Input
-                      label="Adelaide Suburb / Location *"
+                      label="Adelaide Suburb / Location"
                       required
                       placeholder="e.g. North Adelaide, Norwood, Unley, Crafers"
                       value={formState.projectLocation}
@@ -213,7 +283,8 @@ export default function ContactPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <Select
-                      label="Primary Discipline Required *"
+                      label="Primary Discipline Required"
+                      required
                       value={formState.serviceRequired}
                       onChange={(e) => setFormState({ ...formState, serviceRequired: e.target.value })}
                       options={[
@@ -226,7 +297,8 @@ export default function ContactPage() {
                     />
 
                     <Select
-                      label="Property Typology *"
+                      label="Property Typology"
+                      required
                       value={formState.propertyType}
                       onChange={(e) => setFormState({ ...formState, propertyType: e.target.value })}
                       options={[
@@ -260,7 +332,7 @@ export default function ContactPage() {
                   </div>
 
                   <Textarea
-                    label="Project Scope &amp; Architectural Specifications *"
+                    label="Project Scope & Architectural Specifications"
                     required
                     rows={5}
                     placeholder="Provide details on ceiling heights, raking light exposures, square meterage, schedule milestones..."
@@ -270,13 +342,17 @@ export default function ContactPage() {
 
                   {/* Architectural Plan / PDF Attachment */}
                   <div className="p-4 bg-ivory border border-warm-grey/30 space-y-2">
-                    <span className="font-sans text-xs uppercase tracking-wider text-charcoal font-medium block">
+                    <label
+                      htmlFor="quote-attachment-input"
+                      className="font-sans text-xs uppercase tracking-wider text-charcoal font-medium block"
+                    >
                       Architectural Plans or Reference Drawings (Optional)
-                    </span>
+                    </label>
                     <p className="text-[11px] text-warm-grey-dark">
                       Upload PDF plans, DWG exports, or finish schedule documents (Max 15MB).
                     </p>
                     <input
+                      id="quote-attachment-input"
                       type="file"
                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
                       onChange={async (e) => {
@@ -331,5 +407,21 @@ export default function ContactPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function ContactPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="w-full min-h-screen bg-ivory text-charcoal flex items-center justify-center py-40">
+          <div className="font-mono text-xs text-warm-grey-dark uppercase tracking-widest animate-pulse">
+            Loading Specification Portal...
+          </div>
+        </main>
+      }
+    >
+      <ContactFormContent />
+    </Suspense>
   );
 }

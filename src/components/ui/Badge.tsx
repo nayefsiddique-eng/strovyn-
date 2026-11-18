@@ -23,20 +23,20 @@ const variantStyles: Record<BadgeVariant, { container: string; dot: string }> = 
     dot: "bg-charcoal",
   },
   bronze: {
-    container: "bg-bronze/10 border-bronze text-[#876E4B]",
-    dot: "bg-bronze",
+    container: "bg-bronze/10 border-bronze text-bronze-hover dark:text-[#C9B28F]",
+    dot: "bg-bronze dark:bg-[#C9B28F]",
   },
   success: {
-    container: "bg-emerald-950/5 border-emerald-700/40 text-emerald-800",
-    dot: "bg-emerald-600",
+    container: "bg-emerald-950/5 dark:bg-emerald-950/40 border-emerald-700/40 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-300",
+    dot: "bg-emerald-600 dark:bg-emerald-400",
   },
   warning: {
-    container: "bg-amber-950/5 border-amber-700/40 text-amber-800",
-    dot: "bg-amber-600",
+    container: "bg-amber-950/5 dark:bg-amber-950/40 border-amber-700/40 dark:border-amber-500/40 text-amber-800 dark:text-amber-300",
+    dot: "bg-amber-600 dark:bg-amber-400",
   },
   error: {
-    container: "bg-rose-950/5 border-rose-700/40 text-rose-800",
-    dot: "bg-rose-600",
+    container: "bg-rose-950/5 dark:bg-rose-950/40 border-rose-700/40 dark:border-rose-500/40 text-rose-800 dark:text-rose-300",
+    dot: "bg-rose-600 dark:bg-rose-400",
   },
 };
 

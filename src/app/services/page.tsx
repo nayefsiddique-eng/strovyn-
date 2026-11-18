@@ -112,8 +112,8 @@ export default function ServicesPage() {
           <p className="font-sans text-base sm:text-lg text-warm-grey leading-relaxed mb-8 max-w-2xl mx-auto">
             We deliver 600×600mm substrate test panels directly to your design studio for light-balancing and client sign-off.
           </p>
-          <Button href="/contact" variant="primary" size="lg">
-            Order Sample Box &amp; Specification Review
+          <Button href="/contact" variant="primary" size="lg" className="max-w-full text-center">
+            <span className="truncate sm:whitespace-normal">Order Sample Box &amp; Specification Review</span>
           </Button>
         </div>
       </section>

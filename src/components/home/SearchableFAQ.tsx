@@ -14,7 +14,7 @@ const FAQ_DATA: FAQItem[] = [
     category: 'Preparation & Standards',
     question: 'What is Strovyn’s zero-tolerance surface preparation process?',
     answer:
-      'We invest over 70% of our labour in substrate diagnostics, crack remediation, planar skim leveling, and dust-controlled orbital sanding. We never paint over unstable, chalking, or poorly bonded surfaces.',
+      'We invest significant craftsmanship and focus in substrate diagnostics, crack remediation, planar skim leveling, and dust-controlled orbital sanding. We never paint over unstable, chalking, or poorly bonded surfaces.',
   },
   {
     category: 'Preparation & Standards',

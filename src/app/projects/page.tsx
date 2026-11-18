@@ -116,11 +116,20 @@ export default function ProjectsPage() {
                   sizes="(max-width: 768px) 100vw, 50vw"
                 />
                 <div className="absolute top-4 left-4 flex gap-2">
-                  <Badge variant={project.lifecycle === 'Completed' ? 'bronze' : 'warning'}>
-                    {project.lifecycle}
+                  <Badge
+                    variant={
+                      project.isDemonstrationSpec
+                        ? 'warning'
+                        : project.lifecycle === 'Completed'
+                        ? 'bronze'
+                        : 'warning'
+                    }
+                    className="bg-ivory/95 dark:bg-charcoal/95"
+                  >
+                    {project.isDemonstrationSpec ? 'Demonstration Study' : project.lifecycle}
                   </Badge>
                   <span className="font-mono text-xs bg-charcoal/90 text-white px-2.5 py-1 uppercase tracking-widest">
-                    {project.year}
+                    {project.isDemonstrationSpec ? 'Illustrative Spec' : project.year}
                   </span>
                 </div>
               </Link>

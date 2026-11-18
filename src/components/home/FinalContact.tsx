@@ -53,23 +53,15 @@ export const FinalContact: React.FC<FinalContactProps> = ({
             {/* Direct Contact Coordinates as shown in mobile reference */}
             <div className="space-y-4 font-sans text-sm text-white/95 pt-4 border-t border-white/20">
               <a
-                href="tel:0406646061"
+                href={WHATSAPP_DETAILS.chatUrl}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex items-center gap-3 hover:text-white transition-colors"
               >
-                <svg className="w-5 h-5 text-white/90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                <svg className="w-5 h-5 text-white/90" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.634.044-1.29-.199-.705-.261-1.558-.871-2.261-1.574-.703-.703-1.313-1.556-1.574-2.261-.243-.656-.244-.978-.199-1.29.05-.333.419-1.026.824-1.17.133-.048.28-.023.372.069.13.131.428.985.498 1.157.069.172.035.328-.046.449-.07.104-.15.176-.239.267-.099.1-.177.172-.07.357.144.251.524.846 1.053 1.375.529.529 1.124.909 1.375 1.053.185.107.257.029.357-.07.091-.089.163-.169.267-.239.121-.081.277-.115.449-.046.172.07 1.026.368 1.157.498.092.092.117.239.069.372z" />
                 </svg>
-                <span className="font-mono tracking-wide">+61 406 646 061</span>
-              </a>
-
-              <a
-                href="mailto:contact@strovyn.com"
-                className="flex items-center gap-3 hover:text-white transition-colors"
-              >
-                <svg className="w-5 h-5 text-white/90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                <span className="font-mono tracking-wide">contact@strovyn.com</span>
+                <span className="font-mono tracking-wide">WhatsApp: +61 406 646 061</span>
               </a>
 
               <div className="flex items-center gap-3 text-white/90">
@@ -77,7 +69,7 @@ export const FinalContact: React.FC<FinalContactProps> = ({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <span>Serving the greater Adelaide metro area</span>
+                <span>Serving greater Adelaide, South Australia</span>
               </div>
             </div>
           </motion.div>
@@ -103,6 +95,7 @@ export const FinalContact: React.FC<FinalContactProps> = ({
                 <label htmlFor="quote-name" className="sr-only">Full name</label>
                 <input
                   id="quote-name"
+                  name="name"
                   type="text"
                   placeholder="Full name"
                   required
@@ -114,6 +107,7 @@ export const FinalContact: React.FC<FinalContactProps> = ({
                 <label htmlFor="quote-email" className="sr-only">Email</label>
                 <input
                   id="quote-email"
+                  name="email"
                   type="email"
                   placeholder="Email"
                   required
@@ -125,6 +119,7 @@ export const FinalContact: React.FC<FinalContactProps> = ({
                 <label htmlFor="quote-phone" className="sr-only">Phone (optional)</label>
                 <input
                   id="quote-phone"
+                  name="phone"
                   type="tel"
                   placeholder="Phone (optional)"
                   className="w-full px-4 py-3.5 border border-charcoal/20 text-sm font-sans focus:outline-none focus:border-charcoal bg-transparent"
@@ -135,11 +130,13 @@ export const FinalContact: React.FC<FinalContactProps> = ({
                 <label htmlFor="quote-service" className="sr-only">Service</label>
                 <select
                   id="quote-service"
+                  name="service"
+                  defaultValue="interior"
                   className="w-full px-4 py-3.5 border border-charcoal/20 text-sm font-sans focus:outline-none focus:border-charcoal bg-transparent text-charcoal/80"
                 >
                   <option value="interior">Interior Architectural Painting</option>
-                  <option value="exterior">Exterior Facade &amp; Restoration</option>
-                  <option value="heritage">Heritage Conservation Painting</option>
+                  <option value="exterior">Exterior Facade &amp; Coatings</option>
+                  <option value="surface-restoration">Architectural Surface Restoration</option>
                   <option value="plaster">Bespoke Artisan Plasters</option>
                   <option value="commercial">Commercial Specifications</option>
                 </select>

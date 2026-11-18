@@ -40,7 +40,7 @@ export const PROJECTS_DATA: ProjectData[] = [
       '/images/projects/adelaide-luxury-residence/kitchen-island-patio-3.jpg',
     ],
     scope: [
-      'Level 5 surface prep across open-plan living, kitchen and dining expanses',
+      'Comprehensive surface prep across open-plan living, kitchen and dining expanses',
       'Dust-controlled orbital machine sanding throughout architectural walls and ceilings',
       'Ultra-flat interior ceiling and low-sheen wall finishes catching natural daylight',
       'Precision masking and crisp hand-cut trim lines on custom cabinetry and architraves',

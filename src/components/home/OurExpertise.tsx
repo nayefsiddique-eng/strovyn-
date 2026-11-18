@@ -21,8 +21,8 @@ export const expertiseServices: ExpertiseItem[] = [
     title: 'Interior Architectural Painting',
     slug: 'interior-architectural-painting',
     shortDescription:
-      'Level 5 finish standards, precision shadow line junctions, and light-responsive pigment depths engineered for raking daylight.',
-    spec: 'Level 5 Plasterboard Skim & HEPA Dust-Free Sanding',
+      'High-specification finish standards, precision shadow line junctions, and light-responsive pigment depths engineered for raking daylight.',
+    spec: 'Full Surface Skim & HEPA Dust-Controlled Sanding',
     image:
       'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=80',
   },
@@ -58,11 +58,11 @@ export const expertiseServices: ExpertiseItem[] = [
   },
   {
     number: '05',
-    title: 'Historic & Heritage Conservation',
-    slug: 'historic-heritage-conservation',
+    title: 'Architectural Surface Restoration',
+    slug: 'architectural-surface-restoration',
     shortDescription:
-      'Period molding restoration, archival paint layer analysis, and conservation coatings for Adelaide Victorian and bluestone cottages.',
-    spec: 'Archival Distemper Matching & Lead-Safe Remediation',
+      'Substrate repair, precision planar skim-coating, and advanced remediation for weathered or degraded interior and exterior architectural surfaces.',
+    spec: 'Substrate Consolidation & High-Adhesion Bonding Matrix',
     image:
       'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80',
   },
@@ -87,7 +87,7 @@ export const OurExpertise: React.FC<OurExpertiseProps> = ({ className = '' }) =>
     <section
       id="expertise"
       aria-label="Our Expertise & Services"
-      className={`relative w-full bg-ivory text-charcoal py-24 md:py-36 border-b border-warm-grey/30 overflow-hidden ${className}`}
+      className={`relative w-full bg-[#20211F] text-white py-24 md:py-36 border-b border-white/10 overflow-hidden ${className}`}
     >
       <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
         {/* Section Header */}
@@ -96,13 +96,13 @@ export const OurExpertise: React.FC<OurExpertiseProps> = ({ className = '' }) =>
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-80px' }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-col md:flex-row md:items-end justify-between border-b border-warm-grey/30 pb-6 mb-16 gap-6"
+          className="flex flex-col md:flex-row md:items-end justify-between border-b border-white/10 pb-6 mb-16 gap-6"
         >
           <div>
             <span className="font-sans text-xs sm:text-sm uppercase tracking-[0.2em] text-bronze font-medium block mb-3">
               [ 02 / DISCIPLINES &amp; SERVICES ]
             </span>
-            <h2 className="font-serif text-3xl sm:text-5xl md:text-6xl text-charcoal tracking-tight max-w-2xl">
+            <h2 className="font-serif text-3xl sm:text-5xl md:text-6xl text-white tracking-tight max-w-2xl">
               Our Architectural Finishing Expertise.
             </h2>
           </div>
@@ -147,7 +147,7 @@ export const OurExpertise: React.FC<OurExpertiseProps> = ({ className = '' }) =>
                 ease: [0.16, 1, 0.3, 1],
                 delay: index * 0.1,
               }}
-              className="group border border-warm-grey/40 bg-white flex flex-col justify-between transition-all duration-300 hover:shadow-xl hover:border-charcoal/60"
+              className="group border border-white/10 bg-[#2A2B29] flex flex-col justify-between transition-all duration-300 hover:shadow-xl hover:border-bronze/50"
             >
               <div>
                 {/* Large Architectural Photograph */}
@@ -172,32 +172,32 @@ export const OurExpertise: React.FC<OurExpertiseProps> = ({ className = '' }) =>
 
                 {/* Editorial Details */}
                 <div className="p-6 sm:p-8 flex flex-col gap-3">
-                  <div className="border-b border-warm-grey/25 pb-3">
+                  <div className="border-b border-white/10 pb-3">
                     <span className="font-mono text-[10px] text-bronze uppercase tracking-widest font-semibold block mb-1">
                       SPECIFICATION
                     </span>
-                    <span className="font-mono text-xs text-warm-grey-dark truncate block">
+                    <span className="font-mono text-xs text-[#B8B5AE] truncate block">
                       {service.spec}
                     </span>
                   </div>
 
-                  <h3 className="font-serif text-2xl text-charcoal group-hover:text-bronze transition-colors">
+                  <h3 className="font-serif text-2xl text-white group-hover:text-bronze transition-colors">
                     <Link href={`/services/${service.slug}`}>
                       {service.title}
                     </Link>
                   </h3>
 
-                  <p className="font-sans text-xs sm:text-sm text-charcoal-muted leading-relaxed font-light">
+                  <p className="font-sans text-xs sm:text-sm text-[#B8B5AE] leading-relaxed font-light">
                     {service.shortDescription}
                   </p>
                 </div>
               </div>
 
               {/* Bottom Link Action */}
-              <div className="p-6 sm:p-8 pt-0 border-t border-warm-grey/20 mt-4 flex items-center justify-between">
+              <div className="p-6 sm:p-8 pt-0 border-t border-white/10 mt-4 flex items-center justify-between">
                 <Link
                   href={`/services/${service.slug}`}
-                  className="font-mono text-xs uppercase tracking-[0.16em] text-charcoal group-hover:text-brand-red font-medium transition-colors inline-flex items-center gap-2"
+                  className="font-mono text-xs uppercase tracking-[0.16em] text-[#B8B5AE] group-hover:text-bronze font-medium transition-colors inline-flex items-center gap-2"
                 >
                   <span>Explore Specifications</span>
                   <span className="transition-transform group-hover:translate-x-1">&rarr;</span>

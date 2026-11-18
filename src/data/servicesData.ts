@@ -54,7 +54,7 @@ export const SERVICES_DATA: ServiceDetail[] = [
       'Pure Potassium Silicate Mineral Petrification',
       'Salt-Mist & Marine Coastal Resilience',
       'High-Pressure Controlled Substrate Cleaning',
-      '10-Year Manufacturer Guaranteed Systems',
+      'Weather-Resistant Architectural Envelope Coatings',
     ],
     processSteps: [
       { step: '01', title: 'Bio & Efflorescence Removal', desc: 'High-temperature low-pressure biocidal washing.' },

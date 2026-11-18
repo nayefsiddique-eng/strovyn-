@@ -1,5 +1,10 @@
 'use client';
 
+/**
+ * UNPUBLISHED TEMPLATE COMPONENT — DO NOT MOUNT IN PUBLIC ROUTES WITH SAMPLE DATA.
+ * `sampleTestimonials` below are non-production placeholders. Genuine, written, and
+ * consented client endorsements must replace these fixtures before mounting on `/`.
+ */
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Badge from '@/components/ui/Badge';

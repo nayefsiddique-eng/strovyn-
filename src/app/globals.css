@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   /* Brand Colors */
   --color-ivory: #F4F1EA;
@@ -7,12 +9,12 @@
   --color-charcoal: #20211F;
   --color-charcoal-light: #2E302D;
   --color-charcoal-muted: #434440;
-  --color-bronze: #A78B65;
-  --color-bronze-hover: #937854;
-  --color-bronze-light: #C2AB89;
+  --color-bronze: #7E6340;
+  --color-bronze-hover: #6B5335;
+  --color-bronze-light: #C9B28F;
   --color-warm-grey: #B8B5AE;
   --color-warm-grey-light: #D6D4CF;
-  --color-warm-grey-dark: #7A7771;
+  --color-warm-grey-dark: #595651;
   --color-white: #FFFFFF;
 
   /* Strovyn Signature Red — derived from the official logo */
@@ -57,16 +59,6 @@
     }
   }
 
-  @keyframes introReveal {
-    0% { clip-path: inset(0 100% 0 0); opacity: 0; }
-    100% { clip-path: inset(0 0% 0 0); opacity: 1; }
-  }
-
-  @keyframes logoPulse {
-    0%, 100% { opacity: 0.95; }
-    50% { opacity: 1; }
-  }
-
   @keyframes scrollPulse {
     0% { transform: translateY(-100%); opacity: 0; }
     30% { opacity: 1; }
@@ -78,49 +70,63 @@
 :root {
   --background: #F4F1EA;
   --foreground: #20211F;
-  --accent: #A78B65;
+  --accent: #7E6340;
   --border: #B8B5AE;
 }
 
-html {
-  scroll-behavior: smooth;
-  background-color: #F4F1EA;
-  color: #20211F;
-  font-family: var(--font-sans), Inter, -apple-system, BlinkMacSystemFont, sans-serif;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+@layer base {
+  html {
+    background-color: #F4F1EA;
+    color: #20211F;
+    font-family: var(--font-sans), Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-body {
-  background-color: #F4F1EA;
-  color: #20211F;
-  min-height: 100vh;
-  margin: 0;
-  padding: 0;
-  border-radius: 0;
-}
+  body {
+    background-color: #F4F1EA;
+    color: #20211F;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+  }
 
-/* Architectural Typography */
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-serif), "Playfair Display", Georgia, serif;
-  font-weight: 400;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
-}
+  /* Architectural Typography */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif), "Playfair Display", Georgia, serif;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
 
-p {
-  line-height: 1.7;
+  p {
+    line-height: 1.7;
+  }
+
+  /* Links — inside @layer base so Tailwind utilities like text-white always take precedence */
+  a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #595651;
+    opacity: 1;
+  }
 }
 
 /* Selection Color Styling */
 ::selection {
-  background-color: #A78B65;
+  background-color: #7E6340;
   color: #FFFFFF;
 }
 
 ::-moz-selection {
-  background-color: #A78B65;
+  background-color: #7E6340;
   color: #FFFFFF;
 }
 
@@ -140,23 +146,12 @@ p {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #A78B65;
+  background: #7E6340;
 }
 
 * {
   scrollbar-width: thin;
   scrollbar-color: #B8B5AE #F4F1EA;
-}
-
-/* Links */
-a {
-  color: inherit;
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-a:hover {
-  color: #A78B65;
 }
 
 /* Architectural Editorial Utilities */
@@ -226,3 +221,275 @@ button, input, textarea, select, img {
   }
 }
 
+/* ==========================================================================
+   STROVYN ARCHITECTURAL DARK THEME (SCOPED & PRESERVED)
+   ========================================================================== */
+
+/* Root & Base Container Inversion */
+html.dark {
+  background-color: #181917;
+  color: #F4F1EA;
+}
+html.dark body {
+  background-color: #181917;
+  color: #F4F1EA;
+}
+
+/* Secondary Routes & General Main Content */
+html.dark main {
+  background-color: #181917 !important;
+  color: #F4F1EA !important;
+}
+html.dark main .bg-ivory {
+  background-color: #20211F !important;
+}
+html.dark main .bg-white,
+html.dark main .bg-white\/70,
+html.dark main .bg-\[\#FAF9F5\] {
+  background-color: #2A2B29 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Typography Inversions on Naturally Light Surfaces */
+html.dark main .text-charcoal,
+html.dark main .text-\[\#20211F\] {
+  color: #F4F1EA !important;
+}
+html.dark main .text-charcoal\/85 {
+  color: rgba(244, 241, 234, 0.90) !important;
+}
+html.dark main .text-charcoal\/80 {
+  color: rgba(244, 241, 234, 0.84) !important;
+}
+html.dark main .text-charcoal\/75 {
+  color: rgba(244, 241, 234, 0.80) !important;
+}
+html.dark main .text-charcoal\/70 {
+  color: rgba(244, 241, 234, 0.78) !important;
+}
+html.dark main .text-charcoal\/60 {
+  color: rgba(244, 241, 234, 0.74) !important;
+}
+html.dark main .text-charcoal\/50,
+html.dark main .text-charcoal\/40 {
+  color: #B5B2AA !important;
+}
+html.dark main .text-charcoal-muted {
+  color: #D0CDC6 !important;
+}
+
+/* Readable Bronze, Warm Grey & Brand Red on Dark Surfaces (Both Themes for inherently dark sections) */
+html.dark main .text-bronze,
+html.dark header .text-bronze,
+footer .text-bronze,
+#expertise .text-bronze,
+#approach .text-bronze,
+.bg-\[\#181917\] .text-bronze,
+.bg-\[\#1A1B19\] .text-bronze,
+.bg-charcoal .text-bronze {
+  color: #C9B28F !important;
+}
+
+html.dark main .text-warm-grey-dark,
+html.dark header .text-warm-grey-dark,
+footer .text-warm-grey-dark,
+#expertise .text-warm-grey-dark,
+#approach .text-warm-grey-dark,
+.bg-\[\#181917\] .text-warm-grey-dark,
+.bg-\[\#1A1B19\] .text-warm-grey-dark,
+.bg-\[\#141513\] .text-warm-grey-dark,
+.bg-charcoal .text-warm-grey-dark {
+  color: #B5B2AA !important;
+}
+
+html.dark .text-brand-red,
+#expertise .text-brand-red,
+#approach .text-brand-red,
+.bg-charcoal .text-brand-red {
+  color: #F87171 !important;
+}
+
+/* Light-mode muted text on ivory/white: ensure >= 4.5:1 even when opacity utilities are used */
+.text-charcoal\/40,
+.text-charcoal\/50 {
+  color: #595651;
+}
+
+/* General Input & Form Fields across Routes */
+html.dark input,
+html.dark textarea,
+html.dark select {
+  background-color: #242523 !important;
+  color: #FFFFFF !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #A8A59E !important;
+  opacity: 1 !important;
+}
+
+/* Header & Navigation Bar in Dark Mode */
+html.dark header {
+  background-color: rgba(24, 25, 23, 0.96) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+html.dark header nav a {
+  color: rgba(244, 241, 234, 0.85) !important;
+}
+html.dark header nav a:hover {
+  color: #C9B28F !important;
+}
+html.dark header .text-charcoal {
+  color: #F4F1EA !important;
+}
+html.dark header .bg-charcoal {
+  background-color: #F4F1EA !important;
+}
+html.dark header .text-\[\#111110\] {
+  color: #FFFFFF !important;
+}
+
+/* Mobile Navigation Overlay */
+html.dark [role="dialog"][aria-label="Mobile Navigation Menu"] {
+  background-color: #181917 !important;
+  color: #F4F1EA !important;
+}
+html.dark [role="dialog"][aria-label="Mobile Navigation Menu"] .text-charcoal {
+  color: #F4F1EA !important;
+}
+html.dark [role="dialog"][aria-label="Mobile Navigation Menu"] .border-warm-grey\/30 {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Hero Section Adaptation */
+html.dark section[aria-label="Strovyn Painting Co. Hero"] {
+  background-color: #181917 !important;
+  color: #F4F1EA !important;
+}
+html.dark section[aria-label="Strovyn Painting Co. Hero"] span.text-\[\#111110\] {
+  color: #FFFFFF !important;
+}
+html.dark section[aria-label="Strovyn Painting Co. Hero"] .text-stroke-charcoal {
+  -webkit-text-stroke: 1.5px #FFFFFF !important;
+}
+@media (min-width: 768px) {
+  html.dark section[aria-label="Strovyn Painting Co. Hero"] .text-stroke-charcoal {
+    -webkit-text-stroke: 2px #FFFFFF !important;
+  }
+}
+
+/* Section-Specific Scoped Refinements (Tier 2) */
+html.dark section#editorial-statement {
+  background-color: #20211F !important;
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html.dark section#projects {
+  background-color: #20211F !important;
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+}
+html.dark section#projects .bg-white,
+html.dark section#projects .bg-white\/70 {
+  background-color: #2A2B29 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html.dark section#surface-transformation {
+  background-color: #20211F !important;
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+}
+html.dark section#surface-transformation .bg-white\/80 {
+  background-color: #2A2B29 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html.dark section[aria-label="Colour and Finish Explorer"] {
+  background-color: #20211F !important;
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+}
+html.dark section[aria-label="Colour and Finish Explorer"] .bg-white {
+  background-color: #2A2B29 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+html.dark section[aria-label="Colour and Finish Explorer"] .bg-ivory {
+  background-color: #20211F !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+html.dark section[aria-label="Colour and Finish Explorer"] .bg-white\/95 {
+  background-color: rgba(32, 33, 31, 0.95) !important;
+  color: #FFFFFF !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+html.dark section#insights {
+  background-color: #20211F !important;
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+}
+html.dark section#insights .bg-white\/70 {
+  background-color: #2A2B29 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+html.dark section#insights .bg-white {
+  background-color: #2A2B29 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html.dark section[aria-label="Frequently Asked Questions"] {
+  background-color: #20211F !important;
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+}
+html.dark section[aria-label="Frequently Asked Questions"] .bg-white {
+  background-color: #2A2B29 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* AI Assistant & Floating Elements */
+html.dark #ai-assistant-drawer,
+html.dark div:has(> #ai-assistant-messages) {
+  background-color: #20211F !important;
+  color: #F4F1EA !important;
+}
+
+/* ==========================================================================
+   TIER 3: PROTECTED SECTIONS - ZERO INVERSION OR OVERRIDES
+   ========================================================================== */
+html.dark #expertise {
+  background-color: #20211F !important;
+  color: #FFFFFF !important;
+}
+html.dark #expertise .text-white\/90 {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+html.dark #expertise .bg-\[\#2A2B29\] {
+  background-color: #2A2B29 !important;
+}
+
+html.dark #approach {
+  background-color: #181917 !important;
+  color: #FFFFFF !important;
+}
+html.dark #approach .text-white {
+  color: #FFFFFF !important;
+}
+
+html.dark #contact-section {
+  background-color: #C41E1E !important;
+  color: #FFFFFF !important;
+}
+html.dark #contact-section .text-white,
+html.dark #contact-section .text-white\/90,
+html.dark #contact-section .text-white\/80 {
+  color: inherit !important;
+}
+
+html.dark footer {
+  background-color: #20211F !important;
+  color: #B8B5AE !important;
+}
+html.dark footer .text-warm-grey {
+  color: #B8B5AE !important;
+}
+html.dark footer a:hover {
+  color: #FFFFFF !important;
+}

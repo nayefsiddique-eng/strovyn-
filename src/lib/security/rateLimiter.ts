@@ -81,3 +81,95 @@ export async function checkRateLimit(
     remaining: limit - timestamps.length,
   };
 }
+
+export interface SubmissionDedupRecord {
+  id: string;
+  createdAt: string;
+  notified: boolean;
+  storedAt: number;
+}
+
+const DEDUP_CACHE = new Map<string, SubmissionDedupRecord>();
+const IN_FLIGHT_LOCKS = new Map<string, Promise<unknown>>();
+
+/**
+ * Coalesces / serializes concurrent in-process operations sharing the same dedupKey
+ * so two simultaneous POST requests cannot both bypass the persistence check.
+ */
+export async function withSubmissionLock<T>(
+  dedupKey: string,
+  task: () => Promise<T>
+): Promise<T> {
+  const previous = IN_FLIGHT_LOCKS.get(dedupKey);
+  const run = async (): Promise<T> => {
+    if (previous) {
+      try {
+        await previous;
+      } catch {
+        // Proceed cleanly even if the prior in-flight request failed
+      }
+    }
+    return task();
+  };
+
+  const promise = run();
+  IN_FLIGHT_LOCKS.set(dedupKey, promise);
+  try {
+    return await promise;
+  } finally {
+    if (IN_FLIGHT_LOCKS.get(dedupKey) === promise) {
+      IN_FLIGHT_LOCKS.delete(dedupKey);
+    }
+  }
+}
+
+/**
+ * Reads a recent persisted quote record within ttlMs so retries (e.g. after an
+ * email timeout/failure or double-click) never create duplicate database rows.
+ */
+export function getRecentSubmissionRecord(
+  dedupKey: string,
+  ttlMs: number
+): SubmissionDedupRecord | null {
+  const now = Date.now();
+  const cached = DEDUP_CACHE.get(dedupKey);
+  if (cached) {
+    if (now - cached.storedAt <= ttlMs) return cached;
+    DEDUP_CACHE.delete(dedupKey);
+  }
+
+  try {
+    const filePath = getStoreFilePath(dedupKey);
+    if (fs.existsSync(filePath)) {
+      const parsed = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as SubmissionDedupRecord;
+      if (parsed && now - parsed.storedAt <= ttlMs) {
+        DEDUP_CACHE.set(dedupKey, parsed);
+        return parsed;
+      }
+      // Remove expired record file cleanly
+      fs.unlinkSync(filePath);
+    }
+  } catch {
+    // Non-fatal in read-only or corrupt cache conditions
+  }
+
+  return null;
+}
+
+/**
+ * Saves or updates a quote idempotency record for duplicate-retry protection.
+ */
+export function saveSubmissionRecord(
+  dedupKey: string,
+  record: SubmissionDedupRecord
+): void {
+  DEDUP_CACHE.set(dedupKey, record);
+  try {
+    if (!fs.existsSync(PERSISTENT_STORE_DIR)) {
+      fs.mkdirSync(PERSISTENT_STORE_DIR, { recursive: true });
+    }
+    fs.writeFileSync(getStoreFilePath(dedupKey), JSON.stringify(record, null, 2), 'utf-8');
+  } catch {
+    // Non-fatal in read-only environments
+  }
+}
