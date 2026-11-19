@@ -9,13 +9,20 @@
     "lint": "eslint",
     "test:cms-db": "node scripts/verify-migrations.mjs",
     "test:cms-rbac": "node scripts/test-cms-phase1.mjs",
-    "test:cms": "npm run test:cms-db && npm run test:cms-rbac"
+    "test:cms-phase2": "node scripts/test-cms-phase2.mjs",
+    "test:cms": "npm run test:cms-db && npm run test:cms-rbac && npm run test:cms-phase2"
   },
   "dependencies": {
     "@react-three/drei": "10.7.9",
     "@react-three/fiber": "9.8.2",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.119.0",
+    "@tiptap/extension-image": "^3.34.0",
+    "@tiptap/extension-link": "^3.34.0",
+    "@tiptap/extension-text-align": "^3.34.0",
+    "@tiptap/pm": "^3.34.0",
+    "@tiptap/react": "^3.34.0",
+    "@tiptap/starter-kit": "^3.34.0",
     "framer-motion": "^12.43.0",
     "gsap": "^3.15.1",
     "lucide-react": "^1.72.0",
@@ -23,6 +30,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "resend": "^6.38.0",
+    "sanitize-html": "^2.18.2",
     "server-only": "^0.0.1",
     "three": "^0.187.0",
     "zod": "^4.6.7"
@@ -33,6 +41,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/sanitize-html": "^2.16.2",
     "@types/three": "^0.187.0",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",

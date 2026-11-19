@@ -103,60 +103,67 @@ async function createSupabaseSimulatedDb() {
 async function run() {
   console.log('=== CMS-1.4 PostgreSQL Migration, Privilege Role-Switch & Audit Suite (PGlite) ===');
   const db = await createSupabaseSimulatedDb();
-  const staticArticles = loadArticlesData();
+  try {
+    const staticArticles = loadArticlesData();
 
-  // 1. Run DDL migrations 001 -> 002 -> legacy rows -> 003 -> 004 as schema owner
-  await db.exec(sql001);
-  await db.exec(sql002);
+    // 1. Run DDL migrations 001 -> 002 -> legacy rows -> 003 -> 004 as schema owner
+    await db.exec(sql001);
+    await db.exec(sql002);
 
-  await db.query(
-    `INSERT INTO public.articles (title, slug, content, excerpt, category, status, published_at, created_at)
-     VALUES
-       ('Legacy Null Date Published', 'legacy-null-date-published', 'Legacy published body.', 'Legacy excerpt.', 'Surface Preparation', 'published', NULL, '2025-05-01T00:00:00Z'),
-       ('Legacy Null Status Row', 'legacy-null-status-row', 'Legacy draft body.', 'Legacy excerpt.', 'Paint Chemistry', NULL, NULL, '2025-05-02T00:00:00Z')`
-  );
-  await db.exec(`
-    ALTER TABLE public.articles
-      ADD CONSTRAINT legacy_articles_status_check CHECK (status IN ('draft', 'published') OR status IS NULL);
-  `);
-
-  await db.exec(sql003);
-  await db.exec(sql004);
-  console.log('[OK] Sequential migrations 001 -> 002 -> 003 -> 004 executed over legacy data.');
-
-  // 2. Verify legacy backfill + idempotent re-runs of 003 and 004 (without losing review edits)
-  await asRole(db, 'service_role', async (tx) => {
-    const legacyRes = (
-      await tx.query(`SELECT slug, status, published_at FROM public.articles WHERE slug LIKE 'legacy-%' ORDER BY slug`)
-    ).rows;
-    assert.equal(legacyRes[0].status, 'published');
-    assert.equal(new Date(legacyRes[0].published_at).toISOString(), '2025-05-01T00:00:00.000Z');
-    assert.equal(legacyRes[1].status, 'draft');
-    assert.equal(legacyRes[1].published_at, null);
-
-    await tx.query(
-      `UPDATE public.articles SET title = 'Reviewed Draft Edit Preserved' WHERE slug = 'chemistry-of-potassium-silicate-mineral-coatings'`
+    await db.query(
+      `INSERT INTO public.articles (title, slug, content, excerpt, category, status, published_at, created_at)
+       VALUES
+         ('Legacy Null Date Published', 'legacy-null-date-published', 'Legacy published body.', 'Legacy excerpt.', 'Surface Preparation', 'published', NULL, '2025-05-01T00:00:00Z'),
+         ('Legacy Null Status Row', 'legacy-null-status-row', 'Legacy draft body.', 'Legacy excerpt.', 'Paint Chemistry', NULL, NULL, '2025-05-02T00:00:00Z')`
     );
-  });
+    await db.exec(`
+      ALTER TABLE public.articles
+        ADD CONSTRAINT legacy_articles_status_check CHECK (status IN ('draft', 'published') OR status IS NULL);
+    `);
 
-  await db.exec(sql003);
-  await db.exec(sql004);
+    await db.exec(sql003);
+    await db.exec(sql004);
+    console.log('[OK] Sequential migrations 001 -> 002 -> 003 -> 004 executed over legacy data.');
 
-  await asRole(db, 'service_role', async (tx) => {
-    const row = (
-      await tx.query(`SELECT title, status FROM public.articles WHERE slug = 'chemistry-of-potassium-silicate-mineral-coatings'`)
-    ).rows[0];
-    assert.equal(row.title, 'Reviewed Draft Edit Preserved');
-    assert.equal(row.status, 'review');
-  });
-  console.log('[OK] Legacy backfill (A-1) and idempotent re-execution of 003 & 004 verified.');
+    // 2. Verify legacy backfill + idempotent re-runs of 003 and 004 (without losing review edits)
+    await asRole(db, 'service_role', async (tx) => {
+      const legacyRes = (
+        await tx.query(`SELECT slug, status, published_at FROM public.articles WHERE slug LIKE 'legacy-%' ORDER BY slug`)
+      ).rows;
+      assert.equal(legacyRes[0].status, 'published');
+      assert.equal(new Date(legacyRes[0].published_at).toISOString(), '2025-05-01T00:00:00.000Z');
+      assert.equal(legacyRes[1].status, 'draft');
+      assert.equal(legacyRes[1].published_at, null);
 
-  // 3. Clean DB for function security hardening audit (pg_proc) + parity + role-switched tests
-  const cleanDb = await createSupabaseSimulatedDb();
-  await cleanDb.exec(sql001);
-  await cleanDb.exec(sql002);
-  await cleanDb.exec(sql003);
-  await cleanDb.exec(sql004);
+      await tx.query(
+        `UPDATE public.articles SET title = 'Reviewed Draft Edit Preserved' WHERE slug = 'chemistry-of-potassium-silicate-mineral-coatings'`
+      );
+    });
+
+    await db.exec(sql003);
+    await db.exec(sql004);
+
+    await asRole(db, 'service_role', async (tx) => {
+      const row = (
+        await tx.query(`SELECT title, status FROM public.articles WHERE slug = 'chemistry-of-potassium-silicate-mineral-coatings'`)
+      ).rows[0];
+      assert.equal(row.title, 'Reviewed Draft Edit Preserved');
+      assert.equal(row.status, 'review');
+    });
+    console.log('[OK] Legacy backfill (A-1) and idempotent re-execution of 003 & 004 verified.');
+
+    // 3. Reset `public` schema within the SAME PGlite instance (avoids duplicate WASM
+    //    ArrayBuffer allocation) for clean DB catalog audit + parity + role-switched tests.
+    await db.exec(`
+      DROP SCHEMA IF EXISTS public CASCADE;
+      CREATE SCHEMA public;
+      GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+    `);
+    const cleanDb = db;
+    await cleanDb.exec(sql001);
+    await cleanDb.exec(sql002);
+    await cleanDb.exec(sql003);
+    await cleanDb.exec(sql004);
 
   // Inspect pg_proc catalog for search_path and SECURITY DEFINER boundaries
   const procRows = (
@@ -598,10 +605,10 @@ async function run() {
       subId
     );
   }
-  console.log('[OK] authenticated role-switched GRANT/REVOKE, peer isolation & inactive/outsider denial verified.');
-
-  await cleanDb.close();
-  await db.close();
+    console.log('[OK] authenticated role-switched GRANT/REVOKE, peer isolation & inactive/outsider denial verified.');
+  } finally {
+    await db.close();
+  }
   console.log('=== ALL CMS-1.4 POSTGRESQL HARDENING CHECKS PASSED ===');
 }
 
