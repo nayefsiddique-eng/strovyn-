@@ -6,7 +6,7 @@ import { SERVICES_DATA } from '@/data/servicesData';
 import { Button } from '@/components/ui/Button';
 
 export const metadata: Metadata = {
-  title: 'Services & Finishes | Strovyn Painting Co.',
+  title: 'Services & Finishes',
   description:
     'Comprehensive architectural painting, Level 5 interior coatings, exterior facade restoration, artisanal Venetian plasters, and fine millwork lacquering.',
 };

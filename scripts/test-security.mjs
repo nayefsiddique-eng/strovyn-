@@ -1,4 +1,4 @@
-const http = require('http');
+import http from 'node:http';
 
 function request(options, data) {
   return new Promise((resolve, reject) => {
