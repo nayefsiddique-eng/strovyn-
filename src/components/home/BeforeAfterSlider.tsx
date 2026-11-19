@@ -68,7 +68,7 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
             <span className="font-sans text-xs sm:text-sm uppercase tracking-[0.2em] text-bronze font-medium block mb-3">
               [ 04 / SURFACE PREPARATION &amp; CRAFTSMANSHIP ]
             </span>
-            <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl text-charcoal tracking-tight max-w-2xl">
+            <h2 className="type-section-title text-3xl sm:text-4xl md:text-5xl text-charcoal max-w-2xl">
               The difference is in the invisible preparation.
             </h2>
           </div>
@@ -108,7 +108,7 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
                 <span className="font-mono text-[10px] text-bronze uppercase tracking-widest font-semibold block mb-0.5">
                   COMPLETED WORK · ADELAIDE
                 </span>
-                <span className="font-serif text-sm sm:text-base text-charcoal font-medium">
+                <span className="type-card-title text-sm sm:text-base text-charcoal">
                   Adelaide Residence · Architectural Residential Interior
                 </span>
               </div>
@@ -120,7 +120,7 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
                 <span className="font-mono text-[10px] text-bronze uppercase tracking-widest font-semibold block mb-2">
                   FINISH STANDARDS
                 </span>
-                <h3 className="font-serif text-xl sm:text-2xl text-charcoal mb-4">
+                <h3 className="type-card-title text-xl sm:text-2xl text-charcoal mb-4">
                   Substrate Integrity Under Natural Light
                 </h3>
                 <p className="font-sans text-xs sm:text-sm text-charcoal-muted leading-relaxed font-light mb-6">
@@ -170,7 +170,7 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
                     <span className="font-mono text-xs text-bronze uppercase tracking-widest font-semibold block mb-2">
                       {item.step}
                     </span>
-                    <h4 className="font-serif text-lg text-charcoal mb-2 font-normal">
+                    <h4 className="type-card-title text-lg text-charcoal mb-2">
                       {item.title}
                     </h4>
                     <p className="font-sans text-xs text-charcoal-muted leading-relaxed font-light">

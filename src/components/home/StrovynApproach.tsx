@@ -83,7 +83,7 @@ export const StrovynApproach: React.FC<StrovynApproachProps> = ({ className = ''
             <span className="font-sans text-xs sm:text-sm uppercase tracking-[0.2em] text-bronze font-medium block mb-3">
               [ 04 / METHODOLOGY &amp; DISCIPLINE ]
             </span>
-            <h2 className="font-serif text-3xl sm:text-5xl md:text-6xl text-white tracking-tight max-w-2xl">
+            <h2 className="type-section-title text-3xl sm:text-5xl md:text-6xl text-white max-w-2xl">
               The Strovyn Approach.
             </h2>
           </div>
@@ -125,7 +125,7 @@ export const StrovynApproach: React.FC<StrovynApproachProps> = ({ className = ''
                   </div>
 
                   {/* Stage Title */}
-                  <h3 className="font-serif text-2xl sm:text-3xl text-white mb-2 group-hover:text-bronze transition-colors">
+                  <h3 className="type-card-title text-2xl sm:text-3xl text-white mb-2 group-hover:text-bronze transition-colors">
                     {step.title}
                   </h3>
 

@@ -19,7 +19,7 @@ export default function ServicesPage() {
         <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-4">
           [ ARCHITECTURAL CAPABILITIES ]
         </span>
-        <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-normal leading-[1.1] text-charcoal max-w-4xl mb-8">
+        <h1 className="type-page-title text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-charcoal max-w-4xl mb-8">
           Architectural Finishing Disciplines
         </h1>
         <p className="font-sans text-lg sm:text-xl text-charcoal/80 max-w-2xl leading-relaxed">
@@ -59,7 +59,7 @@ export default function ServicesPage() {
                       {service.category}
                     </span>
                   </div>
-                  <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl text-charcoal mb-4">
+                  <h2 className="type-section-title text-2xl sm:text-3xl md:text-4xl text-charcoal mb-4">
                     <Link
                       href={`/services/${service.slug}`}
                       className="hover:text-bronze transition-colors"
@@ -106,7 +106,7 @@ export default function ServicesPage() {
           <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-4">
             [ BESPOKE SPECIFICATIONS ]
           </span>
-          <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl font-normal mb-6">
+          <h2 className="type-section-title text-3xl sm:text-4xl md:text-5xl mb-6">
             Need custom chemistry or on-site drawdown samples?
           </h2>
           <p className="font-sans text-base sm:text-lg text-warm-grey leading-relaxed mb-8 max-w-2xl mx-auto">

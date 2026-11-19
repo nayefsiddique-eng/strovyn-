@@ -661,7 +661,7 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
               Bespoke Interiors &amp; Heritage Exteriors
             </span>
 
-            <h1 className="font-serif text-[clamp(1.6rem,6vw,3.4rem)] leading-[1.04] font-normal tracking-[-0.02em] uppercase lg:text-[clamp(2.35rem,4.05vw,3.95rem)]">
+            <h1 className="type-hero text-[clamp(1.9rem,6.5vw,3.6rem)] uppercase lg:text-[clamp(2.6rem,4.3vw,4.25rem)]">
               <span className="block overflow-hidden pb-0.5">
                 <span ref={headlineLine1Ref} className="block">
                   Transforming Spaces.

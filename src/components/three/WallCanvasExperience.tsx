@@ -122,7 +122,7 @@ export const WallCanvasExperience: React.FC = () => {
           <span className="font-mono text-xs uppercase text-bronze tracking-widest block">
             [ INTERACTIVE 3D EXPERIENCE ]
           </span>
-          <h2 className="font-serif text-3xl sm:text-4xl leading-tight">
+          <h2 className="type-section-title text-3xl sm:text-4xl">
             The Micro-Planar Transformation
           </h2>
           <p className="font-sans text-sm text-warm-grey leading-relaxed">

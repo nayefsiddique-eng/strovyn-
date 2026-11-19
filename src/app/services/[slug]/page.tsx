@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!service) return { title: 'Service Not Found' };
 
   return {
-    title: `${service.title} | Strovyn Painting Co.`,
+    title: service.title,
     description: service.shortDescription,
   };
 }
@@ -52,7 +52,7 @@ export default async function ServiceDetailPage({ params }: Props) {
             <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-3">
               [ DISCIPLINE {service.number} &mdash; {service.category} ]
             </span>
-            <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl text-charcoal leading-tight">
+            <h1 className="type-page-title text-4xl sm:text-5xl md:text-6xl text-charcoal">
               {service.title}
             </h1>
           </div>
@@ -94,7 +94,7 @@ export default async function ServiceDetailPage({ params }: Props) {
               <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-2">
                 OVERVIEW &amp; SCOPE
               </span>
-              <h2 className="font-serif text-3xl text-charcoal mb-4">
+              <h2 className="type-section-title text-3xl sm:text-4xl text-charcoal mb-4">
                 Engineered for High-Exposure Substrates
               </h2>
               <p className="font-sans text-base sm:text-lg text-charcoal/80 leading-relaxed">
@@ -103,7 +103,7 @@ export default async function ServiceDetailPage({ params }: Props) {
             </div>
 
             <div className="border-t border-warm-grey/30 pt-6">
-              <h3 className="font-serif text-xl text-charcoal mb-4">Core Deliverables</h3>
+              <h3 className="type-card-title text-xl sm:text-2xl text-charcoal mb-4">Core Deliverables</h3>
               <ul className="space-y-3 font-sans text-sm sm:text-base text-charcoal/85">
                 {service.features.map((feat) => (
                   <li key={feat} className="flex items-start gap-3">
@@ -116,7 +116,7 @@ export default async function ServiceDetailPage({ params }: Props) {
 
             {/* 4-Step Process */}
             <div className="border-t border-warm-grey/30 pt-6">
-              <h3 className="font-serif text-xl text-charcoal mb-4">Sequential Application Protocol</h3>
+              <h3 className="type-card-title text-xl sm:text-2xl text-charcoal mb-4">Sequential Application Protocol</h3>
               <div className="space-y-4">
                 {service.processSteps.map((p) => (
                   <div key={p.step} className="flex gap-4 p-4 bg-white border border-warm-grey/30">

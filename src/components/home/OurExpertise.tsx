@@ -102,7 +102,7 @@ export const OurExpertise: React.FC<OurExpertiseProps> = ({ className = '' }) =>
             <span className="font-sans text-xs sm:text-sm uppercase tracking-[0.2em] text-bronze font-medium block mb-3">
               [ 02 / DISCIPLINES &amp; SERVICES ]
             </span>
-            <h2 className="font-serif text-3xl sm:text-5xl md:text-6xl text-white tracking-tight max-w-2xl">
+            <h2 className="type-section-title text-3xl sm:text-5xl md:text-6xl text-white max-w-2xl">
               Our Architectural Finishing Expertise.
             </h2>
           </div>
@@ -112,6 +112,7 @@ export const OurExpertise: React.FC<OurExpertiseProps> = ({ className = '' }) =>
               variant="outline"
               size="md"
               href="/services"
+              className="text-white border-white/40 hover:bg-white hover:text-charcoal hover:border-white"
               rightIcon={
                 <svg
                   className="w-4 h-4 ml-1"
@@ -176,12 +177,12 @@ export const OurExpertise: React.FC<OurExpertiseProps> = ({ className = '' }) =>
                     <span className="font-mono text-[10px] text-bronze uppercase tracking-widest font-semibold block mb-1">
                       SPECIFICATION
                     </span>
-                    <span className="font-mono text-xs text-[#B8B5AE] truncate block">
+                    <span className="font-mono text-xs text-[#B8B5AE] leading-snug block">
                       {service.spec}
                     </span>
                   </div>
 
-                  <h3 className="font-serif text-2xl text-white group-hover:text-bronze transition-colors">
+                  <h3 className="type-card-title text-2xl text-white group-hover:text-bronze transition-colors">
                     <Link href={`/services/${service.slug}`}>
                       {service.title}
                     </Link>

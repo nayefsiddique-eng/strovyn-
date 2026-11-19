@@ -48,7 +48,7 @@ export const EditorialStatement: React.FC<EditorialStatementProps> = ({ classNam
                 THE STROVYN PRINCIPLE
               </span>
               
-              <h2 className="font-serif text-3xl sm:text-5xl md:text-6xl text-charcoal leading-[1.08] tracking-tight mb-8">
+              <h2 className="type-section-title text-4xl sm:text-5xl md:text-6xl text-charcoal mb-8">
                 More Than A Coat Of Paint.
               </h2>
 

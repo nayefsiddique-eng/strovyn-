@@ -45,7 +45,7 @@ export default function ProjectsPage() {
         <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-4">
           [ COMMISSIONS &amp; CASE STUDIES ]
         </span>
-        <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-normal leading-[1.1] text-charcoal max-w-4xl mb-8">
+        <h1 className="type-page-title text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-charcoal max-w-4xl mb-8">
           Architectural Portfolio
         </h1>
         <p className="font-sans text-lg sm:text-xl text-charcoal/80 max-w-2xl leading-relaxed">
@@ -73,14 +73,14 @@ export default function ProjectsPage() {
           </div>
 
           {/* Lifecycle Status filter */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <span className="font-sans text-xs uppercase text-warm-grey-dark">Stage:</span>
             {['All', 'Completed', 'Active On-Site'].map((status) => (
               <button
                 key={status}
                 type="button"
                 onClick={() => setSelectedStatus(status)}
-                className={`font-sans text-xs uppercase tracking-wider px-3 py-1.5 border transition-all cursor-pointer ${
+                className={`font-sans text-xs uppercase tracking-wider px-3 py-1.5 border transition-all cursor-pointer whitespace-nowrap ${
                   selectedStatus === status
                     ? 'bg-bronze text-white border-bronze'
                     : 'bg-transparent text-charcoal/70 border-warm-grey/40 hover:border-bronze'
@@ -146,7 +146,7 @@ export default function ProjectsPage() {
                     </span>
                   </div>
 
-                  <h2 className="font-serif text-2xl sm:text-3xl text-charcoal mb-3">
+                  <h2 className="type-card-title text-2xl sm:text-3xl text-charcoal mb-3">
                     <Link
                       href={`/projects/${project.slug}`}
                       className="hover:text-bronze transition-colors"
@@ -188,7 +188,7 @@ export default function ProjectsPage() {
             <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-2">
               [ PRIVATE COMMISSIONS ]
             </span>
-            <h2 className="font-serif text-3xl sm:text-4xl">
+            <h2 className="type-section-title text-3xl sm:text-4xl">
               Have an architectural project in specification?
             </h2>
           </div>

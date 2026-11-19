@@ -39,7 +39,7 @@ export const FinalContact: React.FC<FinalContactProps> = ({
               </span>
 
               {/* Exact Oversized Reference Headline */}
-              <h2 className="font-display uppercase tracking-tight text-6xl sm:text-7xl lg:text-[5.5rem] text-white leading-[0.88] mb-8 select-none">
+              <h2 className="type-hero uppercase text-6xl sm:text-7xl lg:text-[5.5rem] text-white leading-[0.9] mb-8 select-none">
                 <span className="block">START</span>
                 <span className="block">YOUR</span>
                 <span className="block text-stroke-white">PROJECT.</span>
@@ -82,7 +82,7 @@ export const FinalContact: React.FC<FinalContactProps> = ({
             transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
             className="lg:col-span-6 bg-white text-charcoal p-8 sm:p-10 shadow-2xl"
           >
-            <h3 className="font-display uppercase tracking-wide text-2xl text-charcoal mb-6">
+            <h3 className="type-card-title uppercase tracking-wide text-2xl text-charcoal mb-6">
               Request Your Consultation
             </h3>
 

@@ -66,7 +66,7 @@ export default function InsightsPage() {
         <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-4">
           [ 01 / EDITORIAL &amp; MATERIAL KNOWLEDGE ]
         </span>
-        <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-normal leading-[1.1] text-charcoal max-w-4xl mb-8">
+        <h1 className="type-page-title text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-charcoal max-w-4xl mb-8">
           Architectural Insights &amp; Coatings Science
         </h1>
         <p className="font-sans text-lg sm:text-xl text-charcoal/80 max-w-2xl leading-relaxed">
@@ -128,7 +128,7 @@ export default function InsightsPage() {
                 <span className="font-sans text-xs uppercase tracking-widest text-bronze font-medium block mb-2">
                   {featuredArticle.category} &mdash; {featuredArticle.readTime}
                 </span>
-                <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl text-charcoal mb-4">
+                <h2 className="type-card-title text-2xl sm:text-3xl md:text-4xl text-charcoal mb-4">
                   <Link href={`/insights/${featuredArticle.slug}`} className="hover:text-bronze transition-colors">
                     {featuredArticle.title}
                   </Link>
@@ -158,7 +158,7 @@ export default function InsightsPage() {
       <section className="py-20 px-6 sm:px-8 lg:px-12 max-w-7xl mx-auto">
         {filteredArticles.length === 0 ? (
           <div className="text-center py-24 bg-white border border-warm-grey/30 p-12">
-            <h3 className="font-serif text-2xl text-charcoal mb-3">No matching articles found</h3>
+            <h3 className="type-card-title text-2xl text-charcoal mb-3">No matching articles found</h3>
             <p className="font-sans text-sm text-charcoal/70 max-w-md mx-auto mb-6">
               We could not find any specifications matching &ldquo;{searchQuery}&rdquo;. Try another term or reset filters.
             </p>
@@ -211,7 +211,7 @@ export default function InsightsPage() {
                         <span>{article.readTime}</span>
                       </div>
 
-                      <h3 className="font-serif text-xl text-charcoal mb-3 leading-snug group-hover:text-bronze transition-colors">
+                      <h3 className="type-card-title text-xl sm:text-2xl text-charcoal mb-3 group-hover:text-bronze transition-colors">
                         <Link href={`/insights/${article.slug}`}>
                           {article.title}
                         </Link>

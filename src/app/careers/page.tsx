@@ -103,7 +103,7 @@ export default function CareersPage() {
         <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-4">
           [ 01 / THE GUILD OF MASTER FINISHERS ]
         </span>
-        <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-normal leading-[1.1] text-charcoal max-w-4xl mb-8">
+        <h1 className="type-page-title text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-charcoal max-w-4xl mb-8">
           Careers in Architectural Craftsmanship
         </h1>
         <p className="font-sans text-lg sm:text-xl text-charcoal/80 max-w-2xl leading-relaxed">
@@ -117,7 +117,7 @@ export default function CareersPage() {
           <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-2">
             CURRENT POSITIONS
           </span>
-          <h2 className="font-serif text-3xl sm:text-4xl text-charcoal">
+          <h2 className="type-section-title text-3xl sm:text-4xl text-charcoal">
             Active Commissions &amp; Opportunities
           </h2>
         </div>
@@ -137,7 +137,7 @@ export default function CareersPage() {
                     {op.location}
                   </span>
                 </div>
-                <h3 className="font-serif text-2xl text-charcoal">{op.title}</h3>
+                <h3 className="type-card-title text-2xl text-charcoal">{op.title}</h3>
                 <p className="font-sans text-sm text-charcoal/80 leading-relaxed">
                   {op.desc}
                 </p>
@@ -180,7 +180,7 @@ export default function CareersPage() {
           <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-2">
             SUBMIT CREDENTIALS
           </span>
-          <h2 className="font-serif text-3xl sm:text-4xl text-charcoal mb-4">
+          <h2 className="type-section-title text-3xl sm:text-4xl text-charcoal mb-4">
             Application &amp; Expression of Interest
           </h2>
           <p className="font-sans text-sm text-charcoal/75 leading-relaxed mb-8">
@@ -189,7 +189,7 @@ export default function CareersPage() {
 
           {submitted ? (
             <div className="p-8 bg-ivory border border-bronze text-center space-y-3">
-              <span className="font-serif text-2xl text-charcoal block">Application Received</span>
+              <span className="type-card-title text-2xl text-charcoal block">Application Received</span>
               <p className="font-sans text-sm text-charcoal/80">
                 Thank you for submitting your credentials. Our operations director will review your portfolio and get in touch within 2 business days.
               </p>
@@ -204,14 +204,14 @@ export default function CareersPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <Input
-                  label="Full Name *"
+                  label="Full Name"
                   required
                   placeholder="Your full name"
                   value={formState.fullName}
                   onChange={(e) => setFormState({ ...formState, fullName: e.target.value })}
                 />
                 <Input
-                  label="Email Address *"
+                  label="Email Address"
                   type="email"
                   required
                   placeholder="you@example.com"
@@ -222,7 +222,7 @@ export default function CareersPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <Input
-                  label="Telephone *"
+                  label="Telephone"
                   type="tel"
                   required
                   placeholder="+61 400 000 000"
@@ -230,7 +230,7 @@ export default function CareersPage() {
                   onChange={(e) => setFormState({ ...formState, phone: e.target.value })}
                 />
                 <Input
-                  label="Position of Interest *"
+                  label="Position of Interest"
                   required
                   value={formState.position}
                   onChange={(e) => setFormState({ ...formState, position: e.target.value })}

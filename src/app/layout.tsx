@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import { playfair, inter, bebasNeue } from '@/styles/fonts';
+import { inter, anton } from '@/styles/fonts';
 import { Header, Footer } from '@/components/layout';
 import { FloatingContact } from '@/components/floating/FloatingContact';
 import { AIAssistant } from '@/components/floating/AIAssistant';
@@ -43,7 +43,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${playfair.variable} ${inter.variable} ${bebasNeue.variable} h-full`}
+      className={`${inter.variable} ${anton.variable} h-full`}
     >
       <head>
         <script

@@ -161,7 +161,7 @@ export default function AdminPhotosPage() {
             <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#A78B65] block mb-2 font-medium">
               STROVYN PAINTING CO. &mdash; INTERNAL MEDIA
             </span>
-            <h1 className="font-serif text-2xl text-[#20211F]">
+            <h1 className="type-card-title text-2xl text-[#20211F]">
               Portfolio Photo Manager
             </h1>
             <p className="text-xs text-[#20211F]/60 mt-1 font-light">
@@ -219,7 +219,7 @@ export default function AdminPhotosPage() {
       <header className="bg-white border-b border-[#B8B5AE]/40 px-6 lg:px-12 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <span className="w-2.5 h-2.5 bg-[#C41E1E] inline-block" />
-          <h1 className="font-serif text-lg text-[#20211F]">
+          <h1 className="type-card-title text-lg text-[#20211F]">
             Strovyn Portfolio Photo Replacement
           </h1>
           <span className="hidden sm:inline-block font-mono text-[10px] text-[#A78B65] uppercase tracking-widest">
@@ -283,7 +283,7 @@ export default function AdminPhotosPage() {
                       />
                     </div>
                     <div className="overflow-hidden">
-                      <div className="font-serif text-sm text-[#20211F] truncate font-medium">
+                      <div className="type-card-title text-sm text-[#20211F] truncate">
                         {proj.title}
                       </div>
                       <div className="font-mono text-[10px] text-[#A78B65] uppercase tracking-wider truncate">
@@ -305,7 +305,7 @@ export default function AdminPhotosPage() {
                     <span className="font-mono text-[10px] uppercase tracking-widest text-[#A78B65]">
                       {selectedProject.category}
                     </span>
-                    <h2 className="font-serif text-2xl text-[#20211F]">
+                    <h2 className="type-section-title text-2xl text-[#20211F]">
                       {selectedProject.title}
                     </h2>
                   </div>

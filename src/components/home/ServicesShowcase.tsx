@@ -176,7 +176,7 @@ export const ServicesShowcase: React.FC<ServicesShowcaseProps> = ({ className })
             <span className="font-sans text-xs sm:text-sm uppercase tracking-[0.2em] text-bronze font-medium block mb-3">
               [ 02 / DISCIPLINES &amp; EXPERTISE ]
             </span>
-            <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl text-charcoal tracking-tight max-w-2xl">
+            <h2 className="type-section-title text-3xl sm:text-4xl md:text-5xl text-charcoal max-w-2xl">
               Disciplined execution across specialized architectural coatings.
             </h2>
           </div>
@@ -246,7 +246,7 @@ export const ServicesShowcase: React.FC<ServicesShowcaseProps> = ({ className })
                         </span>
                         <h3
                           className={cn(
-                            'font-serif text-xl sm:text-2xl transition-colors duration-200',
+                            'type-card-title text-xl sm:text-2xl transition-colors duration-200',
                             isActive ? 'text-charcoal' : 'text-charcoal-muted group-hover:text-charcoal'
                           )}
                         >
@@ -336,7 +336,7 @@ export const ServicesShowcase: React.FC<ServicesShowcaseProps> = ({ className })
               {/* Architectural Breakdown */}
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-serif text-2xl text-charcoal mb-2">
+                  <h4 className="type-card-title text-2xl text-charcoal mb-2">
                     {activeService.title}
                   </h4>
                   <p className="text-xs sm:text-sm text-charcoal-muted leading-relaxed font-sans">

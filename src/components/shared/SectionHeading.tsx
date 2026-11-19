@@ -82,7 +82,7 @@ export const SectionHeading = React.forwardRef<HTMLDivElement, SectionHeadingPro
         )}
 
         <motion.div variants={itemVariants}>
-          <HeadingTag className="font-serif text-3xl sm:text-4xl md:text-5xl font-normal tracking-tight text-charcoal leading-[1.15]">
+          <HeadingTag className="type-section-title text-3xl sm:text-4xl md:text-5xl text-charcoal">
             {title}
           </HeadingTag>
         </motion.div>

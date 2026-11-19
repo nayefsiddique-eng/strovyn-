@@ -55,7 +55,7 @@ export const Footer: React.FC<FooterProps> = ({ className }) => {
               <span className="block text-xs uppercase tracking-[0.2em] text-bronze font-sans mb-3 font-medium">
                 Inquiries & Commissions
               </span>
-              <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-white font-normal tracking-tight leading-[1.1]">
+              <h2 className="type-section-title text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-white">
                 Let&apos;s Create Something Beautiful
               </h2>
               <p className="mt-5 text-warm-grey text-base sm:text-lg max-w-2xl font-light leading-relaxed">

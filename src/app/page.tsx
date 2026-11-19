@@ -14,7 +14,9 @@ import {
 } from '@/components/home';
 
 export const metadata: Metadata = {
-  title: 'Strovyn Painting Co. | Premium Painters Adelaide, South Australia',
+  title: {
+    absolute: 'Strovyn Painting Co. | Premium Painters Adelaide, South Australia',
+  },
   description:
     'Thoughtful preparation, refined finishes and professional painting for spaces that deserve a higher standard. Serving greater Adelaide, South Australia.',
 };

@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!project) return { title: 'Project Not Found' };
 
   return {
-    title: `${project.title} | Strovyn Painting Co.`,
+    title: project.title,
     description: project.description,
   };
 }
@@ -69,7 +69,7 @@ export default async function ProjectDetailPage({ params }: Props) {
                 {project.category} &mdash; {project.location}
               </span>
             </div>
-            <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl text-charcoal leading-tight">
+            <h1 className="type-page-title text-4xl sm:text-5xl md:text-6xl text-charcoal">
               {project.title}
             </h1>
           </div>
@@ -146,14 +146,14 @@ export default async function ProjectDetailPage({ params }: Props) {
               <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-2">
                 ARCHITECTURAL INTENT
               </span>
-              <h2 className="font-serif text-3xl text-charcoal mb-4">Project Overview</h2>
+              <h2 className="type-section-title text-3xl sm:text-4xl text-charcoal mb-4">Project Overview</h2>
               <p className="font-sans text-base sm:text-lg text-charcoal/85 leading-relaxed">
                 {project.description}
               </p>
             </div>
 
             <div className="border-t border-warm-grey/30 pt-8">
-              <h3 className="font-serif text-2xl text-charcoal mb-4">Execution Scope</h3>
+              <h3 className="type-card-title text-2xl text-charcoal mb-4">Execution Scope</h3>
               <ul className="space-y-3 font-sans text-sm sm:text-base text-charcoal/85">
                 {project.scope.map((item) => (
                   <li key={item} className="flex items-start gap-3">
@@ -168,7 +168,7 @@ export default async function ProjectDetailPage({ params }: Props) {
               <span className="font-sans text-xs uppercase tracking-wider text-bronze font-medium block mb-2">
                 TECHNICAL RESOLUTION
               </span>
-              <h3 className="font-serif text-xl text-charcoal mb-2">Substrate &amp; Light Challenges</h3>
+              <h3 className="type-card-title text-xl sm:text-2xl text-charcoal mb-2">Substrate &amp; Light Challenges</h3>
               <p className="font-sans text-sm sm:text-base text-charcoal/80 leading-relaxed">
                 {project.challenges}
               </p>
@@ -177,7 +177,7 @@ export default async function ProjectDetailPage({ params }: Props) {
             {/* Gallery Images */}
             {project.galleryImages && project.galleryImages.length > 0 && (
               <div className="border-t border-warm-grey/30 pt-8 space-y-6">
-                <h3 className="font-serif text-2xl text-charcoal mb-4">Finish &amp; Junction Photography</h3>
+                <h3 className="type-card-title text-2xl text-charcoal mb-4">Finish &amp; Junction Photography</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {project.galleryImages.map((img, i) => (
                     <div key={i} className="relative aspect-[4/3] bg-charcoal border border-warm-grey/30 overflow-hidden">
@@ -199,7 +199,7 @@ export default async function ProjectDetailPage({ params }: Props) {
 
       {/* Related Projects */}
       <section className="py-16 px-6 sm:px-8 lg:px-12 max-w-7xl mx-auto">
-        <h3 className="font-serif text-2xl text-charcoal mb-8">Other Selected Commissions</h3>
+        <h3 className="type-section-title text-2xl sm:text-3xl text-charcoal mb-8">Other Selected Commissions</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           {PROJECTS_DATA.filter((p) => p.slug !== project.slug).slice(0, 3).map((p) => (
             <Link key={p.slug} href={`/projects/${p.slug}`} className="group block border border-warm-grey/40 bg-white">
@@ -216,7 +216,7 @@ export default async function ProjectDetailPage({ params }: Props) {
                 <span className="font-sans text-[11px] uppercase text-bronze tracking-wider block mb-1">
                   {p.category}
                 </span>
-                <h4 className="font-serif text-lg text-charcoal group-hover:text-bronze transition-colors">
+                <h4 className="type-card-title text-lg sm:text-xl text-charcoal group-hover:text-bronze transition-colors">
                   {p.title}
                 </h4>
               </div>

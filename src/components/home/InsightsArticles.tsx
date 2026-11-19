@@ -72,7 +72,7 @@ export const InsightsArticles: React.FC<InsightsArticlesProps> = ({ className = 
             <span className="font-sans text-xs sm:text-sm uppercase tracking-[0.2em] text-bronze font-medium block mb-3">
               [ 05 / EDITORIAL &amp; INSIGHTS ]
             </span>
-            <h2 className="font-serif text-3xl sm:text-5xl md:text-6xl text-charcoal tracking-tight max-w-2xl">
+            <h2 className="type-section-title text-3xl sm:text-5xl md:text-6xl text-charcoal max-w-2xl">
               Perspectives on Paint, Space &amp; Craft.
             </h2>
           </div>
@@ -146,7 +146,7 @@ export const InsightsArticles: React.FC<InsightsArticlesProps> = ({ className = 
                     <span>{article.readTime}</span>
                   </div>
 
-                  <h3 className="font-serif text-2xl text-charcoal group-hover:text-bronze transition-colors">
+                  <h3 className="type-card-title text-2xl text-charcoal group-hover:text-bronze transition-colors">
                     <Link href={`/insights/${article.slug}`}>
                       {article.title}
                     </Link>

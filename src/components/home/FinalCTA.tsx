@@ -68,7 +68,7 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({
             </div>
 
             {/* Headline */}
-            <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl text-white tracking-tight leading-[1.1] mb-6">
+            <h2 className="type-section-title text-3xl sm:text-5xl lg:text-6xl text-white mb-6">
               Ready to elevate your architectural vision?
             </h2>
 
@@ -139,7 +139,7 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({
               <span className="font-mono text-[10px] text-bronze uppercase tracking-widest font-semibold block mb-1">
                 [PROJECT INTAKE STANDARD]
               </span>
-              <h3 className="font-serif text-xl text-white font-normal">
+              <h3 className="type-card-title text-xl sm:text-2xl text-white">
                 What to Expect Upon Engagement
               </h3>
             </div>

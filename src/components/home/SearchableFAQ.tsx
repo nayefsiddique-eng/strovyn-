@@ -76,7 +76,7 @@ export const SearchableFAQ: React.FC = () => {
           <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-3">
             [ 01 / TRANSPARENT METHODOLOGY ]
           </span>
-          <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl text-charcoal mb-4">
+          <h2 className="type-section-title text-3xl sm:text-4xl md:text-5xl text-charcoal mb-4">
             Frequently Asked Questions
           </h2>
           <p className="font-sans text-base text-charcoal/75 max-w-xl mx-auto leading-relaxed">
@@ -131,7 +131,7 @@ export const SearchableFAQ: React.FC = () => {
                 >
                   <div className="flex items-center gap-3">
                     <HelpCircle size={16} className="text-bronze flex-shrink-0" />
-                    <span className="font-serif text-lg text-charcoal font-medium">
+                    <span className="font-sans text-base sm:text-lg text-charcoal font-semibold leading-snug">
                       {item.question}
                     </span>
                   </div>

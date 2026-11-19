@@ -175,7 +175,7 @@ function ContactFormContent() {
         <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-4">
           [ 01 / SPECIFICATION &amp; CONSULTATION ]
         </span>
-        <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-normal leading-[1.1] text-charcoal max-w-4xl mb-8">
+        <h1 className="type-page-title text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-charcoal max-w-4xl mb-8">
           Request a Quotation &amp; Site Assessment
         </h1>
         <p className="font-sans text-lg sm:text-xl text-charcoal/80 max-w-2xl leading-relaxed">
@@ -192,7 +192,7 @@ function ContactFormContent() {
               <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-3">
                 DIRECT ENQUIRIES &amp; ADELAIDE CONSULTATION
               </span>
-              <h2 className="font-serif text-3xl text-charcoal mb-4">
+              <h2 className="type-section-title text-3xl text-charcoal mb-4">
                 Studio Contact &amp; On-Site Consults
               </h2>
               <p className="font-sans text-sm text-charcoal/75 leading-relaxed">
@@ -250,13 +250,13 @@ function ContactFormContent() {
               <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-2">
                 PROJECT INTAKE
               </span>
-              <h2 className="font-serif text-3xl text-charcoal mb-6">
+              <h2 className="type-section-title text-3xl text-charcoal mb-6">
                 Consultation &amp; Quotation Request
               </h2>
 
               {submitted ? (
                 <div role="status" className="p-8 bg-ivory border border-bronze text-center space-y-4">
-                  <span className="font-serif text-2xl text-charcoal block">Quotation Request Logged</span>
+                  <span className="type-card-title text-2xl text-charcoal block">Quotation Request Logged</span>
                   <p className="font-sans text-sm text-charcoal/80 max-w-md mx-auto">
                     Your project details have been successfully recorded in our management queue. An estimating director will review your requirements and reach out via your preferred contact method.
                   </p>

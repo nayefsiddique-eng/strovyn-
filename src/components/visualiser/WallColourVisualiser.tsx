@@ -409,7 +409,7 @@ export const WallColourVisualiser: React.FC = () => {
           <span className="font-mono text-xs uppercase tracking-[0.22em] text-bronze dark:text-[#C9B28F] font-semibold block mb-2">
             [ 02 / INTERACTIVE WALL COLOUR VISUALISER ]
           </span>
-          <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-charcoal dark:text-white tracking-tight">
+          <h1 className="type-page-title text-3xl sm:text-4xl lg:text-5xl text-charcoal dark:text-white">
             Preview Finishes On Your Own Walls
           </h1>
           <p className="font-sans text-sm sm:text-base text-charcoal/80 dark:text-[#F4F1EA]/80 max-w-2xl mt-3 leading-relaxed">
@@ -727,7 +727,7 @@ export const WallColourVisualiser: React.FC = () => {
             <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-bronze dark:text-[#C9B28F] font-semibold block mb-1">
               ILLUSTRATIVE STROVYN PALETTE
             </span>
-            <h2 className="font-serif text-2xl text-charcoal dark:text-white">
+            <h2 className="type-card-title text-2xl sm:text-3xl text-charcoal dark:text-white">
               {selectedSwatch.name}
             </h2>
             <p className="font-mono text-xs text-warm-grey-dark dark:text-[#B5B2AA] mt-1">
@@ -754,12 +754,8 @@ export const WallColourVisualiser: React.FC = () => {
                         : 'bg-ivory-light dark:bg-[#1A1B19] text-charcoal dark:text-[#F4F1EA] border-warm-grey/40 dark:border-white/15 hover:border-bronze'
                     }`}
                   >
-                    <span
-                      className="w-4 h-4 shrink-0 border border-black/20"
-                      style={{ backgroundColor: swatch.hex }}
-                      aria-hidden="true"
-                    />
-                    <span className="truncate font-sans text-[11px] font-medium">
+                    <span className="w-4 h-4 shrink-0 border border-black/20" style={{ backgroundColor: swatch.hex }} aria-hidden="true" />
+                    <span className="font-sans text-[11px] font-medium leading-snug">
                       {swatch.name}
                     </span>
                   </button>

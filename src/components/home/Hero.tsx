@@ -290,13 +290,12 @@ export const Hero: React.FC<HeroProps> = ({
         {/* ── MONUMENTAL BRAND WORDMARK ── */}
         <div className="w-full tracking-tighter select-none py-3 sm:py-4 my-1 relative">
           <div className="hero-rule-line absolute top-0 left-0 right-0 h-px bg-warm-grey/35 dark:bg-white/15" />
-          <div className="flex items-baseline justify-between overflow-hidden">
+          <div className="flex items-baseline justify-between overflow-hidden py-1">
             <span
               ref={wordmarkRef}
-              className="font-display font-bold uppercase tracking-tight text-charcoal dark:text-white leading-[0.82] text-[16.5vw] sm:text-[17vw] lg:text-[13.5vw] xl:text-[176px] block"
-              style={{ letterSpacing: '-0.035em' }}
+              className="font-display font-normal uppercase tracking-[-0.02em] text-charcoal dark:text-white leading-[0.88] text-[17vw] sm:text-[16.5vw] lg:text-[13.5vw] xl:text-[184px] block"
             >
-              STROVYN<span className="text-brand-red">.</span>
+              STROVYN
             </span>
           </div>
           <div className="hero-rule-line absolute bottom-0 left-0 right-0 h-px bg-warm-grey/35 dark:bg-white/15" />
@@ -312,7 +311,7 @@ export const Hero: React.FC<HeroProps> = ({
               </span>
 
               {/* Verified Approved Homepage H1 */}
-              <h1 className="hero-copy-item font-serif text-3xl sm:text-4xl md:text-5xl xl:text-[3.35rem] text-charcoal dark:text-white leading-[1.06] tracking-tight mb-4 font-normal">
+              <h1 className="hero-copy-item type-hero text-[2.25rem] sm:text-5xl md:text-[3.35rem] xl:text-[3.75rem] text-charcoal dark:text-white mb-4">
                 Transforming Spaces. Perfecting Every Finish.
               </h1>
 
@@ -455,7 +454,7 @@ export const Hero: React.FC<HeroProps> = ({
 
             {/* Integrated 4-Finish Calibration Console directly beneath the 3D & Photographic Showcase */}
             <div className="hero-visual-plane bg-white/85 dark:bg-[#20211F]/90 border border-warm-grey/40 dark:border-white/15 p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <div className="flex flex-wrap items-center justify-start gap-x-3 gap-y-1 mb-2">
                 <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-warm-grey-dark dark:text-[#A8A59E]">
                   CALIBRATE 3D ALCOVE FINISH (ILLUSTRATIVE):
                 </span>

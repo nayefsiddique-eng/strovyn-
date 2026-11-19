@@ -125,14 +125,14 @@ export const Header: React.FC<HeaderProps> = ({
       >
         <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
           <div className="flex items-center justify-between h-16 md:h-20">
-              {/* Left: Brand Logo Text / Wordmark as per Reference */}
+              {/* Left: Brand Logo Text / Wordmark (official wordmark without trailing punctuation) */}
               <Link
                 href="/"
                 className="group inline-flex items-center gap-2 focus-visible:outline-none"
                 aria-label="Strovyn Painting Co. - Return to homepage"
               >
-                <span className="font-display tracking-[0.06em] text-2xl sm:text-3xl text-charcoal font-bold uppercase">
-                  STROVYN<span className="text-brand-red">.</span>
+                <span className="font-display font-normal tracking-[0.03em] text-2xl sm:text-3xl text-charcoal uppercase leading-none">
+                  STROVYN
                 </span>
               </Link>
 
@@ -349,9 +349,9 @@ export const Header: React.FC<HeaderProps> = ({
                         href={item.href}
                         onClick={() => setMobileMenuOpen(false)}
                         className={cn(
-                          "group py-4 sm:py-5 flex items-center justify-between text-2xl sm:text-3xl font-serif transition-colors",
+                          "group py-4 sm:py-5 flex items-center justify-between text-2xl sm:text-3xl type-card-title uppercase tracking-[0.02em] transition-colors",
                           isActive
-                            ? "text-bronze font-normal"
+                            ? "text-bronze"
                             : "text-charcoal hover:text-bronze"
                         )}
                       >

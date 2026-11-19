@@ -84,7 +84,7 @@ export const CompanyIntro: React.FC<CompanyIntroProps> = ({ className }) => {
           transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
           className="max-w-4xl mb-14 md:mb-20"
         >
-          <h2 className="font-serif text-3xl sm:text-5xl md:text-6xl text-charcoal tracking-tight leading-[1.12] mb-6">
+          <h2 className="type-section-title text-3xl sm:text-5xl md:text-6xl text-charcoal mb-6">
             Surface perfection achieved through architectural precision.
           </h2>
           <p className="font-sans text-lg sm:text-xl text-charcoal-muted leading-relaxed font-light">
@@ -122,7 +122,7 @@ export const CompanyIntro: React.FC<CompanyIntroProps> = ({ className }) => {
               </div>
             </div>
 
-            <div className="border-l-2 border-bronze pl-4 py-1 italic font-serif text-charcoal/80 text-sm sm:text-base">
+            <div className="border-l-2 border-bronze pl-4 py-1 italic type-quote text-charcoal/80 text-sm sm:text-base">
               &ldquo;A finish should never draw attention to its application—only to the pure geometry of light and space it honors.&rdquo;
             </div>
 
@@ -188,7 +188,7 @@ export const CompanyIntro: React.FC<CompanyIntroProps> = ({ className }) => {
                     </span>
                   </div>
 
-                  <h4 className="font-serif text-xl sm:text-2xl text-charcoal mb-2 font-normal group-hover:text-bronze transition-colors duration-200">
+                  <h4 className="type-card-title text-xl sm:text-2xl text-charcoal mb-2 group-hover:text-bronze transition-colors duration-200">
                     {pillar.title}
                   </h4>
 

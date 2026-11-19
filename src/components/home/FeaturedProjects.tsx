@@ -72,7 +72,7 @@ export const FeaturedProjects: React.FC<FeaturedProjectsProps> = ({ className = 
             <span className="font-sans text-xs sm:text-sm uppercase tracking-[0.2em] text-bronze font-medium block mb-3">
               [ 03 / PORTFOLIO &amp; COMMISSIONS ]
             </span>
-            <h2 className="font-serif text-3xl sm:text-5xl md:text-6xl text-charcoal tracking-tight max-w-2xl">
+            <h2 className="type-section-title text-3xl sm:text-5xl md:text-6xl text-charcoal max-w-2xl">
               Featured Architectural Commissions.
             </h2>
           </div>
@@ -172,7 +172,7 @@ export const FeaturedProjects: React.FC<FeaturedProjectsProps> = ({ className = 
                   <span className="text-bronze font-medium">COMPLETED COMMISSION</span>
                 </div>
 
-                <h3 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-charcoal mb-2">
+                <h3 className="type-card-title text-2xl sm:text-3xl lg:text-4xl text-charcoal mb-2">
                   <Link
                     href={`/projects/${VERIFIED_PROJECT.slug}`}
                     className="hover:text-bronze transition-colors"
@@ -251,7 +251,7 @@ export const FeaturedProjects: React.FC<FeaturedProjectsProps> = ({ className = 
                 </Link>
 
                 <div className="flex items-center justify-between text-xs font-mono">
-                  <span className="font-serif text-base text-charcoal font-medium">
+                  <span className="type-card-title text-base text-charcoal">
                     {view.viewTitle}
                   </span>
                   <Link

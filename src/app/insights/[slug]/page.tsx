@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!article) return { title: 'Article Not Found' };
 
   return {
-    title: `${article.title} | Strovyn Painting Co.`,
+    title: article.title,
     description: article.excerpt,
   };
 }
@@ -50,7 +50,7 @@ export default async function ArticleDetailPage({ params }: Props) {
         <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-4">
           [ {article.category} &mdash; {article.readTime} ]
         </span>
-        <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-charcoal leading-[1.15] mb-8">
+        <h1 className="type-page-title text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-charcoal mb-8">
           {article.title}
         </h1>
 
@@ -79,7 +79,7 @@ export default async function ArticleDetailPage({ params }: Props) {
 
       {/* Article Body */}
       <article className="max-w-3xl mx-auto px-6 sm:px-8 lg:px-12 py-12 space-y-6 font-sans text-base sm:text-lg text-charcoal/85 leading-relaxed">
-        <p className="font-serif text-xl sm:text-2xl text-charcoal leading-snug italic border-l-2 border-bronze pl-6 py-1 my-8">
+        <p className="type-quote text-xl sm:text-2xl text-charcoal italic border-l-2 border-bronze pl-6 py-1 my-8">
           &ldquo;{article.excerpt}&rdquo;
         </p>
 
@@ -100,7 +100,7 @@ export default async function ArticleDetailPage({ params }: Props) {
       {/* Bottom CTA */}
       <section className="py-16 bg-charcoal text-white px-6 sm:px-8 lg:px-12 mt-16 border-t border-charcoal">
         <div className="max-w-3xl mx-auto text-center">
-          <h3 className="font-serif text-2xl sm:text-3xl mb-4">
+          <h3 className="type-section-title text-2xl sm:text-3xl mb-4">
             Consult on Substrate Specifications
           </h3>
           <p className="font-sans text-sm sm:text-base text-warm-grey mb-8">

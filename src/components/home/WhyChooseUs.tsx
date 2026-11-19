@@ -95,7 +95,7 @@ export const WhyChooseUs: React.FC<WhyChooseUsProps> = ({ className }) => {
             <span className="font-sans text-xs sm:text-sm uppercase tracking-[0.2em] text-bronze font-medium block mb-3">
               [ 05 / METHODOLOGY &amp; ASSURANCE ]
             </span>
-            <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl text-charcoal tracking-tight max-w-2xl">
+            <h2 className="type-section-title text-3xl sm:text-4xl md:text-5xl text-charcoal max-w-2xl">
               Disciplined execution at every stage of the commission.
             </h2>
           </div>
@@ -132,7 +132,7 @@ export const WhyChooseUs: React.FC<WhyChooseUsProps> = ({ className }) => {
                   </span>
                 </div>
 
-                <h3 className="font-serif text-2xl text-charcoal mb-1">
+                <h3 className="type-card-title text-2xl text-charcoal mb-1">
                   {pillar.title}
                 </h3>
                 <h4 className="font-sans text-xs text-bronze uppercase tracking-wider font-medium mb-4">

@@ -148,7 +148,7 @@ export const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
             <span className="font-sans text-xs sm:text-sm uppercase tracking-[0.2em] text-bronze font-medium block mb-3">
               [ 06 / CLIENT PERSPECTIVES ]
             </span>
-            <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl text-charcoal tracking-tight max-w-2xl">
+            <h2 className="type-section-title text-3xl sm:text-4xl md:text-5xl text-charcoal max-w-2xl">
               Endorsements from architects, builders, and estate owners.
             </h2>
           </div>
@@ -237,7 +237,7 @@ export const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
                 exit="exit"
                 className="flex flex-col justify-between"
               >
-                <blockquote className="font-serif text-xl sm:text-2xl md:text-3xl text-charcoal leading-snug sm:leading-relaxed mb-8 max-w-4xl">
+                <blockquote className="type-quote text-xl sm:text-2xl md:text-[1.65rem] text-charcoal mb-8 max-w-4xl">
                   &ldquo;{current.quote}&rdquo;
                 </blockquote>
 

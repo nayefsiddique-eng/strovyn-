@@ -70,7 +70,7 @@ export default function FeedbackPage() {
         <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-4">
           [ 01 / CLIENT REFLECTIONS ]
         </span>
-        <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl font-normal leading-[1.1] text-charcoal max-w-4xl mb-6">
+        <h1 className="type-page-title text-4xl sm:text-5xl md:text-6xl text-charcoal max-w-4xl mb-6">
           Client Feedback &amp; Project Evaluation
         </h1>
         <p className="font-sans text-lg text-charcoal/80 max-w-2xl leading-relaxed">
@@ -82,7 +82,7 @@ export default function FeedbackPage() {
         <div className="bg-white border border-warm-grey/40 p-8 sm:p-12">
           {submitted ? (
             <div className="p-8 bg-ivory border border-bronze text-center space-y-4">
-              <span className="font-serif text-2xl text-charcoal block">Thank You For Your Evaluation</span>
+              <span className="type-card-title text-2xl text-charcoal block">Thank You For Your Evaluation</span>
               <p className="font-sans text-sm text-charcoal/80 max-w-md mx-auto">
                 Your feedback has been received and securely stored. As part of our governance protocol, all testimonials are reviewed by management before publication.
               </p>
@@ -97,7 +97,7 @@ export default function FeedbackPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <Input
-                  label="Client Name *"
+                  label="Client Name"
                   required
                   placeholder="Your full name"
                   value={formState.customerName}
@@ -113,7 +113,7 @@ export default function FeedbackPage() {
               </div>
 
               <Input
-                label="Project Reference / Suburb *"
+                label="Project Reference / Suburb"
                 required
                 placeholder="e.g. Norwood Interior Repaint or Adelaide Residence"
                 value={formState.projectReference}
@@ -144,7 +144,7 @@ export default function FeedbackPage() {
               </div>
 
               <Textarea
-                label="Evaluation &amp; Feedback Message *"
+                label="Evaluation &amp; Feedback Message"
                 required
                 rows={5}
                 placeholder="Describe the site cleanliness, surface finish quality, and trade coordination..."

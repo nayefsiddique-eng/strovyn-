@@ -66,7 +66,7 @@ export const FinishExplorer: React.FC = () => {
           <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block">
             [ 02 / COLOUR AS CRAFT ]
           </span>
-          <h2 className="font-serif text-3xl sm:text-4xl text-charcoal leading-tight">
+          <h2 className="type-section-title text-3xl sm:text-4xl text-charcoal">
             Curated Colour &amp; Finish Explorer
           </h2>
           <p className="font-sans text-base text-charcoal/80 leading-relaxed">
@@ -102,7 +102,7 @@ export const FinishExplorer: React.FC = () => {
           {/* Wall Colour Visualiser Entry Point (Approach B) */}
           <div className="pt-4 mt-4 border-t border-warm-grey/30 space-y-3">
             <div>
-              <h3 className="font-serif text-lg text-charcoal">
+              <h3 className="type-card-title text-lg sm:text-xl text-charcoal">
                 Preview finishes on your own walls
               </h3>
               <p className="font-sans text-xs sm:text-sm text-charcoal/75 leading-relaxed mt-1">
@@ -126,7 +126,7 @@ export const FinishExplorer: React.FC = () => {
               <span className="font-mono text-xs text-bronze uppercase tracking-widest block">
                 {selected.category}
               </span>
-              <h3 className="font-serif text-2xl text-charcoal mt-1">{selected.name}</h3>
+              <h3 className="type-card-title text-2xl sm:text-3xl text-charcoal mt-1">{selected.name}</h3>
             </div>
             <span className="font-mono text-xs bg-ivory px-3 py-1 border border-warm-grey/30 text-charcoal font-medium">
               HEX {selected.hex}
