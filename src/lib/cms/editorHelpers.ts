@@ -150,6 +150,69 @@ function normOpt(val: string): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+function canonicalizeTiptapNode(node: unknown): unknown {
+  if (Array.isArray(node)) {
+    return node.map((item) => canonicalizeTiptapNode(item));
+  }
+  if (!node || typeof node !== 'object') {
+    return node;
+  }
+
+  const record = node as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+
+  for (const key of Object.keys(record).sort()) {
+    const val = record[key];
+    if (val === undefined) continue;
+
+    if (key === 'attrs' && val && typeof val === 'object' && !Array.isArray(val)) {
+      const cleanedAttrs: Record<string, unknown> = {};
+      for (const attrKey of Object.keys(val as Record<string, unknown>).sort()) {
+        const attrVal = (val as Record<string, unknown>)[attrKey];
+        if (attrVal !== null && attrVal !== undefined) {
+          cleanedAttrs[attrKey] = canonicalizeTiptapNode(attrVal);
+        }
+      }
+      if (Object.keys(cleanedAttrs).length > 0) {
+        out.attrs = cleanedAttrs;
+      }
+      continue;
+    }
+
+    if (key === 'content' && Array.isArray(val)) {
+      if (val.length === 0) continue;
+      out.content = val.map((child) => canonicalizeTiptapNode(child));
+      continue;
+    }
+
+    if (key === 'marks' && Array.isArray(val)) {
+      if (val.length === 0) continue;
+      out.marks = val.map((mark) => canonicalizeTiptapNode(mark));
+      continue;
+    }
+
+    out[key] = canonicalizeTiptapNode(val);
+  }
+
+  return out;
+}
+
+/**
+ * Produces a canonical JSON string for a Tiptap document so semantic comparisons
+ * ignore PostgreSQL JSONB key reordering and ProseMirror default `null` attrs /
+ * empty `content: []` arrays while preserving all real content, structure, and attrs.
+ */
+export function canonicalSerializeTiptapDoc(doc: TiptapDoc | null | undefined): string {
+  return JSON.stringify(canonicalizeTiptapNode(doc ?? null));
+}
+
+export function areTiptapDocsEqual(
+  a: TiptapDoc | null | undefined,
+  b: TiptapDoc | null | undefined
+): boolean {
+  return canonicalSerializeTiptapDoc(a) === canonicalSerializeTiptapDoc(b);
+}
+
 export function isArticleFormDirty(
   baseline: EditableArticleFields,
   draft: EditableArticleFields
@@ -168,7 +231,7 @@ export function isArticleFormDirty(
     baseline.is_featured !== draft.is_featured ||
     baseline.author_name.trim() !== draft.author_name.trim() ||
     normOpt(baseline.author_role) !== normOpt(draft.author_role) ||
-    JSON.stringify(baseline.content_json) !== JSON.stringify(draft.content_json)
+    !areTiptapDocsEqual(baseline.content_json, draft.content_json)
   );
 }
 
@@ -265,7 +328,7 @@ export function buildArticlePatchPayload(
   if (normOpt(baseline.author_role) !== normOpt(draft.author_role)) {
     payload.author_role = normOpt(draft.author_role);
   }
-  if (JSON.stringify(baseline.content_json) !== JSON.stringify(draft.content_json)) {
+  if (!areTiptapDocsEqual(baseline.content_json, draft.content_json)) {
     payload.content_json = draft.content_json;
   }
 

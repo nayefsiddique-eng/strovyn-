@@ -792,8 +792,98 @@ async function run() {
     assert.equal(editorEditPublished.status, 403);
 
     // ------------------------------------------------------------------
-    // 5. Client Boundary & NodeView Canonical Non-Mutation Verification
+    // 5. Client Boundary, Dirty-State & NodeView Canonical Verification
     // ------------------------------------------------------------------
+    const postgresImageBaseline = editorHelpers.extractEditableSnapshot({
+      ...latestServerArticle,
+      content_json: {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ text: 'Mineral silicate coating specification.', type: 'text' }],
+          },
+          {
+            type: 'image',
+            attrs: {
+              alt: 'Mineral coating finish sample',
+              src: uploadedAsset.media_ref,
+            },
+          },
+          { type: 'paragraph', content: [] },
+        ],
+      },
+    });
+    const tiptapNormalizedDraft = {
+      ...postgresImageBaseline,
+      content_json: {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            attrs: { textAlign: null },
+            content: [{ type: 'text', text: 'Mineral silicate coating specification.' }],
+          },
+          {
+            type: 'image',
+            attrs: {
+              src: uploadedAsset.media_ref,
+              alt: 'Mineral coating finish sample',
+              title: null,
+              width: null,
+              height: null,
+            },
+          },
+          { type: 'paragraph', attrs: { textAlign: null } },
+        ],
+      },
+    };
+    assert.equal(
+      editorHelpers.isArticleFormDirty(postgresImageBaseline, tiptapNormalizedDraft),
+      false,
+      'Tiptap getJSON default null attrs and Postgres JSONB key ordering must remain clean'
+    );
+    assert.equal(
+      editorHelpers.buildArticlePatchPayload(
+        postgresImageBaseline,
+        tiptapNormalizedDraft,
+        latestServerArticle.updated_at
+      ),
+      null,
+      'Equivalent canonical Tiptap doc must not emit a dirty PATCH payload'
+    );
+
+    const realImageEditDraft = {
+      ...postgresImageBaseline,
+      content_json: {
+        ...tiptapNormalizedDraft.content_json,
+        content: [
+          ...tiptapNormalizedDraft.content_json.content,
+          {
+            type: 'paragraph',
+            attrs: { textAlign: 'left' },
+            content: [{ type: 'text', text: 'Appended substrate preparation note.' }],
+          },
+        ],
+      },
+    };
+    assert.equal(
+      editorHelpers.isArticleFormDirty(postgresImageBaseline, realImageEditDraft),
+      true,
+      'Real document edit must mark inline-image article dirty'
+    );
+    const dirtyPatch = editorHelpers.buildArticlePatchPayload(
+      postgresImageBaseline,
+      realImageEditDraft,
+      latestServerArticle.updated_at
+    );
+    assert.ok(dirtyPatch && dirtyPatch.content_json);
+    assert.equal(
+      dirtyPatch.content_json.content[1].attrs.src,
+      uploadedAsset.media_ref,
+      'Patch payload must retain canonical /api/editorial-media/<uuid>'
+    );
+
     const editorCompSrc = fs.readFileSync(
       path.join(REPO_ROOT, 'src/components/cms/EditorialRichTextEditor.tsx'),
       'utf8'
@@ -805,6 +895,32 @@ async function run() {
     assert.ok(
       editorCompSrc.includes('addNodeView()'),
       'EditorialRichTextEditor must apply preview URL strictly in NodeView DOM rather than ProseMirror attrs'
+    );
+    assert.ok(
+      editorCompSrc.includes('setEditable(targetEditable, false)'),
+      'EditorialRichTextEditor must disable emitUpdate when initializing or toggling editable mode'
+    );
+    assert.ok(
+      editorCompSrc.includes('ignoreMutation()'),
+      'EditorialRichTextEditor preview NodeView must ignore DOM telemetry mutations'
+    );
+
+    const adminEditorSrc = fs.readFileSync(
+      path.join(REPO_ROOT, 'src/components/cms/AdminArticleEditor.tsx'),
+      'utf8'
+    );
+    assert.ok(
+      adminEditorSrc.includes('setPendingInsert(null)'),
+      'AdminArticleEditor must clear pendingInsert when discarding or switching baseline'
+    );
+
+    const previewPageSrc = fs.readFileSync(
+      path.join(REPO_ROOT, 'src/app/admin/insights/preview/[id]/page.tsx'),
+      'utf8'
+    );
+    assert.ok(
+      previewPageSrc.includes('await connection()'),
+      'Preview page must establish dynamic connection() before auth session lookup'
     );
 
     for (const rel of [

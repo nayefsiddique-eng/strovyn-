@@ -2,6 +2,7 @@ import React, { Suspense } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { connection } from 'next/server';
 import { getSecureArticlePreview } from '@/lib/cms/editorialService';
 import { EditorialHttpError } from '@/lib/cms/http';
 import { isApprovedPreviewImageUrl } from '@/lib/cms/mediaUrlPolicy';
@@ -50,6 +51,7 @@ async function AuthenticatedPreviewContent({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await connection();
   const { id } = await params;
 
   let staffEmail = '';

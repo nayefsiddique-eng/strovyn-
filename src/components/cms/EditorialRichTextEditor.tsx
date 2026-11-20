@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -26,7 +26,10 @@ import {
 } from 'lucide-react';
 import type { TiptapDoc } from '@/lib/cms/contentSecurity';
 import { validateApprovedEditorialMediaUrl } from '@/lib/cms/mediaUrlPolicy';
-import { resolveEditorPreviewImageSrc } from '@/lib/cms/editorHelpers';
+import {
+  canonicalSerializeTiptapDoc,
+  resolveEditorPreviewImageSrc,
+} from '@/lib/cms/editorHelpers';
 
 export interface UploadedEditorialImage {
   url: string;
@@ -106,6 +109,11 @@ function buildEditorialPreviewImageExtension() {
           update(updatedNode) {
             if (updatedNode.type.name !== 'image') return false;
             applyNodeAttrs(updatedNode);
+            return true;
+          },
+          ignoreMutation() {
+            // Preview wrapper DOM (img src/alt/caption) is read-only telemetry and
+            // must never be misinterpreted by ProseMirror as a document mutation.
             return true;
           },
         };
@@ -229,13 +237,11 @@ export function EditorialRichTextEditor({
 
   const initialDoc = value || DEFAULT_EMPTY_DOC;
   const lastEmittedRef = useRef<string | null>(null);
-  const lastAppliedExternalRef = useRef<string | null>(JSON.stringify(initialDoc));
+  const lastAppliedExternalRef = useRef<string | null>(canonicalSerializeTiptapDoc(initialDoc));
   const prevDocumentKeyRef = useRef<string | number | undefined>(documentKey);
 
-  const editor = useEditor({
-    immediatelyRender: false,
-    editable: !disabled,
-    extensions: [
+  const extensions = useMemo(
+    () => [
       StarterKit.configure({
         heading: { levels: [2, 3, 4] },
         code: false,
@@ -260,6 +266,13 @@ export function EditorialRichTextEditor({
         alignments: ['left', 'center', 'right'],
       }),
     ],
+    []
+  );
+
+  const editor = useEditor({
+    immediatelyRender: false,
+    editable: !disabled,
+    extensions,
     content: initialDoc,
     editorProps: {
       attributes: {
@@ -272,21 +285,25 @@ export function EditorialRichTextEditor({
     },
     onUpdate: ({ editor: ed }) => {
       const nextDoc = ed.getJSON() as TiptapDoc;
-      lastEmittedRef.current = JSON.stringify(nextDoc);
+      lastEmittedRef.current = canonicalSerializeTiptapDoc(nextDoc);
       onChangeRef.current(nextDoc);
     },
   });
 
   useEffect(() => {
     if (!editor) return;
-    editor.setEditable(!disabled);
+    const targetEditable = !disabled;
+    if (editor.isEditable !== targetEditable) {
+      // Never emit an artificial document update when toggling or initializing editable mode.
+      editor.setEditable(targetEditable, false);
+    }
   }, [editor, disabled]);
 
   useEffect(() => {
     if (!editor) return;
 
     const incomingDoc = value || DEFAULT_EMPTY_DOC;
-    const incomingSerialized = JSON.stringify(incomingDoc);
+    const incomingSerialized = canonicalSerializeTiptapDoc(incomingDoc);
     const keyChanged = prevDocumentKeyRef.current !== documentKey;
     prevDocumentKeyRef.current = documentKey;
 
@@ -299,7 +316,7 @@ export function EditorialRichTextEditor({
       return;
     }
 
-    const currentEditorSerialized = JSON.stringify(editor.getJSON());
+    const currentEditorSerialized = canonicalSerializeTiptapDoc(editor.getJSON() as TiptapDoc);
     const syncPlan = computeExternalSyncPlan({
       incomingSerialized,
       lastEmittedSerialized: lastEmittedRef.current,

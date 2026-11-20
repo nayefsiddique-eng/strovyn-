@@ -218,6 +218,7 @@ export function AdminArticleEditor({
   const handleDiscardDirty = () => {
     setErrorBanner(null);
     setSaveSuccessMsg(null);
+    setPendingInsert(null);
     setDraft(baselineSnapshot);
     setEditorRevision((r) => r + 1);
   };
@@ -228,6 +229,7 @@ export function AdminArticleEditor({
   ) => {
     setErrorBanner(null);
     setConflictState(null);
+    setPendingInsert(null);
     const immediateSnap = extractEditableSnapshot(transitioned);
     setServerArticle(transitioned);
     setBaselineSnapshot(immediateSnap);
@@ -265,6 +267,7 @@ export function AdminArticleEditor({
   const handleAdoptServerVersion = async () => {
     setErrorBanner(null);
     setSaveSuccessMsg(null);
+    setPendingInsert(null);
     const latest = conflictState?.serverArticle ?? (await fetchLatestServerArticle());
     if (!latest) {
       setErrorBanner('Could not fetch the latest server version. Retry in a moment.');
