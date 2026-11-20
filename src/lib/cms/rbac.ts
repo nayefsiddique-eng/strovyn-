@@ -14,6 +14,8 @@ const EDITOR_ACTIONS: readonly EditorialAction[] = [
   'media:upload',
   'media:delete_orphan',
   'preview:create_token',
+  'overview:read',
+  'project:read',
 ];
 
 const PUBLISHER_ONLY_ACTIONS: readonly EditorialAction[] = [
@@ -24,6 +26,8 @@ const PUBLISHER_ONLY_ACTIONS: readonly EditorialAction[] = [
   'article:publish_now',
   'article:edit_published',
   'article:archive',
+  'project:write',
+  'project:publish',
 ];
 
 const ROLE_PERMISSION_SETS: Record<EditorialRole, ReadonlySet<EditorialAction>> = {

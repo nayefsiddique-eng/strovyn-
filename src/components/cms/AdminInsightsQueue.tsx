@@ -271,6 +271,14 @@ export function AdminInsightsQueue({
                 <ShieldCheck className="w-3.5 h-3.5 text-bronze" aria-hidden="true" />
                 {roleMeta.label}
               </span>
+              <nav aria-label="Business CMS shortcuts" className="inline-flex flex-wrap items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider">
+                <Link href="/admin" className="px-2 py-0.5 border border-warm-grey bg-white text-charcoal hover:border-charcoal">
+                  CMS Overview
+                </Link>
+                <Link href="/admin/projects" className="px-2 py-0.5 border border-warm-grey bg-white text-charcoal hover:border-charcoal">
+                  Projects
+                </Link>
+              </nav>
             </div>
             <h1 className="type-page-title text-3xl sm:text-4xl lg:text-5xl text-charcoal">
               Insights Editorial Queue

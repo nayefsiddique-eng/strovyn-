@@ -28,6 +28,10 @@ export const EDITORIAL_ACTIONS = [
   'media:upload',
   'media:delete_orphan',
   'preview:create_token',
+  'overview:read',
+  'project:read',
+  'project:write',
+  'project:publish',
   'staff:manage',
 ] as const;
 export type EditorialAction = (typeof EDITORIAL_ACTIONS)[number];
