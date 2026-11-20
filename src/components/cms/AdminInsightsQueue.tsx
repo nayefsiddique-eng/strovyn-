@@ -186,6 +186,16 @@ export function AdminInsightsQueue({
     }
   }, [fetchQueue, sessionExpired, deniedState]);
 
+  useEffect(() => {
+    const onPageShow = () => {
+      if (!sessionExpired && !deniedState) {
+        fetchQueue();
+      }
+    };
+    window.addEventListener('pageshow', onPageShow);
+    return () => window.removeEventListener('pageshow', onPageShow);
+  }, [fetchQueue, sessionExpired, deniedState]);
+
   const handleSignOut = async () => {
     setIsSigningOut(true);
     try {
@@ -306,10 +316,10 @@ export function AdminInsightsQueue({
           </div>
         </header>
 
-        {/* Stage 2 Status Banner */}
+        {/* Stage 3 Status Banner */}
         <div className="border border-warm-grey/50 bg-ivory-light px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-sans text-charcoal/80">
           <span>
-            <strong>Editorial Authoring Workspace:</strong> Draft creation, metadata &amp; Tiptap editing, optimistic concurrency protection, and private editorial media controls are active. Workflow status transitions unlock in Stage 3.
+            <strong>Strovyn Editorial CMS:</strong> Authenticated queue, draft authoring, private media management, RBAC workflow transitions, secure preview, and immutable audit timeline are active.
           </span>
           <span className="font-mono text-[11px] uppercase tracking-wider text-bronze flex-shrink-0">
             Role Scope: {staff.role}

@@ -38,6 +38,8 @@ import {
   AdminMediaLibraryDrawer,
   type EditorialMediaAssetView,
 } from './AdminMediaLibraryDrawer';
+import { AdminWorkflowControls } from './AdminWorkflowControls';
+import { AdminAuditHistoryPanel } from './AdminAuditHistoryPanel';
 import type { StaffViewerIdentity } from './StaffAuthGateCards';
 
 interface ConflictReconciliationState {
@@ -75,6 +77,7 @@ export function AdminArticleEditor({
   const [mediaDrawerOpen, setMediaDrawerOpen] = useState(false);
   const [mediaTargetMode, setMediaTargetMode] = useState<'body' | 'featured' | 'og'>('body');
   const [pendingInsert, setPendingInsert] = useState<PendingEditorialImageInsert | null>(null);
+  const [auditRefreshTrigger, setAuditRefreshTrigger] = useState(0);
   const insertCounterRef = useRef(0);
 
   const canEdit = canStaffEditArticle(initialStaff.role, serverArticle.status);
@@ -202,6 +205,7 @@ export function AdminArticleEditor({
       setServerArticle(saved);
       setBaselineSnapshot(nextSnap);
       setDraft(nextSnap);
+      setAuditRefreshTrigger((c) => c + 1);
       setSaveSuccessMsg('Changes saved to database.');
     } catch {
       setErrorBanner('Network error saving article changes. Your local edits remain intact.');
@@ -209,6 +213,53 @@ export function AdminArticleEditor({
       saveLockRef.current = false;
       setIsSaving(false);
     }
+  };
+
+  const handleDiscardDirty = () => {
+    setErrorBanner(null);
+    setSaveSuccessMsg(null);
+    setDraft(baselineSnapshot);
+    setEditorRevision((r) => r + 1);
+  };
+
+  const handleTransitionSucceeded = async (
+    transitioned: EditorialArticleDetail,
+    message: string
+  ) => {
+    setErrorBanner(null);
+    setConflictState(null);
+    const immediateSnap = extractEditableSnapshot(transitioned);
+    setServerArticle(transitioned);
+    setBaselineSnapshot(immediateSnap);
+    setDraft(immediateSnap);
+    setEditorRevision((r) => r + 1);
+    setAuditRefreshTrigger((c) => c + 1);
+    setSaveSuccessMsg(message);
+
+    // Refresh authoritative record from server and revalidate queue RSC state
+    const latest = await fetchLatestServerArticle();
+    if (latest) {
+      const latestSnap = extractEditableSnapshot(latest);
+      setServerArticle(latest);
+      setBaselineSnapshot(latestSnap);
+      setDraft(latestSnap);
+    }
+    router.refresh();
+  };
+
+  const handleTransitionConflict = async (message: string) => {
+    setSaveSuccessMsg(null);
+    setConflictState({
+      message,
+      serverArticle: null,
+      loadingLatest: true,
+    });
+    const latest = await fetchLatestServerArticle();
+    setConflictState({
+      message,
+      serverArticle: latest,
+      loadingLatest: false,
+    });
   };
 
   const handleAdoptServerVersion = async () => {
@@ -612,10 +663,28 @@ export function AdminArticleEditor({
                 pendingImageInsert={pendingInsert}
               />
             </section>
+
+            <AdminAuditHistoryPanel
+              articleId={serverArticle.id}
+              refreshTrigger={auditRefreshTrigger}
+              onSessionExpired={() => setSessionExpiredBanner(true)}
+            />
           </div>
 
-          {/* Right Column: Publishing Metadata, Cover Image & SEO */}
+          {/* Right Column: Workflow Governance, Metadata, Cover Image & SEO */}
           <aside className="lg:col-span-4 space-y-6">
+            <AdminWorkflowControls
+              article={serverArticle}
+              staffRole={initialStaff.role}
+              isDirty={isDirty}
+              hasConflict={Boolean(conflictState)}
+              onSaveBeforeTransition={handleSave}
+              onDiscardDirtyBeforeTransition={handleDiscardDirty}
+              onTransitionSucceeded={handleTransitionSucceeded}
+              onConflictDetected={handleTransitionConflict}
+              onSessionExpired={() => setSessionExpiredBanner(true)}
+            />
+
             <section className="bg-white border border-warm-grey/60 p-5 space-y-4">
               <h2 className="font-mono text-[11px] uppercase tracking-[0.18em] text-bronze border-b border-warm-grey/40 pb-2.5">
                 Classification &amp; URL
@@ -885,7 +954,11 @@ export function AdminArticleEditor({
 
               <div className="pt-2 border-t border-warm-grey/30 font-mono text-[10px] text-warm-grey-dark space-y-1">
                 <p>Concurrency lock: {serverArticle.updated_at}</p>
-                <p>Workflow transitions &amp; audit log arrive in Stage 3.</p>
+                {isDirty && (
+                  <p className="text-bronze">
+                    Preview shows the last saved version until edits are saved.
+                  </p>
+                )}
               </div>
             </section>
           </aside>

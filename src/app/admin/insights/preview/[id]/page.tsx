@@ -87,9 +87,9 @@ async function AuthenticatedPreviewContent({
   return (
     <main className="w-full min-h-screen bg-ivory text-charcoal">
       {/* Staff-only preview banner */}
-      <div className="w-full bg-charcoal text-ivory border-b border-bronze/40 px-6 py-3">
+      <div className="w-full bg-charcoal text-ivory border-b border-bronze/40 px-6 py-3 pt-24 sm:pt-28">
         <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <span className="px-2 py-0.5 bg-bronze text-ivory uppercase tracking-widest">
               INTERNAL PREVIEW — NOT PUBLICLY INDEXED
             </span>
@@ -97,9 +97,23 @@ async function AuthenticatedPreviewContent({
               Status: <strong className="text-white">{preview.status}</strong>
             </span>
           </div>
-          <span className="text-warm-grey">
-            Viewing as {staffEmail} ({staffRole})
-          </span>
+          <div className="flex flex-wrap items-center gap-4">
+            <Link
+              href={`/admin/insights/articles/${preview.id}`}
+              className="text-ivory hover:text-bronze-light underline underline-offset-4 transition-colors"
+            >
+              &larr; Back to Editor
+            </Link>
+            <Link
+              href="/admin/insights"
+              className="text-warm-grey hover:text-ivory transition-colors"
+            >
+              Queue
+            </Link>
+            <span className="text-warm-grey">
+              Viewing as {staffEmail} ({staffRole})
+            </span>
+          </div>
         </div>
       </div>
 

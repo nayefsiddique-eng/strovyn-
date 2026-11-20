@@ -49,6 +49,8 @@ export interface EditorialArticleDetail {
   reading_time?: number;
   author_name: string;
   author_role?: string | null;
+  approved_at?: string | null;
+  archived_at?: string | null;
   published_at?: string | null;
   created_at: string;
   updated_at: string;
