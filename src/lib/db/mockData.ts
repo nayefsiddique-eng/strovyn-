@@ -146,7 +146,10 @@ interface LocalUploadClaim {
   claimTokenHash: string;
   claimedByTable: string | null;
   claimedRecordId: string | null;
+  expiresAt: string;
 }
+
+const CUSTOMER_UPLOAD_TTL_MS = 2 * 60 * 60 * 1000;
 
 function readLocalUploadClaims(): LocalUploadClaim[] {
   try {
@@ -179,6 +182,7 @@ export async function registerCustomerDocumentUpload(params: {
 }): Promise<{ ok: true; uploadToken: string } | { ok: false; error: unknown }> {
   const uploadToken = randomBytes(24).toString('hex');
   const claimTokenHash = hashClaimToken(uploadToken);
+  const expiresAt = new Date(Date.now() + CUSTOMER_UPLOAD_TTL_MS).toISOString();
 
   if (isServiceRoleConfigured()) {
     try {
@@ -191,6 +195,8 @@ export async function registerCustomerDocumentUpload(params: {
         mime_type: params.mimeType,
         byte_size: params.byteSize,
         claim_token_hash: claimTokenHash,
+        expires_at: expiresAt,
+        cleanup_state: 'active',
       });
       if (error) {
         return { ok: false, error };
@@ -212,19 +218,20 @@ export async function registerCustomerDocumentUpload(params: {
     claimTokenHash,
     claimedByTable: null,
     claimedRecordId: null,
+    expiresAt,
   });
   writeLocalUploadClaims(claims);
   return { ok: true, uploadToken };
 }
 
-async function verifyAndClaimSupabaseAttachment(params: {
-  fileReference: string;
-  claimToken: string | undefined;
+function prepareSupabaseAttachmentParams(params: {
+  fileReference?: string;
+  claimToken?: string;
   expectedCategory: 'documents' | 'resumes';
-  targetTable: 'quote_requests' | 'job_applications';
-  targetRecordId: string;
-  idempotencyKey?: string;
-}): Promise<{ alreadyPersisted?: boolean }> {
+}): { fileReference: string | null; claimTokenHash: string | null } {
+  if (!params.fileReference) {
+    return { fileReference: null, claimTokenHash: null };
+  }
   const expectedPrefix = `supabase://customer-documents/${params.expectedCategory}/`;
   if (!params.fileReference.startsWith(expectedPrefix)) {
     throw new AttachmentClaimError(400, 'Invalid attachment reference category.');
@@ -232,70 +239,178 @@ async function verifyAndClaimSupabaseAttachment(params: {
   if (!params.claimToken || params.claimToken.trim().length < 32) {
     throw new AttachmentClaimError(400, 'Missing or invalid attachment verification token.');
   }
+  return {
+    fileReference: params.fileReference,
+    claimTokenHash: hashClaimToken(params.claimToken),
+  };
+}
 
-  const supabase = createServiceRoleClient();
+function mapAtomicSubmissionRpcError(error: unknown): never {
+  const errObj = error as { message?: unknown; details?: unknown } | null;
+  const raw = `${String(errObj?.message || '')} ${String(errObj?.details || '')}`.trim();
 
-  if (params.idempotencyKey) {
-    const refCol = params.targetTable === 'quote_requests' ? 'attachment_url' : 'cv_url';
-    const { data: existingRow } = await supabase
-      .from(params.targetTable)
-      .select(`id, ${refCol}`)
-      .eq('idempotency_key', params.idempotencyKey)
-      .maybeSingle();
-    if (
-      existingRow &&
-      (existingRow as Record<string, unknown>)[refCol] === params.fileReference
-    ) {
-      return { alreadyPersisted: true };
-    }
+  if (raw.includes('ATTACHMENT_IDEMPOTENCY_MISMATCH:')) {
+    throw new AttachmentClaimError(
+      409,
+      'This idempotency key has already been used with a different submission payload.'
+    );
   }
-
-  const tokenHash = hashClaimToken(params.claimToken);
-  const { data: claimedRows, error: claimErr } = await supabase
-    .from('customer_document_uploads')
-    .update({
-      claimed_by_table: params.targetTable,
-      claimed_record_id: params.targetRecordId,
-      claimed_at: new Date().toISOString(),
-    })
-    .eq('file_reference', params.fileReference)
-    .eq('category', params.expectedCategory)
-    .eq('claim_token_hash', tokenHash)
-    .is('claimed_at', null)
-    .select('id');
-
-  if (claimErr) {
-    throw claimErr;
+  if (raw.includes('ATTACHMENT_EXPIRED:')) {
+    throw new AttachmentClaimError(
+      400,
+      'Attachment upload window has expired. Please upload the document again.'
+    );
   }
-
-  if (!claimedRows || claimedRows.length === 0) {
+  if (raw.includes('ATTACHMENT_CLEANED_UP:')) {
+    throw new AttachmentClaimError(
+      400,
+      'Attachment upload is no longer available. Please upload the document again.'
+    );
+  }
+  if (
+    raw.includes('ATTACHMENT_WRONG_CATEGORY:') ||
+    raw.includes('ATTACHMENT_TOKEN_INVALID:') ||
+    raw.includes('ATTACHMENT_NOT_FOUND:') ||
+    raw.includes('ATTACHMENT_UNAUTHORIZED:') ||
+    raw.includes('ATTACHMENT_ALREADY_CLAIMED:')
+  ) {
     throw new AttachmentClaimError(
       400,
       'Attachment reference is invalid, unauthorized, or already attached to another submission.'
     );
   }
 
-  return {};
+  throw error instanceof Error ? error : new Error(raw || 'Atomic submission failed');
 }
 
-async function releaseSupabaseAttachmentClaim(
-  fileReference: string,
-  targetRecordId: string
-): Promise<void> {
-  try {
-    const supabase = createServiceRoleClient();
-    await supabase
+export interface CustomerUploadCleanupSummary {
+  ok: boolean;
+  skipped?: boolean;
+  reserved: number;
+  deleted: number;
+  failed: number;
+  errors: Array<{ id: string; storagePath: string; message: string }>;
+}
+
+/**
+ * Reserves expired, unclaimed customer uploads via `cms_reserve_expired_customer_uploads`,
+ * removes their Storage objects, and updates cleanup tracking state. Bound submissions and
+ * grace-window rows are skipped inside PostgreSQL.
+ */
+export async function cleanupExpiredCustomerDocumentUploads(options?: {
+  graceSeconds?: number;
+  limit?: number;
+}): Promise<CustomerUploadCleanupSummary> {
+  const graceSeconds = Math.max(0, Math.floor(options?.graceSeconds ?? 900));
+  const limit = Math.min(500, Math.max(1, Math.floor(options?.limit ?? 50)));
+
+  if (!isServiceRoleConfigured()) {
+    if (process.env.NODE_ENV === 'production') {
+      return {
+        ok: false,
+        reserved: 0,
+        deleted: 0,
+        failed: 0,
+        errors: [{ id: '', storagePath: '', message: 'Supabase service role is required.' }],
+      };
+    }
+    const cutoff = Date.now() - graceSeconds * 1000;
+    const claims = readLocalUploadClaims();
+    const kept = claims.filter((c) => {
+      if (c.claimedRecordId !== null) return true;
+      const exp = c.expiresAt ? new Date(c.expiresAt).getTime() : 0;
+      return exp >= cutoff;
+    });
+    const pruned = claims.length - kept.length;
+    if (pruned > 0) {
+      writeLocalUploadClaims(kept);
+    }
+    return { ok: true, skipped: true, reserved: pruned, deleted: pruned, failed: 0, errors: [] };
+  }
+
+  const supabase = createServiceRoleClient();
+  const { data: reservedRows, error: reserveErr } = await supabase.rpc(
+    'cms_reserve_expired_customer_uploads',
+    {
+      p_limit: limit,
+      p_grace_seconds: graceSeconds,
+    }
+  );
+
+  if (reserveErr) {
+    return {
+      ok: false,
+      reserved: 0,
+      deleted: 0,
+      failed: 0,
+      errors: [{ id: '', storagePath: '', message: reserveErr.message }],
+    };
+  }
+
+  const rows = (
+    Array.isArray(reservedRows) ? reservedRows : reservedRows ? [reservedRows] : []
+  ) as Array<{ id: string; bucket_id?: string; storage_path: string; file_reference?: string }>;
+
+  let deleted = 0;
+  let failed = 0;
+  const errors: Array<{ id: string; storagePath: string; message: string }> = [];
+
+  for (const row of rows) {
+    const bucketId = row.bucket_id || 'customer-documents';
+    const storagePath = String(row.storage_path || '');
+    if (!storagePath || storagePath.includes('..')) {
+      const msg = 'Invalid reserved storage path';
+      await supabase
+        .from('customer_document_uploads')
+        .update({ cleanup_state: 'cleanup_failed', cleanup_error: msg })
+        .eq('id', row.id)
+        .is('claimed_at', null)
+        .eq('cleanup_state', 'pending_cleanup');
+      failed += 1;
+      errors.push({ id: row.id, storagePath, message: msg });
+      continue;
+    }
+
+    const { error: removeErr } = await supabase.storage.from(bucketId).remove([storagePath]);
+    if (removeErr) {
+      const msg = removeErr.message.slice(0, 500);
+      await supabase
+        .from('customer_document_uploads')
+        .update({ cleanup_state: 'cleanup_failed', cleanup_error: msg })
+        .eq('id', row.id)
+        .is('claimed_at', null)
+        .eq('cleanup_state', 'pending_cleanup');
+      failed += 1;
+      errors.push({ id: row.id, storagePath, message: msg });
+      continue;
+    }
+
+    const { error: finalizeErr } = await supabase
       .from('customer_document_uploads')
       .update({
-        claimed_by_table: null,
-        claimed_record_id: null,
-        claimed_at: null,
+        cleanup_state: 'deleted',
+        cleaned_at: new Date().toISOString(),
+        cleanup_error: null,
       })
-      .eq('file_reference', fileReference)
-      .eq('claimed_record_id', targetRecordId);
-  } catch {
-    // Best-effort compensation
+      .eq('id', row.id)
+      .is('claimed_at', null)
+      .eq('cleanup_state', 'pending_cleanup');
+
+    if (finalizeErr) {
+      failed += 1;
+      errors.push({ id: row.id, storagePath, message: finalizeErr.message });
+    } else {
+      deleted += 1;
+    }
   }
+
+  return {
+    ok: failed === 0,
+    reserved: rows.length,
+    deleted,
+    failed,
+    errors,
+  };
 }
 
 /**
@@ -417,6 +532,12 @@ function claimLocalCustomerDocument(params: {
       'Attachment reference is invalid, unauthorized, or already attached to another submission.'
     );
   }
+  if (claims[idx].expiresAt && new Date(claims[idx].expiresAt).getTime() <= Date.now()) {
+    throw new AttachmentClaimError(
+      400,
+      'Attachment upload window has expired. Please upload the document again.'
+    );
+  }
   claims[idx] = {
     ...claims[idx],
     claimedByTable: params.targetTable,
@@ -440,59 +561,54 @@ export async function addQuote(
   };
 
   if (isServiceRoleConfigured()) {
-    let claimed = false;
     try {
-      if (newQuote.attachmentUrl) {
-        const claimRes = await verifyAndClaimSupabaseAttachment({
-          fileReference: newQuote.attachmentUrl,
-          claimToken: attachmentToken,
-          expectedCategory: 'documents',
-          targetTable: 'quote_requests',
-          targetRecordId: newQuote.id,
-          idempotencyKey,
-        });
-        if (claimRes.alreadyPersisted) {
-          return { ...newQuote, deduplicated: true };
-        }
-        claimed = true;
-      }
+      const attachment = prepareSupabaseAttachmentParams({
+        fileReference: newQuote.attachmentUrl,
+        claimToken: attachmentToken,
+        expectedCategory: 'documents',
+      });
 
       const persistedDescription = newQuote.propertyType
         ? `[Property Type: ${newQuote.propertyType}]\n${newQuote.description}`
         : newQuote.description;
 
-      const res = await insertSupabaseRowWithIdempotency(
-        'quote_requests',
-        {
-          id: newQuote.id,
-          full_name: newQuote.fullName,
-          email: newQuote.email,
-          phone: newQuote.phone,
-          project_location: newQuote.projectLocation,
-          service_required: newQuote.serviceRequired,
-          description: persistedDescription,
-          preferred_contact: newQuote.preferredContact,
-          attachment_url: newQuote.attachmentUrl,
-          status: newQuote.status,
-        },
-        idempotencyKey
-      );
+      const supabase = createServiceRoleClient();
+      const { data, error } = await supabase.rpc('cms_submit_quote_with_attachment', {
+        p_quote_id: newQuote.id,
+        p_full_name: newQuote.fullName,
+        p_email: newQuote.email,
+        p_phone: newQuote.phone,
+        p_project_location: newQuote.projectLocation,
+        p_service_required: newQuote.serviceRequired,
+        p_description: persistedDescription,
+        p_preferred_contact: newQuote.preferredContact,
+        p_status: newQuote.status,
+        p_attachment_url: attachment.fileReference,
+        p_claim_token_hash: attachment.claimTokenHash,
+        p_idempotency_key: idempotencyKey ?? null,
+      });
 
-      if (res.ok) {
-        return { ...newQuote, ...(res.deduplicated ? { deduplicated: true } : {}) };
+      if (error) {
+        mapAtomicSubmissionRpcError(error);
       }
 
-      if (claimed && newQuote.attachmentUrl) {
-        await releaseSupabaseAttachmentClaim(newQuote.attachmentUrl, newQuote.id);
+      const row = (Array.isArray(data) ? data[0] : data) as
+        | { record_id?: string; created_at?: string; deduplicated?: boolean }
+        | null;
+
+      if (row && row.record_id) {
+        return {
+          ...newQuote,
+          id: String(row.record_id),
+          createdAt: row.created_at ? String(row.created_at) : newQuote.createdAt,
+          ...(row.deduplicated ? { deduplicated: true } : {}),
+        };
       }
 
       if (process.env.NODE_ENV === 'production') {
         throw new Error('Database persistence failed');
       }
     } catch (e) {
-      if (claimed && newQuote.attachmentUrl) {
-        await releaseSupabaseAttachmentClaim(newQuote.attachmentUrl, newQuote.id);
-      }
       if (e instanceof AttachmentClaimError) {
         throw e;
       }
@@ -582,22 +698,12 @@ export async function addApplication(
   };
 
   if (isServiceRoleConfigured()) {
-    let claimed = false;
     try {
-      if (newApp.resumeUrl) {
-        const claimRes = await verifyAndClaimSupabaseAttachment({
-          fileReference: newApp.resumeUrl,
-          claimToken: resumeToken,
-          expectedCategory: 'resumes',
-          targetTable: 'job_applications',
-          targetRecordId: newApp.id,
-          idempotencyKey,
-        });
-        if (claimRes.alreadyPersisted) {
-          return { ...newApp, deduplicated: true };
-        }
-        claimed = true;
-      }
+      const attachment = prepareSupabaseAttachmentParams({
+        fileReference: newApp.resumeUrl,
+        claimToken: resumeToken,
+        expectedCategory: 'resumes',
+      });
 
       const metadataLines = [
         `[Position: ${newApp.position}]`,
@@ -608,35 +714,40 @@ export async function addApplication(
         ? `${metadataLines.join('\n')}\n\n${newApp.coverLetter}`
         : metadataLines.join('\n');
 
-      const res = await insertSupabaseRowWithIdempotency(
-        'job_applications',
-        {
-          id: newApp.id,
-          applicant_name: newApp.fullName,
-          email: newApp.email,
-          phone: newApp.phone,
-          cover_letter: persistedCoverLetter,
-          cv_url: newApp.resumeUrl,
-          status: newApp.status,
-        },
-        idempotencyKey
-      );
+      const supabase = createServiceRoleClient();
+      const { data, error } = await supabase.rpc('cms_submit_application_with_attachment', {
+        p_application_id: newApp.id,
+        p_applicant_name: newApp.fullName,
+        p_email: newApp.email,
+        p_phone: newApp.phone,
+        p_cover_letter: persistedCoverLetter,
+        p_status: newApp.status,
+        p_cv_url: attachment.fileReference,
+        p_claim_token_hash: attachment.claimTokenHash,
+        p_idempotency_key: idempotencyKey ?? null,
+      });
 
-      if (res.ok) {
-        return { ...newApp, ...(res.deduplicated ? { deduplicated: true } : {}) };
+      if (error) {
+        mapAtomicSubmissionRpcError(error);
       }
 
-      if (claimed && newApp.resumeUrl) {
-        await releaseSupabaseAttachmentClaim(newApp.resumeUrl, newApp.id);
+      const row = (Array.isArray(data) ? data[0] : data) as
+        | { record_id?: string; created_at?: string; deduplicated?: boolean }
+        | null;
+
+      if (row && row.record_id) {
+        return {
+          ...newApp,
+          id: String(row.record_id),
+          createdAt: row.created_at ? String(row.created_at) : newApp.createdAt,
+          ...(row.deduplicated ? { deduplicated: true } : {}),
+        };
       }
 
       if (process.env.NODE_ENV === 'production') {
         throw new Error('Database persistence failed');
       }
     } catch (e) {
-      if (claimed && newApp.resumeUrl) {
-        await releaseSupabaseAttachmentClaim(newApp.resumeUrl, newApp.id);
-      }
       if (e instanceof AttachmentClaimError) {
         throw e;
       }

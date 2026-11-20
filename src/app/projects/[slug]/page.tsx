@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { connection } from 'next/server';
 import Link from 'next/link';
 import Image from 'next/image';
-import { PROJECTS_DATA } from '@/data/projectsData';
-import { getProjectsWithOverrides } from '@/lib/projectPhotos';
+import { PROJECTS_DATA, ProjectData } from '@/data/projectsData';
+import { getProjectsWithOverrides, getProjectsWithOverridesAsync } from '@/lib/projectPhotos';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 
@@ -30,15 +31,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function ProjectDetailPage({ params }: Props) {
-  const { slug } = await params;
-  const projects = getProjectsWithOverrides();
-  const project = projects.find((p) => p.slug === slug);
-
-  if (!project) {
-    notFound();
-  }
-
+function ProjectDetailBody({
+  project,
+  relatedProjects,
+}: {
+  project: ProjectData;
+  relatedProjects: ProjectData[];
+}) {
   return (
     <main className="w-full min-h-screen bg-ivory text-charcoal">
       {/* Breadcrumb & Title */}
@@ -201,7 +200,7 @@ export default async function ProjectDetailPage({ params }: Props) {
       <section className="py-16 px-6 sm:px-8 lg:px-12 max-w-7xl mx-auto">
         <h3 className="type-section-title text-2xl sm:text-3xl text-charcoal mb-8">Other Selected Commissions</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          {PROJECTS_DATA.filter((p) => p.slug !== project.slug).slice(0, 3).map((p) => (
+          {relatedProjects.map((p) => (
             <Link key={p.slug} href={`/projects/${p.slug}`} className="group block border border-warm-grey/40 bg-white">
               <div className="relative aspect-[16/10] bg-charcoal overflow-hidden">
                 <Image
@@ -225,5 +224,40 @@ export default async function ProjectDetailPage({ params }: Props) {
         </div>
       </section>
     </main>
+  );
+}
+
+async function DynamicProjectDetail({ slug }: { slug: string }) {
+  await connection();
+  const projects = await getProjectsWithOverridesAsync();
+  const project = projects.find((p) => p.slug === slug);
+
+  if (!project) {
+    notFound();
+  }
+
+  const relatedProjects = projects.filter((p) => p.slug !== project.slug).slice(0, 3);
+  return <ProjectDetailBody project={project} relatedProjects={relatedProjects} />;
+}
+
+export default async function ProjectDetailPage({ params }: Props) {
+  const { slug } = await params;
+  const fallbackProjects = getProjectsWithOverrides();
+  const fallbackProject = fallbackProjects.find((p) => p.slug === slug);
+
+  if (!fallbackProject) {
+    notFound();
+  }
+
+  const fallbackRelated = fallbackProjects
+    .filter((p) => p.slug !== fallbackProject.slug)
+    .slice(0, 3);
+
+  return (
+    <Suspense
+      fallback={<ProjectDetailBody project={fallbackProject} relatedProjects={fallbackRelated} />}
+    >
+      <DynamicProjectDetail slug={slug} />
+    </Suspense>
   );
 }

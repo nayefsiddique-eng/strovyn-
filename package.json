@@ -10,7 +10,8 @@
     "test:cms-db": "node scripts/verify-migrations.mjs",
     "test:cms-rbac": "node scripts/test-cms-phase1.mjs",
     "test:cms-phase2": "node scripts/test-cms-phase2.mjs",
-    "test:cms": "npm run test:cms-db && npm run test:cms-rbac && npm run test:cms-phase2"
+    "test:cms-hardening": "node scripts/test-submission-hardening.mjs",
+    "test:cms": "npm run test:cms-db && npm run test:cms-rbac && npm run test:cms-phase2 && npm run test:cms-hardening"
   },
   "dependencies": {
     "@react-three/drei": "10.7.9",

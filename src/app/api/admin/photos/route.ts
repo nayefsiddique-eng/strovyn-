@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import path from 'path';
 import fs from 'fs';
 import { cookies } from 'next/headers';
@@ -79,6 +80,8 @@ function verifyCsrf(req: Request): boolean {
  * Validates admin-supplied image URLs against safe local `/images/` paths
  * or approved HTTPS hosts (Unsplash / configured Supabase host).
  */
+const PUBLIC_PROJECT_PHOTOS_PREFIX = '/storage/v1/object/public/project-photos/';
+
 function validateDirectPhotoUrl(rawUrl: string): string | null {
   const trimmed = rawUrl.trim();
   if (!trimmed || trimmed.length > 1000) return null;
@@ -92,17 +95,31 @@ function validateDirectPhotoUrl(rawUrl: string): string | null {
     const parsed = new URL(trimmed);
     if (parsed.protocol !== 'https:') return null;
 
-    const allowedHosts = new Set<string>(['images.unsplash.com']);
+    let supabaseHostname: string | null = null;
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (supabaseUrl) {
       try {
-        allowedHosts.add(new URL(supabaseUrl).hostname);
+        supabaseHostname = new URL(supabaseUrl).hostname;
       } catch {
         // Ignore invalid env URL
       }
     }
 
-    if (!allowedHosts.has(parsed.hostname)) {
+    if (supabaseHostname && parsed.hostname === supabaseHostname) {
+      if (
+        !parsed.pathname.startsWith(PUBLIC_PROJECT_PHOTOS_PREFIX) ||
+        parsed.pathname.length <= PUBLIC_PROJECT_PHOTOS_PREFIX.length ||
+        parsed.pathname.endsWith('/') ||
+        parsed.pathname.includes('..') ||
+        parsed.search ||
+        parsed.hash
+      ) {
+        return null;
+      }
+      return parsed.toString();
+    }
+
+    if (parsed.hostname !== 'images.unsplash.com') {
       return null;
     }
 
@@ -342,6 +359,14 @@ export async function POST(req: Request) {
         { success: false, error: 'Unable to persist project photo override.' },
         { status: 500 }
       );
+    }
+
+    try {
+      revalidatePath('/projects');
+      revalidatePath(`/projects/${slug}`);
+      revalidatePath('/api/projects');
+    } catch {
+      // Ignore revalidation errors outside Next.js request context
     }
 
     return NextResponse.json({
