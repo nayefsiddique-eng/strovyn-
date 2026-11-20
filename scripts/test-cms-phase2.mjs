@@ -11,13 +11,13 @@ const ts = require('typescript');
 const REPO_ROOT = path.resolve(import.meta.dirname, '..');
 const MIGRATIONS_DIR = path.join(REPO_ROOT, 'supabase', 'migrations');
 
-const sql001 = fs.readFileSync(path.join(MIGRATIONS_DIR, '001_initial_schema.sql'), 'utf8');
-const sql002 = fs.readFileSync(path.join(MIGRATIONS_DIR, '002_idempotency_and_hardening.sql'), 'utf8');
-const sql003 = fs.readFileSync(path.join(MIGRATIONS_DIR, '003_editorial_cms.sql'), 'utf8');
-const sql004 = fs.readFileSync(path.join(MIGRATIONS_DIR, '004_editorial_cms_hardening.sql'), 'utf8');
-const sql005 = fs.readFileSync(path.join(MIGRATIONS_DIR, '005_editorial_media_and_bucket.sql'), 'utf8');
-const sql006 = fs.readFileSync(path.join(MIGRATIONS_DIR, '006_editorial_media_privacy.sql'), 'utf8');
-const sql007 = fs.readFileSync(path.join(MIGRATIONS_DIR, '007_editorial_media_gated_delivery.sql'), 'utf8');
+const sql001 = fs.readFileSync(path.join(MIGRATIONS_DIR, '20261113212535_initial_schema.sql'), 'utf8');
+const sql002 = fs.readFileSync(path.join(MIGRATIONS_DIR, '20261119140214_idempotency_and_hardening.sql'), 'utf8');
+const sql003 = fs.readFileSync(path.join(MIGRATIONS_DIR, '20261119191815_editorial_cms.sql'), 'utf8');
+const sql004 = fs.readFileSync(path.join(MIGRATIONS_DIR, '20261119202922_editorial_cms_hardening.sql'), 'utf8');
+const sql005 = fs.readFileSync(path.join(MIGRATIONS_DIR, '20261119210040_editorial_media_and_bucket.sql'), 'utf8');
+const sql006 = fs.readFileSync(path.join(MIGRATIONS_DIR, '20261119220209_editorial_media_privacy.sql'), 'utf8');
+const sql007 = fs.readFileSync(path.join(MIGRATIONS_DIR, '20261119234431_editorial_media_gated_delivery.sql'), 'utf8');
 
 function transpileTsFile(relPath) {
   const fullPath = path.join(REPO_ROOT, relPath);

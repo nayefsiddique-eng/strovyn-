@@ -42,6 +42,7 @@ export default function CareersPage() {
     portfolioUrl: '',
     coverLetter: '',
     resumeUrl: '',
+    resumeToken: '',
   });
 
   const [uploadingResume, setUploadingResume] = useState(false);
@@ -71,6 +72,7 @@ export default function CareersPage() {
         portfolioUrl: formState.portfolioUrl.trim() || undefined,
         coverLetter: formState.coverLetter.trim() || undefined,
         resumeUrl: formState.resumeUrl.trim() || undefined,
+        resumeToken: formState.resumeToken.trim() || undefined,
       };
       const res = await fetch('/api/applications', {
         method: 'POST',
@@ -286,10 +288,14 @@ export default function CareersPage() {
                       });
                       const upData = await upRes.json();
                       if (upRes.ok && upData.success && typeof upData.fileReference === 'string' && upData.fileReference.length > 0) {
-                        setFormState((prev) => ({ ...prev, resumeUrl: upData.fileReference }));
+                        setFormState((prev) => ({
+                          ...prev,
+                          resumeUrl: upData.fileReference,
+                          resumeToken: typeof upData.uploadToken === 'string' ? upData.uploadToken : '',
+                        }));
                         setResumeFileName(upData.fileName || file.name);
                       } else {
-                        setFormState((prev) => ({ ...prev, resumeUrl: '' }));
+                        setFormState((prev) => ({ ...prev, resumeUrl: '', resumeToken: '' }));
                         setResumeFileName('');
                         setErrorMsg(upData.error || 'Failed to upload CV file');
                       }

@@ -17,6 +17,7 @@ const INITIAL_FORM_STATE = {
   preferredContact: 'email',
   description: '',
   attachmentUrl: '',
+  attachmentToken: '',
 };
 
 const SERVICE_QUERY_MAP: Record<string, { service: string; scopeNote?: string }> = {
@@ -143,6 +144,7 @@ function ContactFormContent() {
       const payload = {
         ...formState,
         attachmentUrl: formState.attachmentUrl || undefined,
+        attachmentToken: formState.attachmentToken || undefined,
       };
       const res = await fetch('/api/quotes', {
         method: 'POST',
@@ -405,10 +407,14 @@ function ContactFormContent() {
                           });
                           const upData = await upRes.json();
                           if (upRes.ok && upData.success && typeof upData.fileReference === 'string' && upData.fileReference.length > 0) {
-                            setFormState((prev) => ({ ...prev, attachmentUrl: upData.fileReference }));
+                            setFormState((prev) => ({
+                              ...prev,
+                              attachmentUrl: upData.fileReference,
+                              attachmentToken: typeof upData.uploadToken === 'string' ? upData.uploadToken : '',
+                            }));
                             setAttachmentName(upData.fileName || file.name);
                           } else {
-                            setFormState((prev) => ({ ...prev, attachmentUrl: '' }));
+                            setFormState((prev) => ({ ...prev, attachmentUrl: '', attachmentToken: '' }));
                             setAttachmentName('');
                             setErrorMsg(upData.error || 'Failed to upload plan file');
                           }

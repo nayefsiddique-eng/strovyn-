@@ -1,7 +1,11 @@
-import { NextResponse } from 'next/server';
-import { getProjectsWithOverrides } from '@/lib/projectPhotos';
+import { connection, NextResponse } from 'next/server';
+import { getProjectsWithOverridesAsync } from '@/lib/projectPhotos';
 
 export async function GET() {
-  const projects = getProjectsWithOverrides();
-  return NextResponse.json({ success: true, projects });
+  await connection();
+  const projects = await getProjectsWithOverridesAsync();
+  return NextResponse.json(
+    { success: true, projects },
+    { headers: { 'Cache-Control': 'no-store' } }
+  );
 }

@@ -3,7 +3,11 @@ import path from 'path';
 import fs from 'fs';
 import { cookies } from 'next/headers';
 import { PROJECTS_DATA } from '@/data/projectsData';
-import { getProjectsWithOverrides, savePhotoOverride, getPhotoOverrides } from '@/lib/projectPhotos';
+import {
+  getPhotoOverridesAsync,
+  getProjectsWithOverridesAsync,
+  savePhotoOverrideAsync,
+} from '@/lib/projectPhotos';
 import {
   verifyAdminKey,
   createSessionToken,
@@ -12,10 +16,47 @@ import {
 } from '@/lib/security/auth';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
 import { validateUploadFile } from '@/lib/security/fileValidation';
-import { isSupabaseConfigured } from '@/lib/db/mockData';
-import { createClient as createSupabaseClient } from '@/lib/supabase/server';
+import { resolveAuthenticatedStaff, StaffAuthError } from '@/lib/cms/staffAuth';
+import {
+  createServiceRoleClient,
+  isCmsSupabaseConfigured,
+  isServiceRoleConfigured,
+} from '@/lib/supabase/serviceRole';
 
 const SESSION_COOKIE_NAME = 'strovyn_admin_session';
+
+async function authorizePhotoAdmin(
+  cookieStore: Awaited<ReturnType<typeof cookies>>
+): Promise<{ authorized: true; staffId: string | null } | { authorized: false; status: 401 | 403; error: string }> {
+  const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  if (verifySessionToken(sessionToken)) {
+    return { authorized: true, staffId: null };
+  }
+
+  if (isCmsSupabaseConfigured()) {
+    try {
+      const staff = await resolveAuthenticatedStaff();
+      if (staff.role !== 'admin' && staff.role !== 'publisher') {
+        return {
+          authorized: false,
+          status: 403,
+          error: 'Administrator or publisher staff role required for portfolio photo updates.',
+        };
+      }
+      return { authorized: true, staffId: staff.id };
+    } catch (err) {
+      if (err instanceof StaffAuthError) {
+        return {
+          authorized: false,
+          status: err.status === 401 ? 401 : 403,
+          error: err.status === 401 ? 'Unauthorized' : err.message,
+        };
+      }
+    }
+  }
+
+  return { authorized: false, status: 401, error: 'Unauthorized' };
+}
 
 /**
  * Validates Origin/Host fail-closed for CSRF defense on state mutations.
@@ -71,17 +112,16 @@ function validateDirectPhotoUrl(rawUrl: string): string | null {
   }
 }
 
-// GET: Returns list of projects and their current photos (requires signed session)
+// GET: Returns list of projects and their current photos (requires signed session or authorized staff)
 export async function GET() {
   const cookieStore = await cookies();
-  const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  const session = verifySessionToken(sessionToken);
+  const auth = await authorizePhotoAdmin(cookieStore);
 
-  if (!session) {
-    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  if (!auth.authorized) {
+    return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
   }
 
-  const projects = getProjectsWithOverrides();
+  const projects = await getProjectsWithOverridesAsync();
   return NextResponse.json({
     success: true,
     projects: projects.map((p) => ({
@@ -168,12 +208,11 @@ export async function POST(req: Request) {
     }
   }
 
-  // 2. All mutation operations require a valid HMAC-signed session
-  const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  const session = verifySessionToken(sessionToken);
+  // 2. All mutation operations require a valid HMAC-signed session or authorized staff session
+  const auth = await authorizePhotoAdmin(cookieStore);
 
-  if (!session) {
-    return NextResponse.json({ success: false, error: 'Unauthorized access' }, { status: 401 });
+  if (!auth.authorized) {
+    return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
   }
 
   // 3. Handle File Upload & Photo Replacement
@@ -217,10 +256,10 @@ export async function POST(req: Request) {
 
       const cleanFileName = validation.sanitizedFilename;
 
-      // In production with Supabase Storage
-      if (isSupabaseConfigured()) {
+      // In production / configured staging, upload strictly via service_role AFTER admin auth + file validation
+      if (isServiceRoleConfigured()) {
         try {
-          const supabase = await createSupabaseClient();
+          const supabase = createServiceRoleClient();
           const bucket = 'project-photos';
           const { data, error } = await supabase.storage
             .from(bucket)
@@ -232,6 +271,8 @@ export async function POST(req: Request) {
           if (!error && data) {
             const { data: pubData } = supabase.storage.from(bucket).getPublicUrl(data.path);
             finalImageUrl = pubData.publicUrl;
+          } else {
+            console.error('Supabase project-photos upload error:', error);
           }
         } catch (err) {
           console.error('Supabase storage upload failed:', err);
@@ -277,11 +318,12 @@ export async function POST(req: Request) {
     }
 
     // Apply override
-    const currentOverrides = getPhotoOverrides();
+    const currentOverrides = await getPhotoOverridesAsync();
     const projectOverride = currentOverrides[slug] || { updatedAt: new Date().toISOString() };
 
+    let saved = false;
     if (type === 'hero') {
-      savePhotoOverride(slug, { heroImage: finalImageUrl });
+      saved = await savePhotoOverrideAsync(slug, { heroImage: finalImageUrl }, auth.staffId);
     } else if (type === 'gallery') {
       const galleryIndex = parseInt(indexStr || '0', 10);
       const currentGallery = projectOverride.galleryImages || [...project.galleryImages];
@@ -290,7 +332,16 @@ export async function POST(req: Request) {
       } else {
         currentGallery.push(finalImageUrl);
       }
-      savePhotoOverride(slug, { galleryImages: currentGallery });
+      saved = await savePhotoOverrideAsync(slug, { galleryImages: currentGallery }, auth.staffId);
+    } else {
+      return NextResponse.json({ success: false, error: 'Invalid photo target type' }, { status: 400 });
+    }
+
+    if (!saved) {
+      return NextResponse.json(
+        { success: false, error: 'Unable to persist project photo override.' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({

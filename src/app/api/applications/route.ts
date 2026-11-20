@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createHash } from 'crypto';
-import { addApplication } from '@/lib/db/mockData';
+import { addApplication, AttachmentClaimError } from '@/lib/db/mockData';
 import { applicationSchema } from '@/lib/security/schemas';
 import { escapeHtml } from '@/lib/security/escapeHtml';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
@@ -113,6 +113,7 @@ export async function POST(req: Request) {
           portfolioUrl: validated.portfolioUrl || undefined,
           coverLetter: validated.coverLetter || undefined,
           resumeUrl: validated.resumeUrl || undefined,
+          resumeToken: validated.resumeToken || undefined,
           idempotencyKey,
         }),
     });
@@ -130,6 +131,12 @@ export async function POST(req: Request) {
       { status: outcome.status }
     );
   } catch (err: unknown) {
+    if (err instanceof AttachmentClaimError) {
+      return NextResponse.json(
+        { success: false, error: err.message },
+        { status: err.status }
+      );
+    }
     const isUnconfiguredProd =
       err instanceof Error &&
       err.message.includes('Supabase database is required in production');

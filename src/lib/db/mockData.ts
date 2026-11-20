@@ -1,7 +1,11 @@
+import 'server-only';
 import fs from 'fs';
 import path from 'path';
-import { randomUUID } from 'crypto';
-import { createClient as createSupabaseClient } from '@/lib/supabase/server';
+import { createHash, randomBytes, randomUUID } from 'crypto';
+import {
+  createServiceRoleClient,
+  isServiceRoleConfigured,
+} from '@/lib/supabase/serviceRole';
 
 export interface DBQuote {
   id: string;
@@ -115,18 +119,195 @@ export function isSupabaseConfigured(): boolean {
   );
 }
 
+export class AttachmentClaimError extends Error {
+  readonly status: 400 | 409 | 503;
+
+  constructor(status: 400 | 409 | 503, message: string) {
+    super(message);
+    this.name = 'AttachmentClaimError';
+    this.status = status;
+  }
+}
+
+function hashClaimToken(token: string): string {
+  return createHash('sha256').update(token.trim()).digest('hex');
+}
+
+const LOCAL_UPLOAD_CLAIMS_FILE = path.join(
+  process.cwd(),
+  'private_storage',
+  'security',
+  'upload_claims.json'
+);
+
+interface LocalUploadClaim {
+  fileReference: string;
+  category: 'documents' | 'resumes';
+  claimTokenHash: string;
+  claimedByTable: string | null;
+  claimedRecordId: string | null;
+}
+
+function readLocalUploadClaims(): LocalUploadClaim[] {
+  try {
+    if (!fs.existsSync(LOCAL_UPLOAD_CLAIMS_FILE)) return [];
+    const parsed = JSON.parse(fs.readFileSync(LOCAL_UPLOAD_CLAIMS_FILE, 'utf-8'));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalUploadClaims(claims: LocalUploadClaim[]): void {
+  const dir = path.dirname(LOCAL_UPLOAD_CLAIMS_FILE);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  fs.writeFileSync(LOCAL_UPLOAD_CLAIMS_FILE, JSON.stringify(claims, null, 2), 'utf-8');
+}
+
 /**
- * Inserts a row into Supabase with optional `idempotency_key` support.
- * - Handles unique index violations (`23505`) as safe idempotent duplicates.
- * - Automatically retries without `idempotency_key` if migration `002_idempotency_and_hardening.sql`
- *   has not yet been applied to the remote Supabase database.
+ * Registers a newly uploaded private customer document and returns a random
+ * one-time claim token that binds the file to a single submission.
+ */
+export async function registerCustomerDocumentUpload(params: {
+  category: 'documents' | 'resumes';
+  storagePath: string;
+  fileReference: string;
+  mimeType: string;
+  byteSize: number;
+}): Promise<{ ok: true; uploadToken: string } | { ok: false; error: unknown }> {
+  const uploadToken = randomBytes(24).toString('hex');
+  const claimTokenHash = hashClaimToken(uploadToken);
+
+  if (isServiceRoleConfigured()) {
+    try {
+      const supabase = createServiceRoleClient();
+      const { error } = await supabase.from('customer_document_uploads').insert({
+        bucket_id: 'customer-documents',
+        category: params.category,
+        storage_path: params.storagePath,
+        file_reference: params.fileReference,
+        mime_type: params.mimeType,
+        byte_size: params.byteSize,
+        claim_token_hash: claimTokenHash,
+      });
+      if (error) {
+        return { ok: false, error };
+      }
+      return { ok: true, uploadToken };
+    } catch (error) {
+      return { ok: false, error };
+    }
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    return { ok: false, error: new Error('Supabase service role is required in production.') };
+  }
+
+  const claims = readLocalUploadClaims();
+  claims.push({
+    fileReference: params.fileReference,
+    category: params.category,
+    claimTokenHash,
+    claimedByTable: null,
+    claimedRecordId: null,
+  });
+  writeLocalUploadClaims(claims);
+  return { ok: true, uploadToken };
+}
+
+async function verifyAndClaimSupabaseAttachment(params: {
+  fileReference: string;
+  claimToken: string | undefined;
+  expectedCategory: 'documents' | 'resumes';
+  targetTable: 'quote_requests' | 'job_applications';
+  targetRecordId: string;
+  idempotencyKey?: string;
+}): Promise<{ alreadyPersisted?: boolean }> {
+  const expectedPrefix = `supabase://customer-documents/${params.expectedCategory}/`;
+  if (!params.fileReference.startsWith(expectedPrefix)) {
+    throw new AttachmentClaimError(400, 'Invalid attachment reference category.');
+  }
+  if (!params.claimToken || params.claimToken.trim().length < 32) {
+    throw new AttachmentClaimError(400, 'Missing or invalid attachment verification token.');
+  }
+
+  const supabase = createServiceRoleClient();
+
+  if (params.idempotencyKey) {
+    const refCol = params.targetTable === 'quote_requests' ? 'attachment_url' : 'cv_url';
+    const { data: existingRow } = await supabase
+      .from(params.targetTable)
+      .select(`id, ${refCol}`)
+      .eq('idempotency_key', params.idempotencyKey)
+      .maybeSingle();
+    if (
+      existingRow &&
+      (existingRow as Record<string, unknown>)[refCol] === params.fileReference
+    ) {
+      return { alreadyPersisted: true };
+    }
+  }
+
+  const tokenHash = hashClaimToken(params.claimToken);
+  const { data: claimedRows, error: claimErr } = await supabase
+    .from('customer_document_uploads')
+    .update({
+      claimed_by_table: params.targetTable,
+      claimed_record_id: params.targetRecordId,
+      claimed_at: new Date().toISOString(),
+    })
+    .eq('file_reference', params.fileReference)
+    .eq('category', params.expectedCategory)
+    .eq('claim_token_hash', tokenHash)
+    .is('claimed_at', null)
+    .select('id');
+
+  if (claimErr) {
+    throw claimErr;
+  }
+
+  if (!claimedRows || claimedRows.length === 0) {
+    throw new AttachmentClaimError(
+      400,
+      'Attachment reference is invalid, unauthorized, or already attached to another submission.'
+    );
+  }
+
+  return {};
+}
+
+async function releaseSupabaseAttachmentClaim(
+  fileReference: string,
+  targetRecordId: string
+): Promise<void> {
+  try {
+    const supabase = createServiceRoleClient();
+    await supabase
+      .from('customer_document_uploads')
+      .update({
+        claimed_by_table: null,
+        claimed_record_id: null,
+        claimed_at: null,
+      })
+      .eq('file_reference', fileReference)
+      .eq('claimed_record_id', targetRecordId);
+  } catch {
+    // Best-effort compensation
+  }
+}
+
+/**
+ * Inserts a row into Supabase strictly through the server service-role client
+ * with `idempotency_key` deduplication (browser roles have zero direct DML grants).
  */
 async function insertSupabaseRowWithIdempotency(
   table: 'quote_requests' | 'job_applications' | 'customer_feedback',
   rowWithoutKey: Record<string, unknown>,
   idempotencyKey?: string
 ): Promise<{ ok: boolean; deduplicated?: boolean; error?: unknown }> {
-  const supabase = await createSupabaseClient();
+  const supabase = createServiceRoleClient();
   const payload = idempotencyKey
     ? { ...rowWithoutKey, idempotency_key: idempotencyKey }
     : rowWithoutKey;
@@ -161,9 +342,9 @@ async function insertSupabaseRowWithIdempotency(
 
 // ----------------- QUOTES -----------------
 export async function getQuotes(): Promise<DBQuote[]> {
-  if (isSupabaseConfigured()) {
+  if (isServiceRoleConfigured()) {
     try {
-      const supabase = await createSupabaseClient();
+      const supabase = createServiceRoleClient();
       const { data, error } = await supabase
         .from('quote_requests')
         .select('*')
@@ -207,10 +388,50 @@ export async function getQuotes(): Promise<DBQuote[]> {
   ]);
 }
 
+function claimLocalCustomerDocument(params: {
+  fileReference: string;
+  claimToken: string | undefined;
+  expectedCategory: 'documents' | 'resumes';
+  targetTable: 'quote_requests' | 'job_applications';
+  targetRecordId: string;
+}): void {
+  const expectedPrefix = `private://${params.expectedCategory}/`;
+  if (!params.fileReference.startsWith(expectedPrefix)) {
+    throw new AttachmentClaimError(400, 'Invalid local attachment reference category.');
+  }
+  if (!params.claimToken || params.claimToken.trim().length < 32) {
+    throw new AttachmentClaimError(400, 'Missing or invalid attachment verification token.');
+  }
+  const tokenHash = hashClaimToken(params.claimToken);
+  const claims = readLocalUploadClaims();
+  const idx = claims.findIndex(
+    (c) =>
+      c.fileReference === params.fileReference &&
+      c.category === params.expectedCategory &&
+      c.claimTokenHash === tokenHash &&
+      c.claimedRecordId === null
+  );
+  if (idx === -1) {
+    throw new AttachmentClaimError(
+      400,
+      'Attachment reference is invalid, unauthorized, or already attached to another submission.'
+    );
+  }
+  claims[idx] = {
+    ...claims[idx],
+    claimedByTable: params.targetTable,
+    claimedRecordId: params.targetRecordId,
+  };
+  writeLocalUploadClaims(claims);
+}
+
 export async function addQuote(
-  quote: Omit<DBQuote, 'id' | 'createdAt' | 'status'> & { idempotencyKey?: string }
+  quote: Omit<DBQuote, 'id' | 'createdAt' | 'status'> & {
+    idempotencyKey?: string;
+    attachmentToken?: string;
+  }
 ): Promise<DBQuote & { deduplicated?: boolean }> {
-  const { idempotencyKey, ...quoteData } = quote;
+  const { idempotencyKey, attachmentToken, ...quoteData } = quote;
   const newQuote: DBQuote = {
     ...quoteData,
     id: randomUUID(),
@@ -218,8 +439,24 @@ export async function addQuote(
     createdAt: new Date().toISOString(),
   };
 
-  if (isSupabaseConfigured()) {
+  if (isServiceRoleConfigured()) {
+    let claimed = false;
     try {
+      if (newQuote.attachmentUrl) {
+        const claimRes = await verifyAndClaimSupabaseAttachment({
+          fileReference: newQuote.attachmentUrl,
+          claimToken: attachmentToken,
+          expectedCategory: 'documents',
+          targetTable: 'quote_requests',
+          targetRecordId: newQuote.id,
+          idempotencyKey,
+        });
+        if (claimRes.alreadyPersisted) {
+          return { ...newQuote, deduplicated: true };
+        }
+        claimed = true;
+      }
+
       const persistedDescription = newQuote.propertyType
         ? `[Property Type: ${newQuote.propertyType}]\n${newQuote.description}`
         : newQuote.description;
@@ -245,10 +482,20 @@ export async function addQuote(
         return { ...newQuote, ...(res.deduplicated ? { deduplicated: true } : {}) };
       }
 
+      if (claimed && newQuote.attachmentUrl) {
+        await releaseSupabaseAttachmentClaim(newQuote.attachmentUrl, newQuote.id);
+      }
+
       if (process.env.NODE_ENV === 'production') {
         throw new Error('Database persistence failed');
       }
     } catch (e) {
+      if (claimed && newQuote.attachmentUrl) {
+        await releaseSupabaseAttachmentClaim(newQuote.attachmentUrl, newQuote.id);
+      }
+      if (e instanceof AttachmentClaimError) {
+        throw e;
+      }
       console.error('Supabase addQuote error:', e);
       if (process.env.NODE_ENV === 'production') {
         throw e;
@@ -256,6 +503,16 @@ export async function addQuote(
     }
   } else if (process.env.NODE_ENV === 'production') {
     throw new Error('Supabase database is required in production environment.');
+  }
+
+  if (newQuote.attachmentUrl) {
+    claimLocalCustomerDocument({
+      fileReference: newQuote.attachmentUrl,
+      claimToken: attachmentToken,
+      expectedCategory: 'documents',
+      targetTable: 'quote_requests',
+      targetRecordId: newQuote.id,
+    });
   }
 
   const current = ensureDataFile<DBQuote>('quotes.json', []);
@@ -266,9 +523,9 @@ export async function addQuote(
 
 // ----------------- APPLICATIONS -----------------
 export async function getApplications(): Promise<DBApplication[]> {
-  if (isSupabaseConfigured()) {
+  if (isServiceRoleConfigured()) {
     try {
-      const supabase = await createSupabaseClient();
+      const supabase = createServiceRoleClient();
       const { data, error } = await supabase
         .from('job_applications')
         .select('*')
@@ -311,9 +568,12 @@ export async function getApplications(): Promise<DBApplication[]> {
 }
 
 export async function addApplication(
-  app: Omit<DBApplication, 'id' | 'createdAt' | 'status'> & { idempotencyKey?: string }
+  app: Omit<DBApplication, 'id' | 'createdAt' | 'status'> & {
+    idempotencyKey?: string;
+    resumeToken?: string;
+  }
 ): Promise<DBApplication & { deduplicated?: boolean }> {
-  const { idempotencyKey, ...appData } = app;
+  const { idempotencyKey, resumeToken, ...appData } = app;
   const newApp: DBApplication = {
     ...appData,
     id: randomUUID(),
@@ -321,8 +581,24 @@ export async function addApplication(
     createdAt: new Date().toISOString(),
   };
 
-  if (isSupabaseConfigured()) {
+  if (isServiceRoleConfigured()) {
+    let claimed = false;
     try {
+      if (newApp.resumeUrl) {
+        const claimRes = await verifyAndClaimSupabaseAttachment({
+          fileReference: newApp.resumeUrl,
+          claimToken: resumeToken,
+          expectedCategory: 'resumes',
+          targetTable: 'job_applications',
+          targetRecordId: newApp.id,
+          idempotencyKey,
+        });
+        if (claimRes.alreadyPersisted) {
+          return { ...newApp, deduplicated: true };
+        }
+        claimed = true;
+      }
+
       const metadataLines = [
         `[Position: ${newApp.position}]`,
         `[Experience: ${newApp.yearsOfExperience}]`,
@@ -332,7 +608,6 @@ export async function addApplication(
         ? `${metadataLines.join('\n')}\n\n${newApp.coverLetter}`
         : metadataLines.join('\n');
 
-      // Schema 001 grants anonymous INSERT only (no SELECT policy), and id is UUID.
       const res = await insertSupabaseRowWithIdempotency(
         'job_applications',
         {
@@ -351,10 +626,20 @@ export async function addApplication(
         return { ...newApp, ...(res.deduplicated ? { deduplicated: true } : {}) };
       }
 
+      if (claimed && newApp.resumeUrl) {
+        await releaseSupabaseAttachmentClaim(newApp.resumeUrl, newApp.id);
+      }
+
       if (process.env.NODE_ENV === 'production') {
         throw new Error('Database persistence failed');
       }
     } catch (e) {
+      if (claimed && newApp.resumeUrl) {
+        await releaseSupabaseAttachmentClaim(newApp.resumeUrl, newApp.id);
+      }
+      if (e instanceof AttachmentClaimError) {
+        throw e;
+      }
       console.error('Supabase addApplication error:', e);
       if (process.env.NODE_ENV === 'production') {
         throw e;
@@ -362,6 +647,16 @@ export async function addApplication(
     }
   } else if (process.env.NODE_ENV === 'production') {
     throw new Error('Supabase database is required in production environment.');
+  }
+
+  if (newApp.resumeUrl) {
+    claimLocalCustomerDocument({
+      fileReference: newApp.resumeUrl,
+      claimToken: resumeToken,
+      expectedCategory: 'resumes',
+      targetTable: 'job_applications',
+      targetRecordId: newApp.id,
+    });
   }
 
   const current = ensureDataFile<DBApplication>('applications.json', []);
@@ -372,9 +667,9 @@ export async function addApplication(
 
 // ----------------- FEEDBACK -----------------
 export async function getFeedback(): Promise<DBFeedback[]> {
-  if (isSupabaseConfigured()) {
+  if (isServiceRoleConfigured()) {
     try {
-      const supabase = await createSupabaseClient();
+      const supabase = createServiceRoleClient();
       const { data, error } = await supabase
         .from('customer_feedback')
         .select('*')
@@ -423,7 +718,7 @@ export async function addFeedback(
     createdAt: new Date().toISOString(),
   };
 
-  if (isSupabaseConfigured()) {
+  if (isServiceRoleConfigured()) {
     try {
       const persistedMessage = newFb.permissionToPublish
         ? newFb.message

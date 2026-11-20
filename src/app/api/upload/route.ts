@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
-import { isSupabaseConfigured } from '@/lib/db/mockData';
-import { createClient as createSupabaseClient } from '@/lib/supabase/server';
+import { registerCustomerDocumentUpload } from '@/lib/db/mockData';
+import {
+  createServiceRoleClient,
+  isServiceRoleConfigured,
+} from '@/lib/supabase/serviceRole';
 import { validateUploadFile } from '@/lib/security/fileValidation';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
 import path from 'path';
@@ -69,30 +72,50 @@ export async function POST(req: Request) {
 
     const uniqueFileName = validation.sanitizedFilename;
 
-    // 3. Cloud Storage (Supabase Storage: private bucket 'customer-documents')
-    if (isSupabaseConfigured()) {
+    // 3. Cloud Storage (Supabase Storage: private bucket 'customer-documents' via service_role)
+    if (isServiceRoleConfigured()) {
       try {
-        const supabase = await createSupabaseClient();
+        const supabase = createServiceRoleClient();
         const bucket = 'customer-documents';
         const storagePath = `${category}/${uniqueFileName}`;
+        const detectedMime = validation.detectedType || file.type;
 
         const { data, error } = await supabase.storage
           .from(bucket)
           .upload(storagePath, fileBuffer, {
-            contentType: validation.detectedType || file.type,
+            contentType: detectedMime,
             upsert: false,
           });
 
         if (!error && data) {
-          return NextResponse.json({
-            success: true,
-            storage: 'supabase-private',
-            fileReference: `supabase://${bucket}/${data.path}`,
-            fileName: uniqueFileName,
+          const fileReference = `supabase://${bucket}/${data.path}`;
+          const registered = await registerCustomerDocumentUpload({
+            category,
+            storagePath: data.path,
+            fileReference,
+            mimeType: detectedMime,
+            byteSize: fileBuffer.length,
           });
-        }
 
-        console.error('Supabase private storage error:', error);
+          if (!registered.ok) {
+            try {
+              await supabase.storage.from(bucket).remove([data.path]);
+            } catch (cleanupErr) {
+              console.error('Supabase private storage cleanup failed:', cleanupErr);
+            }
+            console.error('Customer upload registration failed:', registered.error);
+          } else {
+            return NextResponse.json({
+              success: true,
+              storage: 'supabase-private',
+              fileReference,
+              fileName: uniqueFileName,
+              uploadToken: registered.uploadToken,
+            });
+          }
+        } else {
+          console.error('Supabase private storage error:', error);
+        }
       } catch (err) {
         console.error('Supabase private storage upload failed:', err);
       }
@@ -120,12 +143,29 @@ export async function POST(req: Request) {
     const destinationPath = path.join(privateDir, uniqueFileName);
     fs.writeFileSync(destinationPath, fileBuffer);
 
+    const localReference = `private://${category}/${uniqueFileName}`;
+    const localRegistered = await registerCustomerDocumentUpload({
+      category,
+      storagePath: `${category}/${uniqueFileName}`,
+      fileReference: localReference,
+      mimeType: validation.detectedType || file.type,
+      byteSize: fileBuffer.length,
+    });
+
+    if (!localRegistered.ok) {
+      return NextResponse.json(
+        { success: false, error: 'Unable to bind uploaded file to session.' },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       storage: 'local-private',
-      fileReference: `private://${category}/${uniqueFileName}`,
+      fileReference: localReference,
       fileName: uniqueFileName,
       fileSize: file.size,
+      uploadToken: localRegistered.uploadToken,
     });
   } catch (err: unknown) {
     console.error('Upload route internal error:', err);

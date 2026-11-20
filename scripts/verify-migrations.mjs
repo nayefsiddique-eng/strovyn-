@@ -11,10 +11,10 @@ const ts = require('typescript');
 const REPO_ROOT = path.resolve(import.meta.dirname, '..');
 const MIGRATIONS_DIR = path.join(REPO_ROOT, 'supabase', 'migrations');
 
-const sql001 = fs.readFileSync(path.join(MIGRATIONS_DIR, '001_initial_schema.sql'), 'utf8');
-const sql002 = fs.readFileSync(path.join(MIGRATIONS_DIR, '002_idempotency_and_hardening.sql'), 'utf8');
-const sql003 = fs.readFileSync(path.join(MIGRATIONS_DIR, '003_editorial_cms.sql'), 'utf8');
-const sql004 = fs.readFileSync(path.join(MIGRATIONS_DIR, '004_editorial_cms_hardening.sql'), 'utf8');
+const sql001 = fs.readFileSync(path.join(MIGRATIONS_DIR, '20261113212535_initial_schema.sql'), 'utf8');
+const sql002 = fs.readFileSync(path.join(MIGRATIONS_DIR, '20261119140214_idempotency_and_hardening.sql'), 'utf8');
+const sql003 = fs.readFileSync(path.join(MIGRATIONS_DIR, '20261119191815_editorial_cms.sql'), 'utf8');
+const sql004 = fs.readFileSync(path.join(MIGRATIONS_DIR, '20261119202922_editorial_cms_hardening.sql'), 'utf8');
 
 function loadArticlesData() {
   const source = fs.readFileSync(path.join(REPO_ROOT, 'src', 'data', 'articlesData.ts'), 'utf8');

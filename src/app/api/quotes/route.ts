@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createHash } from 'crypto';
-import { addQuote } from '@/lib/db/mockData';
+import { addQuote, AttachmentClaimError } from '@/lib/db/mockData';
 import { quoteRequestSchema } from '@/lib/security/schemas';
 import { escapeHtml } from '@/lib/security/escapeHtml';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
@@ -139,6 +139,7 @@ export async function POST(req: Request) {
           description: validated.description,
           preferredContact: validated.preferredContact,
           attachmentUrl: validated.attachmentUrl,
+          attachmentToken: validated.attachmentToken,
           idempotencyKey,
         }),
     });
@@ -156,6 +157,12 @@ export async function POST(req: Request) {
       { status: outcome.status }
     );
   } catch (err: unknown) {
+    if (err instanceof AttachmentClaimError) {
+      return NextResponse.json(
+        { success: false, error: err.message },
+        { status: err.status }
+      );
+    }
     const isUnconfiguredProd =
       err instanceof Error &&
       err.message.includes('Supabase database is required in production');
