@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import type { TiptapDoc } from '@/lib/cms/contentSecurity';
 import { validateApprovedEditorialMediaUrl } from '@/lib/cms/mediaUrlPolicy';
+import { resolveEditorPreviewImageSrc } from '@/lib/cms/editorHelpers';
 
 export interface UploadedEditorialImage {
   url: string;
@@ -34,13 +35,83 @@ export interface UploadedEditorialImage {
   height?: number;
 }
 
+export interface PendingEditorialImageInsert {
+  requestId: number;
+  url: string;
+  alt: string;
+  width?: number | null;
+  height?: number | null;
+}
+
 export interface EditorialRichTextEditorProps {
   value: TiptapDoc;
   onChange: (doc: TiptapDoc) => void;
   documentKey?: string | number;
   disabled?: boolean;
   onUploadImage?: (file: File, altText: string) => Promise<UploadedEditorialImage>;
+  onOpenMediaLibrary?: () => void;
+  pendingImageInsert?: PendingEditorialImageInsert | null;
   ariaLabel?: string;
+}
+
+/**
+ * Custom Tiptap Image node extension whose ProseMirror attributes and `renderHTML`
+ * strictly retain canonical `/api/editorial-media/<uuid>` URLs while visually
+ * rendering authenticated `/api/admin/insights/media/<uuid>` preview streams in
+ * the interactive editor DOM.
+ */
+function buildEditorialPreviewImageExtension() {
+  if (typeof Image?.extend !== 'function') {
+    return Image;
+  }
+  return Image.extend({
+    addNodeView() {
+      return ({ node }) => {
+        const wrapper = document.createElement('figure');
+        wrapper.className = 'my-4 border border-warm-grey/40 bg-ivory-light/60 p-2';
+        wrapper.setAttribute('data-editorial-image-node', 'true');
+
+        const img = document.createElement('img');
+        img.className = 'max-w-full h-auto block mx-auto';
+
+        const caption = document.createElement('figcaption');
+        caption.className = 'mt-1.5 font-mono text-[10px] text-warm-grey-dark truncate';
+
+        const applyNodeAttrs = (currentNode: typeof node) => {
+          const canonicalSrc =
+            typeof currentNode.attrs.src === 'string' ? currentNode.attrs.src : '';
+          img.src = resolveEditorPreviewImageSrc(canonicalSrc);
+          img.alt = typeof currentNode.attrs.alt === 'string' ? currentNode.attrs.alt : '';
+          if (currentNode.attrs.width) {
+            img.setAttribute('width', String(currentNode.attrs.width));
+          } else {
+            img.removeAttribute('width');
+          }
+          if (currentNode.attrs.height) {
+            img.setAttribute('height', String(currentNode.attrs.height));
+          } else {
+            img.removeAttribute('height');
+          }
+          caption.textContent = canonicalSrc
+            ? `${img.alt || 'Editorial image'} · ${canonicalSrc}`
+            : img.alt || 'Editorial image';
+        };
+
+        applyNodeAttrs(node);
+        wrapper.appendChild(img);
+        wrapper.appendChild(caption);
+
+        return {
+          dom: wrapper,
+          update(updatedNode) {
+            if (updatedNode.type.name !== 'image') return false;
+            applyNodeAttrs(updatedNode);
+            return true;
+          },
+        };
+      };
+    },
+  });
 }
 
 const DEFAULT_EMPTY_DOC: TiptapDoc = {
@@ -138,6 +209,8 @@ export function EditorialRichTextEditor({
   documentKey,
   disabled = false,
   onUploadImage,
+  onOpenMediaLibrary,
+  pendingImageInsert = null,
   ariaLabel = 'Article body editor',
 }: EditorialRichTextEditorProps) {
   const [activePopover, setActivePopover] = useState<'none' | 'link' | 'image'>('none');
@@ -147,6 +220,7 @@ export function EditorialRichTextEditor({
   const [controlError, setControlError] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const lastHandledInsertRef = useRef<number | null>(null);
 
   const onChangeRef = useRef(onChange);
   useEffect(() => {
@@ -177,7 +251,7 @@ export function EditorialRichTextEditor({
           rel: 'noopener noreferrer nofollow',
         },
       }),
-      Image.configure({
+      buildEditorialPreviewImageExtension().configure({
         inline: false,
         allowBase64: false,
       }),
@@ -252,6 +326,22 @@ export function EditorialRichTextEditor({
       }
     }
   }, [editor, value, documentKey]);
+
+  useEffect(() => {
+    if (!editor || !pendingImageInsert || disabled) return;
+    if (lastHandledInsertRef.current === pendingImageInsert.requestId) return;
+    const urlCheck = validateApprovedEditorialMediaUrl(pendingImageInsert.url);
+    if (!urlCheck.valid) return;
+    lastHandledInsertRef.current = pendingImageInsert.requestId;
+    editor
+      .chain()
+      .focus()
+      .setImage({
+        src: urlCheck.url,
+        alt: pendingImageInsert.alt.trim(),
+      })
+      .run();
+  }, [editor, pendingImageInsert, disabled]);
 
   const handleApplyLink = () => {
     if (!editor) return;
@@ -535,7 +625,7 @@ export function EditorialRichTextEditor({
                 type="url"
                 value={imageUrlInput}
                 onChange={(e) => setImageUrlInput(e.target.value)}
-                placeholder="https://.../editorial-media/..."
+                placeholder="/api/editorial-media/<uuid> or https://images.unsplash.com/..."
                 className="w-full border border-warm-grey/60 bg-white px-3 py-1.5 text-xs text-charcoal"
               />
             </div>
@@ -545,10 +635,23 @@ export function EditorialRichTextEditor({
             <button
               type="button"
               onClick={handleInsertImageByUrl}
-              className="px-3 py-1.5 text-xs bg-charcoal text-ivory uppercase tracking-wider"
+              className="px-3 py-1.5 text-xs bg-charcoal text-ivory uppercase tracking-wider cursor-pointer"
             >
               Insert Image URL
             </button>
+
+            {onOpenMediaLibrary && (
+              <button
+                type="button"
+                onClick={() => {
+                  setActivePopover('none');
+                  onOpenMediaLibrary();
+                }}
+                className="px-3 py-1.5 text-xs border border-bronze text-bronze hover:bg-bronze hover:text-ivory transition-colors uppercase tracking-wider cursor-pointer"
+              >
+                Choose from Media Library
+              </button>
+            )}
 
             {onUploadImage && (
               <>
@@ -563,7 +666,7 @@ export function EditorialRichTextEditor({
                   type="button"
                   disabled={isUploadingImage}
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-3 py-1.5 text-xs border border-charcoal text-charcoal uppercase tracking-wider disabled:opacity-50"
+                  className="px-3 py-1.5 text-xs border border-charcoal text-charcoal uppercase tracking-wider disabled:opacity-50 cursor-pointer"
                 >
                   {isUploadingImage ? 'Uploading...' : 'Upload JPEG/PNG/WebP'}
                 </button>

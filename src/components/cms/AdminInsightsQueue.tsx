@@ -9,17 +9,20 @@ import {
   ExternalLink,
   FileText,
   LogOut,
+  Plus,
   RefreshCw,
   Search,
   ShieldCheck,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { hasEditorialPermission } from '@/lib/cms/rbac';
 import { ARTICLE_STATUSES, type ArticleStatus } from '@/lib/cms/roles';
 import {
   describeStaffRole,
   formatStatusLabel,
   getRoleQueueActionModel,
 } from '@/lib/cms/stage1Access';
+import { NewArticleModal } from './NewArticleModal';
 import {
   StaffAccessDeniedCard,
   StaffSignInCard,
@@ -111,6 +114,9 @@ export function AdminInsightsQueue({
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
   const [isSigningOut, setIsSigningOut] = useState<boolean>(false);
+  const [isNewModalOpen, setIsNewModalOpen] = useState<boolean>(false);
+
+  const canCreateDraft = hasEditorialPermission(staff.role, 'article:create_draft');
 
   const fetchQueue = useCallback(async () => {
     setIsLoading(true);
@@ -269,7 +275,17 @@ export function AdminInsightsQueue({
               <p className="font-sans text-sm font-medium text-charcoal">{staff.full_name}</p>
               <p className="font-mono text-[11px] text-warm-grey-dark">{staff.email}</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {canCreateDraft && (
+                <button
+                  type="button"
+                  onClick={() => setIsNewModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-bronze text-ivory hover:bg-bronze-hover transition-colors font-mono text-xs uppercase tracking-wider cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bronze"
+                >
+                  <Plus className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>New Article</span>
+                </button>
+              )}
               <Link
                 href="/insights"
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-warm-grey text-xs font-mono uppercase tracking-wider text-charcoal hover:border-charcoal transition-colors"
@@ -290,10 +306,10 @@ export function AdminInsightsQueue({
           </div>
         </header>
 
-        {/* Stage 1 Notice Banner */}
+        {/* Stage 2 Status Banner */}
         <div className="border border-warm-grey/50 bg-ivory-light px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-sans text-charcoal/80">
           <span>
-            <strong>Stage 1 Workspace:</strong> Authenticated queue, status inspection, and RBAC navigation are active. Rich-text authoring, media library management, and workflow transitions arrive in Stages 2–3.
+            <strong>Editorial Authoring Workspace:</strong> Draft creation, metadata &amp; Tiptap editing, optimistic concurrency protection, and private editorial media controls are active. Workflow status transitions unlock in Stage 3.
           </span>
           <span className="font-mono text-[11px] uppercase tracking-wider text-bronze flex-shrink-0">
             Role Scope: {staff.role}
@@ -713,6 +729,20 @@ export function AdminInsightsQueue({
           )}
         </section>
       </div>
+
+      <NewArticleModal
+        isOpen={isNewModalOpen}
+        staff={staff}
+        onClose={() => setIsNewModalOpen(false)}
+        onSessionExpired={() => {
+          setItems([]);
+          setSessionExpired(true);
+        }}
+        onAccessDenied={(code, status, message) => {
+          setItems([]);
+          setDeniedState({ code, status, message });
+        }}
+      />
     </main>
   );
 }

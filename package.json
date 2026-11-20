@@ -12,7 +12,8 @@
     "test:cms-phase2": "node scripts/test-cms-phase2.mjs",
     "test:cms-hardening": "node scripts/test-submission-hardening.mjs",
     "test:cms-stage1": "node scripts/test-cms-phase3-stage1.mjs",
-    "test:cms": "npm run test:cms-db && npm run test:cms-rbac && npm run test:cms-phase2 && npm run test:cms-hardening && npm run test:cms-stage1"
+    "test:cms-stage2": "node scripts/test-cms-phase3-stage2.mjs",
+    "test:cms": "npm run test:cms-db && npm run test:cms-rbac && npm run test:cms-phase2 && npm run test:cms-hardening && npm run test:cms-stage1 && npm run test:cms-stage2"
   },
   "dependencies": {
     "@react-three/drei": "10.7.9",
