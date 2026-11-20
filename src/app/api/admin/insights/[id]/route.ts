@@ -8,6 +8,7 @@ import {
   EditorialHttpError,
   enforceCmsRateLimit,
   mapCmsErrorToResponse,
+  revalidatePublicInsightsPaths,
 } from '@/lib/cms/http';
 import {
   requireStaffSession,
@@ -67,6 +68,7 @@ export async function PATCH(req: Request, context: RouteContext) {
     }
 
     const article = await updateEditorialArticle(staff, articleId, bodyCheck.data);
+    revalidatePublicInsightsPaths(typeof article.slug === 'string' ? article.slug : null);
     return NextResponse.json({ success: true, article });
   } catch (err) {
     return mapCmsErrorToResponse(err);

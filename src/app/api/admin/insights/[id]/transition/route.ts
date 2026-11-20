@@ -5,6 +5,7 @@ import {
   EditorialHttpError,
   enforceCmsRateLimit,
   mapCmsErrorToResponse,
+  revalidatePublicInsightsPaths,
 } from '@/lib/cms/http';
 import { resolveAuthenticatedStaff } from '@/lib/cms/staffAuth';
 import { UuidParamSchema } from '@/lib/cms/validators';
@@ -44,6 +45,7 @@ export async function POST(req: Request, context: RouteContext) {
       idParsed.data,
       bodyCheck.data
     );
+    revalidatePublicInsightsPaths(typeof article.slug === 'string' ? article.slug : null);
     return NextResponse.json({ success: true, article });
   } catch (err) {
     return mapCmsErrorToResponse(err);

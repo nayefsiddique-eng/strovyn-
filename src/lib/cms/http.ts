@@ -1,4 +1,5 @@
 import 'server-only';
+import { revalidatePath } from 'next/cache';
 import { NextResponse } from 'next/server';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
 import { StaffAuthError } from './staffAuth';
@@ -162,4 +163,21 @@ export function mapCmsErrorToResponse(err: unknown): NextResponse {
     },
     { status: 500 }
   );
+}
+
+/**
+ * Best-effort invalidation of public Insights routes and homepage showcase after
+ * editorial updates or status transitions. Wrapped safely so non-Next test
+ * harnesses continue working without a request async-storage context.
+ */
+export function revalidatePublicInsightsPaths(slug?: string | null): void {
+  try {
+    revalidatePath('/');
+    revalidatePath('/insights');
+    if (slug && typeof slug === 'string') {
+      revalidatePath(`/insights/${slug}`);
+    }
+  } catch {
+    // Ignore when executed outside an active Next.js request context
+  }
 }

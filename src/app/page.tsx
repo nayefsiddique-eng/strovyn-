@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import type { Metadata } from 'next';
 import {
   Hero,
@@ -12,6 +12,7 @@ import {
   SearchableFAQ,
   FinishExplorer,
 } from '@/components/home';
+import { HomeInsightsSection } from '@/components/home/HomeInsightsSection';
 
 export const metadata: Metadata = {
   title: {
@@ -46,7 +47,9 @@ export default function HomePage() {
       <StrovynApproach />
 
       {/* SECTION G: INSIGHTS AND ARTICLES WITH MOVING TICKER */}
-      <InsightsArticles />
+      <Suspense fallback={<InsightsArticles isLoading />}>
+        <HomeInsightsSection />
+      </Suspense>
 
       {/* SEARCHABLE FAQ */}
       <SearchableFAQ />
