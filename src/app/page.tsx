@@ -11,9 +11,11 @@ import {
   FinalContact,
   SearchableFAQ,
   FinishExplorer,
+  TestimonialCarousel,
 } from '@/components/home';
 import { HomeInsightsSection } from '@/components/home/HomeInsightsSection';
 import { HomeProjectsSection } from '@/components/home/HomeProjectsSection';
+import { HomeTestimonialsSection } from '@/components/home/HomeTestimonialsSection';
 
 export const metadata: Metadata = {
   title: {
@@ -48,6 +50,11 @@ export default function HomePage() {
 
       {/* SECTION F: THE STROVYN APPROACH */}
       <StrovynApproach />
+
+      {/* SECTION 06: CLIENT PERSPECTIVES & VERIFIED TESTIMONIALS */}
+      <Suspense fallback={<TestimonialCarousel isLoading />}>
+        <HomeTestimonialsSection />
+      </Suspense>
 
       {/* SECTION G: INSIGHTS AND ARTICLES WITH MOVING TICKER */}
       <Suspense fallback={<InsightsArticles isLoading />}>

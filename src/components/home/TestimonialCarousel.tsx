@@ -1,11 +1,7 @@
 'use client';
 
-/**
- * UNPUBLISHED TEMPLATE COMPONENT — DO NOT MOUNT IN PUBLIC ROUTES WITH SAMPLE DATA.
- * `sampleTestimonials` below are non-production placeholders. Genuine, written, and
- * consented client endorsements must replace these fixtures before mounting on `/`.
- */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import Badge from '@/components/ui/Badge';
 import { cn } from '@/lib/utils';
@@ -14,67 +10,25 @@ export interface TestimonialItem {
   id: string;
   quote: string;
   author: string;
-  role: string;
-  project: string;
-  location: string;
-  specification: string;
-  rating: number;
+  role?: string | null;
+  project?: string | null;
+  location?: string | null;
+  specification?: string | null;
+  rating?: number | null;
+  isFeatured?: boolean;
 }
 
-export const sampleTestimonials: TestimonialItem[] = [
-  {
-    id: 'henderson-north-adelaide',
-    quote:
-      'Strovyn’s craftsmen approached our heritage residence with the exactitude of museum conservators. The Level 5 ceiling finishes under harsh afternoon raking sunlight show zero defects, and their care around delicate 140-year-old plaster cornices was remarkable.',
-    author: 'P. Henderson',
-    role: 'Private Client & Estate Owner',
-    project: 'The North Adelaide Villa',
-    location: 'North Adelaide, SA',
-    specification: 'Level 5 Drywall & Heritage Cornices',
-    rating: 5,
-  },
-  {
-    id: 'lin-studio',
-    quote:
-      'In high-end architectural builds, surface transitions make or break the integrity of the design. Strovyn’s millwork lacquering and lime wash applications were executed with absolute precision, meeting our studio’s most demanding tolerances.',
-    author: 'M. Lin',
-    role: 'Principal Architect, Studio Lin Architecture',
-    project: 'Unley Park Residence',
-    location: 'Unley Park, Adelaide SA',
-    specification: 'Italian Marmorino Plaster & 2K Millwork',
-    rating: 5,
-  },
-  {
-    id: 'rossi-apex',
-    quote:
-      'The professionalism on site was exemplary. Seamless dust containment, schedule reliability under tight milestones, and a finish quality that surpassed our client’s highest standards. They are our definitive architectural coatings partner.',
-    author: 'D. Rossi',
-    role: 'Project Director, Apex Luxury Construct',
-    project: 'Adelaide Hills Modern Estate',
-    location: 'Crafers, Adelaide Hills SA',
-    specification: 'Mineral Silicate Envelope & Fine Joinery',
-    rating: 5,
-  },
-  {
-    id: 'campbell-interior',
-    quote:
-      'From their initial diagnostic moisture analysis to final raking light inspection, Strovyn operates with a scientific discipline that is exceptionally rare in the coatings trade. Flawless execution across our heritage restoration.',
-    author: 'E. Campbell',
-    role: 'Interior Architect, Campbell & Co.',
-    project: 'Medindie Heritage Restoration',
-    location: 'Medindie, Adelaide SA',
-    specification: 'Archival Distemper & Timber Restoration',
-    rating: 5,
-  },
-];
-
 export interface TestimonialCarouselProps {
+  testimonials?: TestimonialItem[];
+  isLoading?: boolean;
   className?: string;
   autoPlay?: boolean;
   autoPlayInterval?: number;
 }
 
 export const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
+  testimonials = [],
+  isLoading = false,
   className,
   autoPlay = false,
   autoPlayInterval = 8000,
@@ -82,30 +36,33 @@ export const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [direction, setDirection] = useState<number>(1);
 
-  const total = sampleTestimonials.length;
-  const current = sampleTestimonials[currentIndex];
+  const total = testimonials.length;
+  const safeIndex = total > 0 ? currentIndex % total : 0;
+  const current = total > 0 ? testimonials[safeIndex] : null;
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
+    if (total <= 1) return;
     setDirection(1);
     setCurrentIndex((prev) => (prev + 1) % total);
-  };
+  }, [total]);
 
-  const handlePrev = () => {
+  const handlePrev = useCallback(() => {
+    if (total <= 1) return;
     setDirection(-1);
     setCurrentIndex((prev) => (prev - 1 + total) % total);
-  };
+  }, [total]);
 
   useEffect(() => {
-    if (!autoPlay) return;
+    if (!autoPlay || total <= 1) return;
     const timer = setInterval(() => {
       handleNext();
     }, autoPlayInterval);
     return () => clearInterval(timer);
-  }, [autoPlay, autoPlayInterval, currentIndex]);
+  }, [autoPlay, autoPlayInterval, handleNext, total]);
 
   const slideVariants = {
-    enter: (direction: number) => ({
-      x: direction > 0 ? 40 : -40,
+    enter: (dir: number) => ({
+      x: dir > 0 ? 40 : -40,
       opacity: 0,
     }),
     center: {
@@ -116,8 +73,8 @@ export const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
         ease: [0.25, 1, 0.5, 1] as [number, number, number, number],
       },
     },
-    exit: (direction: number) => ({
-      x: direction > 0 ? -40 : 40,
+    exit: (dir: number) => ({
+      x: dir > 0 ? -40 : 40,
       opacity: 0,
       transition: {
         duration: 0.35,
@@ -125,6 +82,10 @@ export const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
       },
     }),
   };
+
+  const attributionMeta = current
+    ? [current.role, current.location].filter((part): part is string => Boolean(part && part.trim()))
+    : [];
 
   return (
     <section
@@ -153,140 +114,192 @@ export const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({
             </h2>
           </div>
 
-          <div className="flex items-center gap-4">
-            <span className="font-mono text-[10px] text-warm-grey-dark uppercase tracking-widest border border-warm-grey/40 bg-white px-2.5 py-1">
-              [Sample Client Endorsement]
-            </span>
-          </div>
+          {current && (
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-[10px] text-warm-grey-dark uppercase tracking-widest border border-warm-grey/40 bg-white px-2.5 py-1">
+                {current.isFeatured ? 'Featured Client Endorsement' : 'Verified Client Endorsement'}
+              </span>
+            </div>
+          )}
         </motion.div>
 
-        {/* Carousel Framing Box */}
-        <div className="border border-warm-grey/40 bg-white p-8 sm:p-12 lg:p-16 relative">
-          {/* Top Status & Controls Bar */}
-          <div className="flex items-center justify-between border-b border-warm-grey/30 pb-6 mb-8 sm:mb-12">
-            <div className="flex items-center gap-3">
-              <span className="font-mono text-sm text-bronze font-semibold">
-                0{currentIndex + 1}
-              </span>
-              <span className="font-mono text-xs text-warm-grey-dark">/</span>
-              <span className="font-mono text-xs text-warm-grey-dark">
-                0{total}
-              </span>
-              <span className="ml-4 font-mono text-[11px] text-charcoal uppercase tracking-wider hidden sm:inline-block">
-                {current.project}
-              </span>
+        {isLoading ? (
+          <div className="border border-warm-grey/40 bg-white p-8 sm:p-12 lg:p-16">
+            <p className="font-mono text-xs uppercase tracking-widest text-warm-grey-dark">
+              Loading verified client endorsements...
+            </p>
+          </div>
+        ) : !current ? (
+          <div
+            data-testid="testimonials-empty-state"
+            className="border border-warm-grey/40 bg-white p-8 sm:p-12 lg:p-16 flex flex-col md:flex-row md:items-center justify-between gap-6"
+          >
+            <div className="space-y-3 max-w-2xl">
+              <p className="font-mono text-[11px] uppercase tracking-widest text-bronze">
+                Verified Perspectives Pending Publication
+              </p>
+              <p className="font-sans text-base sm:text-lg text-charcoal/85 leading-relaxed">
+                Strovyn publishes only genuine, written client endorsements after project
+                completion and explicit publication consent verification.
+              </p>
             </div>
-
-            {/* Navigation Buttons */}
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handlePrev}
-                aria-label="Previous endorsement"
-                className="w-10 h-10 border border-warm-grey/40 bg-ivory text-charcoal flex items-center justify-center hover:bg-charcoal hover:text-white hover:border-charcoal transition-colors cursor-pointer"
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
+              <Link
+                href="/feedback"
+                className="px-5 py-3 bg-charcoal text-ivory font-mono text-[11px] uppercase tracking-widest hover:bg-bronze transition-colors"
               >
-                <svg
-                  className="w-4 h-4"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M10 13L5 8L10 3"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="square"
-                  />
-                </svg>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleNext}
-                aria-label="Next endorsement"
-                className="w-10 h-10 border border-warm-grey/40 bg-ivory text-charcoal flex items-center justify-center hover:bg-charcoal hover:text-white hover:border-charcoal transition-colors cursor-pointer"
+                Share Client Feedback
+              </Link>
+              <Link
+                href="/projects"
+                className="px-5 py-3 border border-warm-grey/60 bg-ivory text-charcoal font-mono text-[11px] uppercase tracking-widest hover:border-charcoal transition-colors"
               >
-                <svg
-                  className="w-4 h-4"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M6 3L11 8L6 13"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="square"
-                  />
-                </svg>
-              </button>
+                View Portfolio
+              </Link>
             </div>
           </div>
-
-          {/* Animated Slide Viewport */}
-          <div className="relative min-h-[220px] sm:min-h-[180px] overflow-hidden">
-            <AnimatePresence custom={direction} mode="wait">
-              <motion.div
-                key={current.id}
-                custom={direction}
-                variants={slideVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                className="flex flex-col justify-between"
-              >
-                <blockquote className="type-quote text-xl sm:text-2xl md:text-[1.65rem] text-charcoal mb-8 max-w-4xl">
-                  &ldquo;{current.quote}&rdquo;
-                </blockquote>
-
-                <div className="border-t border-warm-grey/30 pt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-ivory border border-bronze/40 flex items-center justify-center font-mono text-xs font-semibold text-bronze uppercase">
-                      {current.author.substring(0, 2)}
-                    </div>
-                    <div>
-                      <span className="font-sans text-sm font-semibold text-charcoal block">
-                        {current.author}
-                      </span>
-                      <span className="font-sans text-xs text-warm-grey-dark block">
-                        {current.role} &mdash; {current.location}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <Badge variant="bronze" size="sm">
-                      {current.specification}
-                    </Badge>
-                  </div>
-                </div>
-              </motion.div>
-            </AnimatePresence>
-          </div>
-
-          {/* Bottom Pagination Dots / Bars */}
-          <div className="flex items-center gap-2 mt-8 sm:mt-12 pt-6 border-t border-warm-grey/20">
-            {sampleTestimonials.map((item, idx) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  setDirection(idx > currentIndex ? 1 : -1);
-                  setCurrentIndex(idx);
-                }}
-                aria-label={`Go to endorsement ${idx + 1}`}
-                className={cn(
-                  'h-1 transition-all duration-300 cursor-pointer',
-                  idx === currentIndex
-                    ? 'w-12 bg-bronze'
-                    : 'w-4 bg-warm-grey/40 hover:bg-warm-grey'
+        ) : (
+          <div className="border border-warm-grey/40 bg-white p-8 sm:p-12 lg:p-16 relative">
+            {/* Top Status & Controls Bar */}
+            <div className="flex items-center justify-between border-b border-warm-grey/30 pb-6 mb-8 sm:mb-12 gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="font-mono text-sm text-bronze font-semibold">
+                  {String(safeIndex + 1).padStart(2, '0')}
+                </span>
+                <span className="font-mono text-xs text-warm-grey-dark">/</span>
+                <span className="font-mono text-xs text-warm-grey-dark">
+                  {String(total).padStart(2, '0')}
+                </span>
+                {current.project && (
+                  <span className="ml-4 font-mono text-[11px] text-charcoal uppercase tracking-wider hidden sm:inline-block truncate">
+                    {current.project}
+                  </span>
                 )}
-              />
-            ))}
+              </div>
+
+              {total > 1 && (
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handlePrev}
+                    aria-label="Previous endorsement"
+                    className="w-10 h-10 border border-warm-grey/40 bg-ivory text-charcoal flex items-center justify-center hover:bg-charcoal hover:text-white hover:border-charcoal transition-colors cursor-pointer"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M10 13L5 8L10 3"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="square"
+                      />
+                    </svg>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    aria-label="Next endorsement"
+                    className="w-10 h-10 border border-warm-grey/40 bg-ivory text-charcoal flex items-center justify-center hover:bg-charcoal hover:text-white hover:border-charcoal transition-colors cursor-pointer"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M6 3L11 8L6 13"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="square"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Animated Slide Viewport */}
+            <div className="relative min-h-[200px] sm:min-h-[160px] overflow-hidden">
+              <AnimatePresence custom={direction} mode="wait">
+                <motion.div
+                  key={current.id}
+                  custom={direction}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  className="flex flex-col justify-between"
+                >
+                  <blockquote className="type-quote text-xl sm:text-2xl md:text-[1.65rem] text-charcoal mb-8 max-w-4xl">
+                    &ldquo;{current.quote}&rdquo;
+                  </blockquote>
+
+                  <div className="border-t border-warm-grey/30 pt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-ivory border border-bronze/40 flex items-center justify-center font-mono text-xs font-semibold text-bronze uppercase shrink-0">
+                        {current.author.substring(0, 2)}
+                      </div>
+                      <div>
+                        <span className="font-sans text-sm font-semibold text-charcoal block">
+                          {current.author}
+                        </span>
+                        {attributionMeta.length > 0 && (
+                          <span className="font-sans text-xs text-warm-grey-dark block">
+                            {attributionMeta.join(' — ')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      {typeof current.rating === 'number' && (
+                        <span className="font-mono text-[11px] uppercase tracking-wider px-2.5 py-1 border border-bronze/40 bg-ivory text-bronze">
+                          {current.rating}/5 Rating
+                        </span>
+                      )}
+                      {current.specification && (
+                        <Badge variant="bronze" size="sm">
+                          {current.specification}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {/* Bottom Pagination Dots / Bars */}
+            {total > 1 && (
+              <div className="flex items-center gap-2 mt-8 sm:mt-12 pt-6 border-t border-warm-grey/20">
+                {testimonials.map((item, idx) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setDirection(idx > safeIndex ? 1 : -1);
+                      setCurrentIndex(idx);
+                    }}
+                    aria-label={`Go to endorsement ${idx + 1}`}
+                    className={cn(
+                      'h-1 transition-all duration-300 cursor-pointer',
+                      idx === safeIndex
+                        ? 'w-12 bg-bronze'
+                        : 'w-4 bg-warm-grey/40 hover:bg-warm-grey'
+                    )}
+                  />
+                ))}
+              </div>
+            )}
           </div>
-        </div>
+        )}
       </div>
     </section>
   );

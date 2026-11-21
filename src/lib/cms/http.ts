@@ -194,3 +194,11 @@ export function revalidatePublicPortfolioPaths(slug?: string | null): void {
     // Ignore when executed outside an active Next.js request context
   }
 }
+
+export function revalidatePublicTestimonialsPaths(): void {
+  try {
+    revalidatePath('/');
+  } catch {
+    // Ignore when executed outside an active Next.js request context
+  }
+}

@@ -59,12 +59,12 @@ export const ADMIN_NAVIGATION_ITEMS: readonly AdminNavItem[] = [
   {
     id: 'testimonials',
     label: 'Testimonials',
-    href: '/admin?module=testimonials',
+    href: '/admin/testimonials',
     group: 'core',
-    status: 'planned',
+    status: 'live',
     phaseLabel: 'Phase C',
     description: 'Authorized client endorsements, moderation, and homepage ordering.',
-    allowedRoles: ['publisher', 'admin'],
+    allowedRoles: ['editor', 'publisher', 'admin'],
   },
   {
     id: 'careers',

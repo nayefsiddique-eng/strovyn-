@@ -36,6 +36,14 @@ export const EDITORIAL_ACTIONS = [
   'project:write',
   'project:publish',
   'project:archive',
+  'testimonial:read',
+  'testimonial:create_draft',
+  'testimonial:edit_draft',
+  'testimonial:review',
+  'testimonial:publish',
+  'testimonial:feature',
+  'testimonial:edit_published',
+  'testimonial:promote_feedback',
   'staff:manage',
 ] as const;
 export type EditorialAction = (typeof EDITORIAL_ACTIONS)[number];
