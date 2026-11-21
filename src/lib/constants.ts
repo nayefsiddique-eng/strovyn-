@@ -22,14 +22,14 @@ export const COMPANY_INFO: CompanySettings = {
     },
   },
   businessHours: 'Consultations by appointment across Greater Adelaide',
-  licenseNumber: '[Licence details available upon written tender enquiry]',
+  licenseNumber: '',
   serviceArea: 'Adelaide, South Australia',
   socialMedia: {},
   meta: {
     title: 'Strovyn Painting Co. | Premium Painters Adelaide, South Australia',
     description:
       'Strovyn Painting Co. — Premium residential and commercial painters in Adelaide, South Australia. Precision prep, flawless finish, and free on-site consultations.',
-    ogImage: '/images/og-default.jpg',
+    ogImage: '/images/projects/adelaide-luxury-residence/living-dining-2.jpg',
   },
 };
 

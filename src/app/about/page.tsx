@@ -35,9 +35,6 @@ export default function AboutPage() {
               Where construction tolerances end, our precision begins.
             </h2>
             <div className="w-12 h-[2px] bg-bronze mb-8" />
-            <p className="font-sans text-sm text-warm-grey-dark leading-relaxed">
-              [ESTABLISHED FINISHING TRADITIONS — ARCHITECTURAL DISCIPLINE]
-            </p>
           </div>
 
           <div className="lg:col-span-7 space-y-6 font-sans text-base text-charcoal/85 leading-relaxed">

@@ -58,8 +58,8 @@ export const expertiseServices: ExpertiseItem[] = [
   },
   {
     number: '05',
-    title: 'Architectural Surface Restoration',
-    slug: 'architectural-surface-restoration',
+    title: 'Historic & Heritage Conservation',
+    slug: 'historic-heritage-conservation',
     shortDescription:
       'Substrate repair, precision planar skim-coating, and advanced remediation for weathered or degraded interior and exterior architectural surfaces.',
     spec: 'Substrate Consolidation & High-Adhesion Bonding Matrix',
