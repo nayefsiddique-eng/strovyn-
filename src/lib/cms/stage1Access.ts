@@ -79,10 +79,23 @@ export function sanitizeAdminRedirectPath(
     if (parsed.origin !== 'http://local.internal') {
       return fallback;
     }
-    if (
-      parsed.pathname !== '/admin/insights' &&
-      !parsed.pathname.startsWith('/admin/insights/')
-    ) {
+    const allowedPrefixes = [
+      '/admin/insights',
+      '/admin/projects',
+      '/admin/testimonials',
+      '/admin/careers',
+      '/admin/quotes',
+      '/admin/applications',
+      '/admin/feedback',
+      '/admin/ai-studio',
+    ];
+    const isAllowed =
+      parsed.pathname === '/admin' ||
+      allowedPrefixes.some(
+        (prefix) =>
+          parsed.pathname === prefix || parsed.pathname.startsWith(`${prefix}/`)
+      );
+    if (!isAllowed) {
       return fallback;
     }
     return `${parsed.pathname}${parsed.search}${parsed.hash}`;

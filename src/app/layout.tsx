@@ -2,8 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { inter, anton } from '@/styles/fonts';
 import { Header, Footer } from '@/components/layout';
-import { FloatingContact } from '@/components/floating/FloatingContact';
-import { AIAssistant } from '@/components/floating/AIAssistant';
+import { PublicConversionWidgets } from '@/components/floating/PublicConversionWidgets';
 import { IntroWrapper } from '@/components/intro';
 import './globals.css';
 
@@ -82,8 +81,7 @@ export default function RootLayout({
           <IntroWrapper>{children}</IntroWrapper>
         </div>
         <Footer />
-        <FloatingContact />
-        <AIAssistant />
+        <PublicConversionWidgets />
       </body>
     </html>
   );

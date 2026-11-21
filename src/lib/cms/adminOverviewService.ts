@@ -148,7 +148,7 @@ export async function getAdminOverviewSnapshot(
       detail: `${reviewCount} article${reviewCount === 1 ? ' is' : 's are'} submitted for review.`,
       count: reviewCount,
       href: '/admin/insights',
-      ctaLabel: 'Open Editorial Queue',
+      ctaLabel: 'Manage Articles',
       priority: 'high',
     });
   }
@@ -181,10 +181,10 @@ export async function getAdminOverviewSnapshot(
     pendingActions.push({
       id: 'pending-quotes',
       title: 'Pending Quote Requests',
-      detail: `${submissions.pendingQuotes} client quote inquiry${submissions.pendingQuotes === 1 ? '' : 's'} awaiting triage (Phase E queue).`,
+      detail: `${submissions.pendingQuotes} client quote inquiry${submissions.pendingQuotes === 1 ? '' : 's'} awaiting review.`,
       count: submissions.pendingQuotes,
-      href: '/admin?module=quote-requests',
-      ctaLabel: 'View Module Plan',
+      href: '/admin/quotes',
+      ctaLabel: 'View Quote Requests',
       priority: 'high',
     });
   }
@@ -193,10 +193,10 @@ export async function getAdminOverviewSnapshot(
     pendingActions.push({
       id: 'pending-applications',
       title: 'Pending Job Applications',
-      detail: `${submissions.pendingApplications} candidate submission${submissions.pendingApplications === 1 ? '' : 's'} awaiting review (Phase E queue).`,
+      detail: `${submissions.pendingApplications} candidate submission${submissions.pendingApplications === 1 ? '' : 's'} awaiting review.`,
       count: submissions.pendingApplications,
-      href: '/admin?module=job-applications',
-      ctaLabel: 'View Module Plan',
+      href: '/admin/applications',
+      ctaLabel: 'View Applications',
       priority: 'high',
     });
   }
@@ -205,10 +205,10 @@ export async function getAdminOverviewSnapshot(
     pendingActions.push({
       id: 'pending-feedback',
       title: 'Pending Customer Feedback',
-      detail: `${submissions.pendingFeedback} feedback submission${submissions.pendingFeedback === 1 ? '' : 's'} awaiting moderation (Phase C/E).`,
+      detail: `${submissions.pendingFeedback} feedback submission${submissions.pendingFeedback === 1 ? '' : 's'} awaiting review.`,
       count: submissions.pendingFeedback,
-      href: '/admin?module=customer-feedback',
-      ctaLabel: 'View Module Plan',
+      href: '/admin/feedback',
+      ctaLabel: 'View Feedback',
       priority: 'normal',
     });
   }
