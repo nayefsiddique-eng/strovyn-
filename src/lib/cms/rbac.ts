@@ -24,6 +24,7 @@ const EDITOR_ACTIONS: readonly EditorialAction[] = [
   'career:read',
   'career:create_draft',
   'career:edit_draft',
+  'ai_studio:use',
 ];
 
 const PUBLISHER_ONLY_ACTIONS: readonly EditorialAction[] = [

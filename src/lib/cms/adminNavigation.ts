@@ -119,12 +119,12 @@ export const ADMIN_NAVIGATION_ITEMS: readonly AdminNavItem[] = [
   {
     id: 'ai-content-studio',
     label: 'AI Content Studio',
-    href: '/admin?module=ai-content-studio',
+    href: '/admin/ai-studio',
     group: 'future',
-    status: 'planned',
+    status: 'live',
     phaseLabel: 'Phase F',
-    description: 'Future staff-assisted drafting workspace (no automated publishing).',
-    allowedRoles: ['publisher', 'admin'],
+    description: 'Staff-assisted drafting workspace (no automated publishing).',
+    allowedRoles: ['editor', 'publisher', 'admin'],
   },
 ] as const;
 
