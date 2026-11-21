@@ -146,7 +146,15 @@ function createPgliteAdapter(db) {
           return `${k} => $${params.length}`;
         });
         const res = await db.query(`SELECT * FROM public.${fnName}(${namedArgs.join(', ')})`, params);
-        return { data: res.rows.map(normalizeRow), error: null };
+        const rows = res.rows.map(normalizeRow);
+        if (
+          rows.length === 1 &&
+          Object.keys(rows[0]).length === 1 &&
+          Object.prototype.hasOwnProperty.call(rows[0], fnName)
+        ) {
+          return { data: rows[0][fnName], error: null };
+        }
+        return { data: rows, error: null };
       } catch (err) {
         return { data: null, error: { message: err.message, code: err.code } };
       }
@@ -612,7 +620,90 @@ async function main() {
         { clientOverride: adapter, resendClient: okClient, retryDelayMs: 1 }
       );
       assert.equal(crashRecRes.sent, 2);
-      console.log('  [OK] Migration 016 durable email outbox (atomic triggers, backoff, replay, concurrency, permanent failure, lease recovery) verified.');
+
+      // 7f. Outbox unavailable during submission -> customer insert succeeds, reconciliation recovers after restore
+      await db.exec(`ALTER TABLE public.email_notification_outbox RENAME TO email_notification_outbox_offline`);
+      const qIdDegraded = '44444444-4444-4444-8444-444444444444';
+      const appIdDegraded = '55555555-5555-4555-8555-555555555555';
+      const fbIdDegraded = '66666666-6666-4666-8666-666666666666';
+      await db.query(
+        `INSERT INTO public.quote_requests (id, full_name, email, phone, project_location, service_required, description, idempotency_key)
+         VALUES ($1, 'Degraded Client', 'degraded@example.com', '0422222222', 'Adelaide', 'Exterior Painting', 'Outbox offline test', 'degraded_quote_key')`,
+        [qIdDegraded]
+      );
+      await db.query(
+        `INSERT INTO public.job_applications (id, applicant_name, email, phone, cover_letter)
+         VALUES ($1, 'Degraded Applicant', 'degapp@example.com', '0433333333', 'Outbox offline app')`,
+        [appIdDegraded]
+      );
+      await db.query(
+        `INSERT INTO public.customer_feedback (id, name, email, message)
+         VALUES ($1, 'Degraded Feedback', 'degfb@example.com', 'Outbox offline fb')`,
+        [fbIdDegraded]
+      );
+      // Restore outbox table and verify worker reconciles and delivers all 3 without duplicates
+      await db.exec(`ALTER TABLE public.email_notification_outbox_offline RENAME TO email_notification_outbox`);
+      const recWorker1 = await outboxMod.runEmailOutboxWorker(
+        { limit: 10 },
+        { clientOverride: adapter, resendClient: okClient, retryDelayMs: 1 }
+      );
+      assert.equal(recWorker1.reconciled, 3);
+      assert.equal(recWorker1.sent, 3);
+      const recWorker2 = await outboxMod.runEmailOutboxWorker(
+        { limit: 10 },
+        { clientOverride: adapter, resendClient: okClient, retryDelayMs: 1 }
+      );
+      assert.equal(recWorker2.reconciled, 0);
+      assert.equal(recWorker2.sent, 0);
+
+      // 7g. Cross-submission idempotency isolation (same idempotency_key across quote and application)
+      const qCrossId = '77777777-7777-4777-8777-777777777777';
+      const appCrossId = '88888888-8888-4888-8888-888888888888';
+      await db.query(
+        `INSERT INTO public.quote_requests (id, full_name, email, phone, project_location, service_required, description, idempotency_key)
+         VALUES ($1, 'Cross Quote', 'cq@example.com', '0444444444', 'Adelaide', 'Interior Painting', 'Cross key test', 'shared_cross_key')`,
+        [qCrossId]
+      );
+      await db.query(
+        `INSERT INTO public.job_applications (id, applicant_name, email, phone, cover_letter, idempotency_key)
+         VALUES ($1, 'Cross App', 'ca@example.com', '0455555555', 'Cross key app', 'shared_cross_key')`,
+        [appCrossId]
+      );
+      const crossRows = (
+        await db.query(
+          `SELECT submission_type FROM public.email_notification_outbox WHERE idempotency_key = 'shared_cross_key' ORDER BY submission_type`
+        )
+      ).rows;
+      assert.equal(crossRows.length, 2);
+      assert.equal(crossRows[0].submission_type, 'job_application');
+      assert.equal(crossRows[1].submission_type, 'quote_request');
+      const crossWorker = await outboxMod.runEmailOutboxWorker(
+        { limit: 10 },
+        { clientOverride: adapter, resendClient: okClient, retryDelayMs: 1 }
+      );
+      assert.equal(crossWorker.sent, 2);
+
+      // 7h. Bounded historical reconciliation outside default 7-day (168h) lookback window
+      await db.exec(`ALTER TABLE public.email_notification_outbox RENAME TO email_notification_outbox_offline`);
+      const qHistId = '99999999-9999-4999-8999-999999999999';
+      await db.query(
+        `INSERT INTO public.quote_requests (id, full_name, email, phone, project_location, service_required, description, created_at)
+         VALUES ($1, 'Historical Quote', 'hq@example.com', '0466666666', 'Adelaide', 'Exterior Painting', '10 days ago', NOW() - INTERVAL '10 days')`,
+        [qHistId]
+      );
+      await db.exec(`ALTER TABLE public.email_notification_outbox_offline RENAME TO email_notification_outbox`);
+      const defaultWin = await outboxMod.runEmailOutboxWorker(
+        { limit: 10 },
+        { clientOverride: adapter, resendClient: okClient, retryDelayMs: 1 }
+      );
+      assert.equal(defaultWin.reconciled, 0);
+      const histWin = await outboxMod.runEmailOutboxWorker(
+        { limit: 10, reconcileLookbackHours: 720 },
+        { clientOverride: adapter, resendClient: okClient, retryDelayMs: 1 }
+      );
+      assert.equal(histWin.reconciled, 1);
+      assert.equal(histWin.sent, 1);
+      console.log('  [OK] Migration 016 durable email outbox (atomic triggers, graceful degradation + reconciliation, cross-type isolation, historical recovery, backoff, replay, concurrency, permanent failure, lease recovery) verified.');
     } finally {
       await db.close();
     }

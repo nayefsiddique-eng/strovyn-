@@ -83,6 +83,7 @@ export async function enqueueAndAttemptEmailNotification(
       const { data: existing, error: selErr } = await client
         .from('email_notification_outbox')
         .select('id, status, attempts')
+        .eq('submission_type', params.submissionType)
         .eq('idempotency_key', params.idempotencyKey)
         .maybeSingle();
 
@@ -311,6 +312,7 @@ async function buildOutboxEmailForRecord(
 
 export interface EmailOutboxWorkerSummary {
   ok: boolean;
+  reconciled: number;
   claimed: number;
   sent: number;
   retried: number;
@@ -318,7 +320,7 @@ export interface EmailOutboxWorkerSummary {
 }
 
 export async function runEmailOutboxWorker(
-  options?: { limit?: number; leaseSeconds?: number },
+  options?: { limit?: number; leaseSeconds?: number; reconcileLookbackHours?: number },
   deps?: {
     clientOverride?: SupabaseClient;
     resendClient?: ResendSendClient | null;
@@ -326,12 +328,46 @@ export async function runEmailOutboxWorker(
   }
 ): Promise<EmailOutboxWorkerSummary> {
   if (!deps?.clientOverride && !isServiceRoleConfigured()) {
-    return { ok: false, claimed: 0, sent: 0, retried: 0, failedPermanent: 0 };
+    return { ok: false, reconciled: 0, claimed: 0, sent: 0, retried: 0, failedPermanent: 0 };
   }
 
   const client = deps?.clientOverride ?? createServiceRoleClient();
   const limit = Math.min(50, Math.max(1, Math.floor(options?.limit ?? 10)));
   const leaseSeconds = Math.min(600, Math.max(15, Math.floor(options?.leaseSeconds ?? 60)));
+  const lookbackHours = Math.min(
+    720,
+    Math.max(1, Math.floor(options?.reconcileLookbackHours ?? 168))
+  );
+
+  let reconciled = 0;
+  try {
+    const { data: recCount, error: recErr } = await client.rpc(
+      'cms_reconcile_missing_email_outbox',
+      {
+        p_lookback_hours: lookbackHours,
+        p_limit: 100,
+      }
+    );
+    if (recErr) {
+      if (resolveDeploymentEnvironment() === 'production') {
+        console.error(
+          '[EMAIL OUTBOX CRITICAL] Reconciliation RPC failed in production:',
+          recErr.message
+        );
+      } else if (!isMissingOutboxSchemaError(recErr)) {
+        console.warn('[EMAIL OUTBOX] Reconciliation warning:', recErr.message);
+      }
+    } else if (typeof recCount === 'number') {
+      reconciled = recCount;
+    }
+  } catch (err) {
+    if (resolveDeploymentEnvironment() === 'production') {
+      console.error(
+        '[EMAIL OUTBOX CRITICAL] Reconciliation exception in production:',
+        err instanceof Error ? err.message : String(err)
+      );
+    }
+  }
 
   const { data: rows, error: claimErr } = await client.rpc(
     'cms_claim_due_email_outbox',
@@ -445,6 +481,7 @@ export async function runEmailOutboxWorker(
 
   return {
     ok: failedPermanent === 0,
+    reconciled,
     claimed: rows.length,
     sent,
     retried,
