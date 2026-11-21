@@ -222,7 +222,7 @@ async function buildOutboxEmailForRecord(
     const { data } = await client
       .from('quote_requests')
       .select(
-        'full_name, email, phone, project_location, service_required, property_type, preferred_contact, description, attachment_url'
+        'full_name, email, phone, project_location, service_required, preferred_contact, description, attachment_url'
       )
       .eq('id', submissionId)
       .maybeSingle();
@@ -244,7 +244,6 @@ async function buildOutboxEmailForRecord(
         phone: data.phone as string,
         projectLocation: (data.project_location as string) || undefined,
         serviceRequired: data.service_required as string,
-        propertyType: (data.property_type as string) || undefined,
         preferredContact: (data.preferred_contact as string) || 'email',
         description: data.description as string,
         hasAttachment: Boolean(data.attachment_url),
@@ -256,7 +255,7 @@ async function buildOutboxEmailForRecord(
     const { data } = await client
       .from('job_applications')
       .select(
-        'applicant_name, email, phone, position, years_of_experience, portfolio_url, cv_url'
+        'applicant_name, email, phone, cover_letter, cv_url, job_opening_id'
       )
       .eq('id', submissionId)
       .maybeSingle();
@@ -270,15 +269,24 @@ async function buildOutboxEmailForRecord(
         }),
       };
     }
+    let positionTitle = 'Painting Position';
+    if (data.job_opening_id) {
+      const { data: opening } = await client
+        .from('job_openings')
+        .select('title')
+        .eq('id', data.job_opening_id as string)
+        .maybeSingle();
+      if (opening?.title) {
+        positionTitle = opening.title as string;
+      }
+    }
     return {
       replyTo: data.email as string,
       ...buildApplicationNotificationEmail({
         fullName: data.applicant_name as string,
         email: data.email as string,
         phone: data.phone as string,
-        position: data.position as string,
-        yearsOfExperience: (data.years_of_experience as string) || undefined,
-        portfolioUrl: (data.portfolio_url as string) || undefined,
+        position: positionTitle,
         hasResume: Boolean(data.cv_url),
       }),
     };
