@@ -116,20 +116,20 @@ export function AdminSubmissionsWorkspace({
   const headerMeta =
     mode === 'quotes'
       ? {
-          tag: 'Phase E · Inbound Client Inquiries',
+          tag: 'Inbound Client Inquiries',
           title: 'Quote Requests & Scope Attachments',
           subtitle:
             'Inspect private client specifications, record internal notes, and download bound scope documents.',
         }
       : mode === 'applications'
         ? {
-            tag: 'Phase E · Candidate Recruitment Intake',
+            tag: 'Candidate Recruitment Intake',
             title: 'Job Applications & Private Resumes',
             subtitle:
               'Review candidate credentials, update interview status, and securely download bound CV files.',
           }
         : {
-            tag: 'Phase E · Client Evaluation Triage',
+            tag: 'Client Feedback Triage',
             title: 'Customer Feedback & Testimonial Promotion',
             subtitle:
               'Triage direct customer evaluations, record internal notes, and promote eligible feedback to testimonial drafts.',
@@ -257,7 +257,7 @@ export function AdminSubmissionsWorkspace({
           type: 'conflict',
           message:
             data.error ??
-            'HTTP 409 · Concurrent edit detected. Your unsaved notes/status are preserved.',
+            'This record was updated elsewhere. Your unsaved notes/status are preserved.',
         });
         return;
       }

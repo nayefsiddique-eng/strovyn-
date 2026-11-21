@@ -281,7 +281,7 @@ export function AdminInsightsQueue({
               </nav>
             </div>
             <h1 className="type-page-title text-3xl sm:text-4xl lg:text-5xl text-charcoal">
-              Insights Editorial Queue
+              Manage Articles
             </h1>
             <p className="font-sans text-sm text-charcoal/75 mt-2 max-w-2xl">
               {roleMeta.scopeSummary}
@@ -612,7 +612,7 @@ export function AdminInsightsQueue({
                                 {actions.permittedTransitions.map((tr) => (
                                   <span
                                     key={tr.toStatus}
-                                    title="Workflow execution unlocks in CMS-3 Stage 3"
+                                    title="Open the article to submit or change publishing status"
                                     className="px-2 py-0.5 bg-ivory-light border border-warm-grey/60 font-mono text-[10px] text-charcoal/80"
                                   >
                                     Permitted: {tr.label}

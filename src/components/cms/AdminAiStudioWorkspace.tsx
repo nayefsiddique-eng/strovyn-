@@ -456,7 +456,7 @@ export function AdminAiStudioWorkspace({
       <div className="bg-white border border-warm-grey/60 p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <span className="font-mono text-[10px] uppercase tracking-widest text-bronze block mb-1">
-            Phase F · Grounded Editorial &amp; Portfolio Drafting Assistant
+            AI Drafting Assistant · Articles &amp; Portfolio Copy
           </span>
           <h2 className="font-serif text-2xl text-charcoal">
             AI Content Studio

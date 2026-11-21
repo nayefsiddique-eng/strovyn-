@@ -228,7 +228,7 @@ export function AdminProjectEditor({
         if (res.status === 409) {
           const latest = await fetchLatest();
           setConflictState({
-            message: (json && !json.success && json.error) || 'Concurrent edit detected.',
+            message: (json && !json.success && json.error) || 'This content was updated elsewhere.',
             latest,
           });
           return;
@@ -489,7 +489,7 @@ export function AdminProjectEditor({
               Unsaved edits
             </span>
           ) : (
-            <span className="font-mono text-[11px] text-warm-grey-dark">Synced</span>
+            <span className="font-mono text-[11px] text-warm-grey-dark">All Changes Saved</span>
           )}
           {!canEdit && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 border border-warm-grey bg-ivory font-mono text-[10px] text-warm-grey-dark">
@@ -507,7 +507,7 @@ export function AdminProjectEditor({
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-warm-grey text-xs font-mono uppercase tracking-wider text-charcoal hover:border-charcoal"
             >
-              <span>View Public</span>
+              <span>View Project</span>
               <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
             </Link>
           )}
@@ -1048,7 +1048,7 @@ export function AdminProjectEditor({
         <aside className="lg:col-span-4 space-y-6">
           <section className="bg-white border border-warm-grey/60 p-5 space-y-4">
             <h2 className="font-mono text-[11px] uppercase tracking-[0.18em] text-bronze border-b border-warm-grey/40 pb-2">
-              Publication Governance
+              Publishing
             </h2>
             <dl className="space-y-1.5 text-xs font-mono text-warm-grey-dark">
               <div>Visibility: <strong className="text-charcoal uppercase">{serverProject.visibility_status}</strong></div>

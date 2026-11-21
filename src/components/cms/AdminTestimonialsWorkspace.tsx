@@ -330,7 +330,7 @@ export function AdminTestimonialsWorkspace({
           type: 'conflict',
           message:
             data.error ??
-            'HTTP 409 · Concurrent edit detected. Your local edits are preserved below.',
+            'This content was updated elsewhere. Your local edits are preserved below.',
         });
         return;
       }
@@ -556,7 +556,7 @@ export function AdminTestimonialsWorkspace({
       <div className="bg-white border border-warm-grey/60 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="font-mono text-[10px] uppercase tracking-widest text-bronze block mb-1">
-            Phase C · Endorsement Governance
+            Client Endorsements
           </span>
           <h2 className="font-serif text-2xl text-charcoal">
             Testimonials &amp; Moderation

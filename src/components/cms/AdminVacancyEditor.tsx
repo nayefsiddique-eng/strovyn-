@@ -135,7 +135,7 @@ export function AdminVacancyEditor({
           type: 'conflict',
           message:
             data.error ??
-            'HTTP 409 · Concurrent edit detected. Your local edits are preserved.',
+            'This vacancy was updated elsewhere. Your local edits are preserved.',
         });
         return;
       }
@@ -278,7 +278,7 @@ export function AdminVacancyEditor({
                 : 'Closed'}
           </span>
           <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 border border-warm-grey/40 text-warm-grey-dark">
-            {isDirty ? 'Unsaved edits' : 'Synced'}
+            {isDirty ? 'Unsaved edits' : 'All Changes Saved'}
           </span>
         </div>
 

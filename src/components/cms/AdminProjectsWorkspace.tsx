@@ -45,7 +45,7 @@ export function AdminProjectsWorkspace({
       <section className="bg-white border border-warm-grey/60 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-bronze block mb-1.5">
-            PHASE B · PORTFOLIO MANAGEMENT
+            PORTFOLIO MANAGEMENT
           </span>
           <h1 className="type-section-title text-3xl text-charcoal">
             Projects &amp; Portfolio

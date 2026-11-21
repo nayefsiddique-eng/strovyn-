@@ -155,7 +155,7 @@ export function AdminCareersWorkspace({
       <div className="bg-white border border-warm-grey/60 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="font-mono text-[10px] uppercase tracking-widest text-bronze block mb-1">
-            Phase D · Recruitment &amp; Guild Commissions
+            Careers &amp; Vacancies
           </span>
           <h2 className="font-serif text-2xl text-charcoal">
             Careers &amp; Vacancies Management

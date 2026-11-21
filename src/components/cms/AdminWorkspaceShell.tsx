@@ -193,8 +193,8 @@ export function AdminWorkspaceShell({
 
               {navItems.some((i) => i.group === 'future') && (
                 <div className="pt-3 border-t border-warm-grey/30">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-warm-grey-dark mb-2">
-                    Future Studio
+                  <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-bronze mb-2">
+                    Drafting Tools
                   </p>
                   <div className="space-y-1.5">
                     {navItems

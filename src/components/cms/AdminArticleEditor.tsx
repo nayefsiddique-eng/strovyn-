@@ -406,7 +406,7 @@ export function AdminArticleEditor({
               </span>
             ) : (
               <span className="font-mono text-[11px] text-warm-grey-dark">
-                Synced
+                All Changes Saved
               </span>
             )}
 

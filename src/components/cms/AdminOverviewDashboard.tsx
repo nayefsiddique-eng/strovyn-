@@ -25,16 +25,62 @@ export function AdminOverviewDashboard({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <section className="bg-white border border-warm-grey/60 p-6">
-        <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-bronze block mb-2">
-          OPERATIONAL OVERVIEW
-        </span>
-        <h1 className="type-section-title text-3xl text-charcoal mb-2">
-          Strovyn Website Operations
-        </h1>
-        <p className="font-sans text-sm text-charcoal/75 leading-relaxed">
-          Live operational counts, pending editorial reviews, and staged business CMS modules.
-        </p>
+      <section className="bg-white border border-warm-grey/60 p-6 space-y-5">
+        <div>
+          <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-bronze block mb-2">
+            WEBSITE DASHBOARD
+          </span>
+          <h1 className="type-section-title text-3xl text-charcoal mb-2">
+            Strovyn Business CMS
+          </h1>
+          <p className="font-sans text-sm text-charcoal/75 leading-relaxed">
+            Manage your website projects, customer testimonials, job openings, articles, and client enquiries.
+          </p>
+        </div>
+
+        {/* Role-Aware Quick Actions */}
+        <div className="pt-4 border-t border-warm-grey/30">
+          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-warm-grey-dark block mb-2.5">
+            Quick Actions
+          </span>
+          <div className="flex flex-wrap gap-2.5">
+            <Link
+              href="/admin/projects/new"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-charcoal text-ivory hover:bg-bronze transition-colors text-xs font-mono uppercase tracking-wider"
+            >
+              <span>Add New Project</span>
+              <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+            </Link>
+            <Link
+              href="/admin/testimonials"
+              className="inline-flex items-center gap-1.5 px-4 py-2 border border-charcoal text-charcoal hover:bg-charcoal hover:text-ivory transition-colors text-xs font-mono uppercase tracking-wider"
+            >
+              <span>Add Testimonial</span>
+            </Link>
+            {staff.role !== 'editor' && (
+              <Link
+                href="/admin/careers/new"
+                className="inline-flex items-center gap-1.5 px-4 py-2 border border-charcoal text-charcoal hover:bg-charcoal hover:text-ivory transition-colors text-xs font-mono uppercase tracking-wider"
+              >
+                <span>Post a Job</span>
+              </Link>
+            )}
+            <Link
+              href="/admin/insights"
+              className="inline-flex items-center gap-1.5 px-4 py-2 border border-warm-grey text-charcoal hover:border-charcoal transition-colors text-xs font-mono uppercase tracking-wider"
+            >
+              <span>Create Article</span>
+            </Link>
+            {staff.role !== 'editor' && (
+              <Link
+                href="/admin/quotes"
+                className="inline-flex items-center gap-1.5 px-4 py-2 border border-warm-grey text-charcoal hover:border-charcoal transition-colors text-xs font-mono uppercase tracking-wider"
+              >
+                <span>View Enquiries</span>
+              </Link>
+            )}
+          </div>
+        </div>
       </section>
 
       {/* Planned Module Notice when user selects Phase C–F nav entry */}
@@ -67,10 +113,10 @@ export function AdminOverviewDashboard({
         <div className="bg-white border border-warm-grey/60 p-5 space-y-3">
           <div className="flex items-center justify-between">
             <span className="font-mono text-[10px] uppercase tracking-wider text-bronze">
-              Editorial Articles
+              Articles &amp; Advice
             </span>
             <Link href="/admin/insights" className="font-mono text-[10px] text-charcoal hover:text-bronze underline">
-              Open Queue
+              Manage Articles
             </Link>
           </div>
           <p className="font-display text-3xl text-charcoal">{snapshot.articles.total}</p>
@@ -93,8 +139,8 @@ export function AdminOverviewDashboard({
           </div>
           <p className="font-display text-3xl text-charcoal">{snapshot.projects.catalogCount}</p>
           <dl className="space-y-1 text-xs font-mono text-warm-grey-dark border-t border-warm-grey/30 pt-3">
-            <div>Photo Overrides: <strong className="text-charcoal">{snapshot.projects.overridesCount}</strong></div>
-            <div>DB Project Records: <strong className="text-charcoal">{snapshot.projects.dbProjectsCount}</strong></div>
+            <div>Updated Galleries: <strong className="text-charcoal">{snapshot.projects.overridesCount}</strong></div>
+            <div>Saved Projects: <strong className="text-charcoal">{snapshot.projects.dbProjectsCount}</strong></div>
           </dl>
         </div>
 
@@ -135,7 +181,7 @@ export function AdminOverviewDashboard({
       <section className="bg-white border border-warm-grey/60 p-6 space-y-4">
         <div className="flex items-center justify-between border-b border-warm-grey/40 pb-3">
           <h2 className="font-mono text-[11px] uppercase tracking-[0.18em] text-bronze">
-            Pending Operational Actions
+            Needs Attention
           </h2>
           <span className="font-mono text-[10px] text-warm-grey-dark">
             Updated {new Date(snapshot.generatedAt).toLocaleTimeString('en-AU')}
