@@ -42,6 +42,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.17",
+    "@netlify/plugin-nextjs": "^5.16.8",
     "@tailwindcss/turbopack": "4.3.3",
     "@types/node": "^20",
     "@types/react": "^19",
