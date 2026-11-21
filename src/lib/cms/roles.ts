@@ -44,6 +44,13 @@ export const EDITORIAL_ACTIONS = [
   'testimonial:feature',
   'testimonial:edit_published',
   'testimonial:promote_feedback',
+  'career:read',
+  'career:create_draft',
+  'career:edit_draft',
+  'career:edit_published',
+  'career:publish',
+  'career:toggle_open',
+  'career:reorder',
   'staff:manage',
 ] as const;
 export type EditorialAction = (typeof EDITORIAL_ACTIONS)[number];

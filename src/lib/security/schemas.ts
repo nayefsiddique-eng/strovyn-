@@ -84,6 +84,14 @@ export const feedbackSchema = z.object({
 // Job Application Schema
 export const applicationSchema = z
   .object({
+    jobOpeningId: z
+      .string()
+      .trim()
+      .transform((v) => (v === '' ? undefined : v))
+      .refine((v) => !v || z.string().uuid().safeParse(v).success, {
+        message: 'Invalid vacancy identifier',
+      })
+      .optional(),
     fullName: z.string().trim().min(2, 'Full name must be at least 2 characters').max(100),
     email: emailSchema,
     phone: z.string().trim().min(6, 'Valid phone number is required').max(30),

@@ -69,12 +69,12 @@ export const ADMIN_NAVIGATION_ITEMS: readonly AdminNavItem[] = [
   {
     id: 'careers',
     label: 'Careers',
-    href: '/admin?module=careers',
+    href: '/admin/careers',
     group: 'core',
-    status: 'planned',
+    status: 'live',
     phaseLabel: 'Phase D',
     description: 'Vacancy openings, application deadlines, and active recruitment status.',
-    allowedRoles: ['publisher', 'admin'],
+    allowedRoles: ['editor', 'publisher', 'admin'],
   },
   {
     id: 'quote-requests',

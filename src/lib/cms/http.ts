@@ -202,3 +202,11 @@ export function revalidatePublicTestimonialsPaths(): void {
     // Ignore when executed outside an active Next.js request context
   }
 }
+
+export function revalidatePublicCareersPaths(): void {
+  try {
+    revalidatePath('/careers');
+  } catch {
+    // Ignore when executed outside an active Next.js request context
+  }
+}

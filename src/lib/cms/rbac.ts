@@ -21,6 +21,9 @@ const EDITOR_ACTIONS: readonly EditorialAction[] = [
   'testimonial:read',
   'testimonial:create_draft',
   'testimonial:edit_draft',
+  'career:read',
+  'career:create_draft',
+  'career:edit_draft',
 ];
 
 const PUBLISHER_ONLY_ACTIONS: readonly EditorialAction[] = [
@@ -40,6 +43,10 @@ const PUBLISHER_ONLY_ACTIONS: readonly EditorialAction[] = [
   'testimonial:feature',
   'testimonial:edit_published',
   'testimonial:promote_feedback',
+  'career:edit_published',
+  'career:publish',
+  'career:toggle_open',
+  'career:reorder',
 ];
 
 const ROLE_PERMISSION_SETS: Record<EditorialRole, ReadonlySet<EditorialAction>> = {

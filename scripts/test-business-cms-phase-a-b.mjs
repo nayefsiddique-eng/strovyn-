@@ -293,7 +293,7 @@ async function run() {
 
     // 1. Navigation & RBAC checks
     const editorNav = navMod.getAdminNavigationForRole('editor').map((i) => i.id);
-    assert.deepEqual(editorNav, ['overview', 'articles', 'projects', 'testimonials']);
+    assert.deepEqual(editorNav, ['overview', 'articles', 'projects', 'testimonials', 'careers']);
     const adminNav = navMod.getAdminNavigationForRole('admin').map((i) => i.id);
     assert.equal(adminNav.length, 10);
     assert.equal(rbacMod.hasEditorialPermission('editor', 'project:read'), true);

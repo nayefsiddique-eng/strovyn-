@@ -120,9 +120,9 @@ export function isSupabaseConfigured(): boolean {
 }
 
 export class AttachmentClaimError extends Error {
-  readonly status: 400 | 409 | 503;
+  readonly status: 400 | 404 | 409 | 422 | 503;
 
-  constructor(status: 400 | 409 | 503, message: string) {
+  constructor(status: 400 | 404 | 409 | 422 | 503, message: string) {
     super(message);
     this.name = 'AttachmentClaimError';
     this.status = status;
@@ -277,6 +277,21 @@ function mapAtomicSubmissionRpcError(error: unknown): never {
     throw new AttachmentClaimError(
       400,
       'Attachment reference is invalid, unauthorized, or already attached to another submission.'
+    );
+  }
+  if (raw.includes('VACANCY_NOT_FOUND:')) {
+    throw new AttachmentClaimError(404, 'Selected vacancy does not exist.');
+  }
+  if (raw.includes('VACANCY_CLOSED:')) {
+    throw new AttachmentClaimError(
+      422,
+      'This vacancy is closed and no longer accepting applications.'
+    );
+  }
+  if (raw.includes('VACANCY_DEADLINE_PASSED:')) {
+    throw new AttachmentClaimError(
+      422,
+      'The application deadline for this vacancy has passed.'
     );
   }
 
@@ -687,9 +702,10 @@ export async function addApplication(
   app: Omit<DBApplication, 'id' | 'createdAt' | 'status'> & {
     idempotencyKey?: string;
     resumeToken?: string;
+    jobOpeningId?: string;
   }
 ): Promise<DBApplication & { deduplicated?: boolean }> {
-  const { idempotencyKey, resumeToken, ...appData } = app;
+  const { idempotencyKey, resumeToken, jobOpeningId, ...appData } = app;
   const newApp: DBApplication = {
     ...appData,
     id: randomUUID(),
@@ -715,7 +731,7 @@ export async function addApplication(
         : metadataLines.join('\n');
 
       const supabase = createServiceRoleClient();
-      const { data, error } = await supabase.rpc('cms_submit_application_with_attachment', {
+      const rpcArgs: Record<string, unknown> = {
         p_application_id: newApp.id,
         p_applicant_name: newApp.fullName,
         p_email: newApp.email,
@@ -725,7 +741,14 @@ export async function addApplication(
         p_cv_url: attachment.fileReference,
         p_claim_token_hash: attachment.claimTokenHash,
         p_idempotency_key: idempotencyKey ?? null,
-      });
+      };
+      if (jobOpeningId) {
+        rpcArgs.p_job_opening_id = jobOpeningId;
+      }
+      const { data, error } = await supabase.rpc(
+        'cms_submit_application_with_attachment',
+        rpcArgs
+      );
 
       if (error) {
         mapAtomicSubmissionRpcError(error);

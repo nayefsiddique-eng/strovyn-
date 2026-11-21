@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createHash } from 'crypto';
+import { validateVacancyForPublicApplication } from '@/lib/cms/careersService';
+import { EditorialHttpError } from '@/lib/cms/http';
 import { addApplication, AttachmentClaimError } from '@/lib/db/mockData';
+import { isServiceRoleConfigured } from '@/lib/supabase/serviceRole';
 import { applicationSchema } from '@/lib/security/schemas';
 import { escapeHtml } from '@/lib/security/escapeHtml';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
@@ -76,6 +79,10 @@ export async function POST(req: Request) {
     }
 
     const validated = parseResult.data;
+    if (validated.jobOpeningId && isServiceRoleConfigured()) {
+      await validateVacancyForPublicApplication(validated.jobOpeningId);
+    }
+
     const dedupKey = buildApplicationDedupKey(req.headers.get('idempotency-key'), validated);
 
     const safeName = escapeHtml(validated.fullName);
@@ -105,6 +112,7 @@ export async function POST(req: Request) {
       },
       persistFn: (idempotencyKey) =>
         addApplication({
+          jobOpeningId: validated.jobOpeningId || undefined,
           fullName: validated.fullName,
           email: validated.email,
           phone: validated.phone,
@@ -131,6 +139,12 @@ export async function POST(req: Request) {
       { status: outcome.status }
     );
   } catch (err: unknown) {
+    if (err instanceof EditorialHttpError) {
+      return NextResponse.json(
+        { success: false, code: err.code, error: err.message },
+        { status: err.status }
+      );
+    }
     if (err instanceof AttachmentClaimError) {
       return NextResponse.json(
         { success: false, error: err.message },
