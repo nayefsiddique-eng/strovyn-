@@ -3,6 +3,11 @@ import fs from 'fs';
 import path from 'path';
 import { PROJECTS_DATA, ProjectData } from '@/data/projectsData';
 import {
+  getPublishedProjectBySlugFromDb,
+  listPublishedProjectsFromDb,
+  type PublicProjectDetail,
+} from '@/lib/cms/publicProjects';
+import {
   createServiceRoleClient,
   isServiceRoleConfigured,
 } from '@/lib/supabase/serviceRole';
@@ -160,16 +165,14 @@ export async function savePhotoOverrideAsync(
   return savePhotoOverride(slug, override);
 }
 
-export async function getProjectsWithOverridesAsync(): Promise<ProjectData[]> {
+export async function getProjectsWithOverridesAsync(): Promise<PublicProjectDetail[]> {
   const overrides = await getPhotoOverridesAsync();
-  return PROJECTS_DATA.map((project) => {
-    const override = overrides[project.slug];
-    if (!override) return project;
+  return listPublishedProjectsFromDb({ overridesMap: overrides });
+}
 
-    return {
-      ...project,
-      heroImage: override.heroImage || project.heroImage,
-      galleryImages: override.galleryImages || project.galleryImages,
-    };
-  });
+export async function getPublishedProjectDetailAsync(
+  slug: string
+): Promise<PublicProjectDetail | null> {
+  const overrides = await getPhotoOverridesAsync();
+  return getPublishedProjectBySlugFromDb(slug, { overridesMap: overrides });
 }

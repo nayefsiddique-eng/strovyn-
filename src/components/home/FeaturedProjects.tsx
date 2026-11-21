@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
+import type { PublicProjectDetail } from '@/lib/cms/publicProjects';
 import Button from '@/components/ui/Button';
 
 export interface VerifiedProjectGalleryItem {
@@ -48,11 +49,93 @@ export const VERIFIED_PROJECT = {
   ] as VerifiedProjectGalleryItem[],
 };
 
-export interface FeaturedProjectsProps {
-  className?: string;
+function mapFeaturedProject(featured?: PublicProjectDetail | null) {
+  if (!featured) return VERIFIED_PROJECT;
+
+  const isLegacyNorthAdelaide = featured.slug === VERIFIED_PROJECT.slug;
+  const views: VerifiedProjectGalleryItem[] =
+    featured.galleryImages.length >= 2
+      ? [
+          {
+            id: 'view-cover',
+            viewTitle: isLegacyNorthAdelaide ? VERIFIED_PROJECT.views[0].viewTitle : 'Primary View',
+            aspectLabel: isLegacyNorthAdelaide
+              ? VERIFIED_PROJECT.views[0].aspectLabel
+              : 'VIEW 01 // ARCHITECTURAL PRIMARY',
+            image: featured.heroImage,
+            alt: featured.title,
+          },
+          ...featured.galleryImages
+            .filter((img, idx) => img !== featured.heroImage || idx > 0)
+            .slice(0, 2)
+            .map((img, idx) => ({
+              id: `view-${idx + 2}`,
+              viewTitle:
+                isLegacyNorthAdelaide && VERIFIED_PROJECT.views[idx + 1]
+                  ? VERIFIED_PROJECT.views[idx + 1].viewTitle
+                  : `Surface Detail 0${idx + 2}`,
+              aspectLabel:
+                isLegacyNorthAdelaide && VERIFIED_PROJECT.views[idx + 1]
+                  ? VERIFIED_PROJECT.views[idx + 1].aspectLabel
+                  : `VIEW 0${idx + 2} // COMMISSION ARCHIVE`,
+              image: img,
+              alt: `${featured.title} — View ${idx + 2}`,
+            })),
+        ]
+      : [
+          {
+            id: 'view-cover',
+            viewTitle: 'Primary View',
+            aspectLabel: 'VIEW 01 // ARCHITECTURAL PRIMARY',
+            image: featured.heroImage,
+            alt: featured.title,
+          },
+        ];
+
+  return {
+    id: featured.slug,
+    title: isLegacyNorthAdelaide ? VERIFIED_PROJECT.title : featured.title,
+    subtitle: featured.finishes || VERIFIED_PROJECT.subtitle,
+    slug: featured.slug,
+    category: featured.category,
+    location: featured.location,
+    overview: featured.description,
+    views,
+  };
 }
 
-export const FeaturedProjects: React.FC<FeaturedProjectsProps> = ({ className = '' }) => {
+export interface FeaturedProjectsProps {
+  className?: string;
+  featuredProject?: PublicProjectDetail | null;
+}
+
+export const FeaturedProjects: React.FC<FeaturedProjectsProps> = ({
+  className = '',
+  featuredProject,
+}) => {
+  const activeProject = mapFeaturedProject(featuredProject);
+
+  if (featuredProject === null) {
+    return (
+      <section
+        id="projects"
+        aria-label="Featured Architectural Projects"
+        className={`relative w-full bg-ivory text-charcoal py-24 md:py-36 border-b border-warm-grey/30 overflow-hidden ${className}`}
+      >
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 text-center space-y-4">
+          <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block">
+            [ 03 / PORTFOLIO &amp; COMMISSIONS ]
+          </span>
+          <p className="font-sans text-sm text-charcoal/75">
+            Architectural commission case studies are currently being updated.
+          </p>
+          <Button variant="outline" size="md" href="/projects">
+            View Portfolio
+          </Button>
+        </div>
+      </section>
+    );
+  }
   return (
     <section
       id="projects"
@@ -110,7 +193,7 @@ export const FeaturedProjects: React.FC<FeaturedProjectsProps> = ({ className = 
         {/* Editorial Notice on Verified Commission */}
         <div className="mb-10 p-3 bg-white/70 border border-warm-grey/30 text-xs font-mono text-warm-grey-dark flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <span>PROJECT ARCHIVE // VERIFIED RESIDENTIAL COMMISSION</span>
-          <span className="text-bronze font-semibold uppercase">{VERIFIED_PROJECT.location}</span>
+          <span className="text-bronze font-semibold uppercase">{activeProject.location}</span>
         </div>
 
         {/* Unified Project Showcase: 1 Verified Project Gallery */}
@@ -126,13 +209,13 @@ export const FeaturedProjects: React.FC<FeaturedProjectsProps> = ({ className = 
               className="lg:col-span-7 relative aspect-[16/10] sm:aspect-[16/9] lg:aspect-auto lg:min-h-[420px] overflow-hidden bg-charcoal group"
             >
               <Link
-                href={`/projects/${VERIFIED_PROJECT.slug}`}
+                href={`/projects/${activeProject.slug}`}
                 className="relative block w-full h-full cursor-pointer"
-                aria-label={`${VERIFIED_PROJECT.title} - ${VERIFIED_PROJECT.views[0].viewTitle}`}
+                aria-label={`${activeProject.title} - ${activeProject.views[0].viewTitle}`}
               >
                 <Image
-                  src={VERIFIED_PROJECT.views[0].image}
-                  alt={VERIFIED_PROJECT.views[0].alt}
+                  src={activeProject.views[0].image}
+                  alt={activeProject.views[0].alt}
                   fill
                   priority
                   sizes="(max-width: 1024px) 100vw, 60vw"
@@ -143,7 +226,7 @@ export const FeaturedProjects: React.FC<FeaturedProjectsProps> = ({ className = 
                 {/* Identification Badges */}
                 <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
                   <span className="font-mono text-[10px] bg-charcoal text-white px-2.5 py-1 tracking-widest uppercase">
-                    {VERIFIED_PROJECT.category}
+                    {activeProject.category}
                   </span>
                   <span className="font-mono text-[10px] bg-white text-charcoal border border-warm-grey/40 px-2 py-1 tracking-widest font-semibold uppercase">
                     Adelaide
@@ -152,7 +235,7 @@ export const FeaturedProjects: React.FC<FeaturedProjectsProps> = ({ className = 
 
                 {/* Corner Spec Stamp */}
                 <div className="absolute bottom-4 left-4 right-4 z-10 font-mono text-[10px] text-white/90 uppercase tracking-widest bg-black/60 px-3 py-1.5 backdrop-blur-none flex items-center justify-between pointer-events-none">
-                  <span>{VERIFIED_PROJECT.views[0].aspectLabel}</span>
+                  <span>{activeProject.views[0].aspectLabel}</span>
                   <span className="text-white font-medium">STROVYN RESIDENTIAL</span>
                 </div>
               </Link>
@@ -168,25 +251,25 @@ export const FeaturedProjects: React.FC<FeaturedProjectsProps> = ({ className = 
             >
               <div>
                 <div className="flex items-center justify-between text-xs font-mono text-warm-grey-dark uppercase tracking-wider mb-3">
-                  <span>{VERIFIED_PROJECT.location}</span>
+                  <span>{activeProject.location}</span>
                   <span className="text-bronze font-medium">COMPLETED COMMISSION</span>
                 </div>
 
                 <h3 className="type-card-title text-2xl sm:text-3xl lg:text-4xl text-charcoal mb-2">
                   <Link
-                    href={`/projects/${VERIFIED_PROJECT.slug}`}
+                    href={`/projects/${activeProject.slug}`}
                     className="hover:text-bronze transition-colors"
                   >
-                    {VERIFIED_PROJECT.title}
+                    {activeProject.title}
                   </Link>
                 </h3>
 
                 <span className="font-mono text-xs uppercase tracking-wider text-brand-red font-medium block mb-4">
-                  {VERIFIED_PROJECT.subtitle}
+                  {activeProject.subtitle}
                 </span>
 
                 <p className="font-sans text-xs sm:text-sm text-charcoal-muted leading-relaxed font-light mb-6">
-                  {VERIFIED_PROJECT.overview}
+                  {activeProject.overview}
                 </p>
 
                 <div className="space-y-2 border-t border-warm-grey/25 pt-4 text-xs font-mono text-charcoal/80">
@@ -207,10 +290,10 @@ export const FeaturedProjects: React.FC<FeaturedProjectsProps> = ({ className = 
 
               <div className="pt-6 border-t border-warm-grey/25 mt-6 flex items-center justify-between">
                 <span className="font-mono text-xs text-warm-grey-dark uppercase tracking-widest">
-                  3 GALLERY VIEWS BELOW
+                  {activeProject.views.length} GALLERY VIEWS
                 </span>
                 <Link
-                  href={`/projects/${VERIFIED_PROJECT.slug}`}
+                  href={`/projects/${activeProject.slug}`}
                   className="font-mono text-xs uppercase tracking-[0.16em] text-charcoal hover:text-brand-red font-semibold transition-colors inline-flex items-center gap-2"
                 >
                   <span>Explore Case Study</span>
@@ -221,50 +304,52 @@ export const FeaturedProjects: React.FC<FeaturedProjectsProps> = ({ className = 
           </div>
 
           {/* Bottom Secondary Views: 2-Column Grid presenting remaining authentic perspectives */}
-          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-warm-grey/30 bg-ivory/20">
-            {VERIFIED_PROJECT.views.slice(1).map((view, idx) => (
-              <motion.div
-                key={view.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-60px' }}
-                transition={{ duration: 0.7, delay: 0.15 * (idx + 1), ease: [0.16, 1, 0.3, 1] }}
-                className="group flex flex-col justify-between p-6 sm:p-8"
-              >
-                <Link
-                  href={`/projects/${VERIFIED_PROJECT.slug}`}
-                  className="relative aspect-[16/10] w-full overflow-hidden bg-charcoal block cursor-pointer mb-4"
-                  aria-label={`${VERIFIED_PROJECT.title} - ${view.viewTitle}`}
+          {activeProject.views.length > 1 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-warm-grey/30 bg-ivory/20">
+              {activeProject.views.slice(1).map((view, idx) => (
+                <motion.div
+                  key={view.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-60px' }}
+                  transition={{ duration: 0.7, delay: 0.15 * (idx + 1), ease: [0.16, 1, 0.3, 1] }}
+                  className="group flex flex-col justify-between p-6 sm:p-8"
                 >
-                  <Image
-                    src={view.image}
-                    alt={view.alt}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                    className="object-cover object-center filter contrast-[1.04] transition-transform duration-700 ease-out group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-300" />
-
-                  <div className="absolute bottom-3 left-3 right-3 font-mono text-[9px] sm:text-[10px] text-white uppercase tracking-wider bg-black/60 px-2.5 py-1 pointer-events-none">
-                    {view.aspectLabel}
-                  </div>
-                </Link>
-
-                <div className="flex items-center justify-between text-xs font-mono">
-                  <span className="type-card-title text-base text-charcoal">
-                    {view.viewTitle}
-                  </span>
                   <Link
-                    href={`/projects/${VERIFIED_PROJECT.slug}`}
-                    className="text-bronze hover:text-charcoal uppercase tracking-wider text-[11px] font-semibold transition-colors inline-flex items-center gap-1"
+                    href={`/projects/${activeProject.slug}`}
+                    className="relative aspect-[16/10] w-full overflow-hidden bg-charcoal block cursor-pointer mb-4"
+                    aria-label={`${activeProject.title} - ${view.viewTitle}`}
                   >
-                    <span>View Detail</span>
-                    <span>&rarr;</span>
+                    <Image
+                      src={view.image}
+                      alt={view.alt}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      className="object-cover object-center filter contrast-[1.04] transition-transform duration-700 ease-out group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-300" />
+
+                    <div className="absolute bottom-3 left-3 right-3 font-mono text-[9px] sm:text-[10px] text-white uppercase tracking-wider bg-black/60 px-2.5 py-1 pointer-events-none">
+                      {view.aspectLabel}
+                    </div>
                   </Link>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="type-card-title text-base text-charcoal">
+                      {view.viewTitle}
+                    </span>
+                    <Link
+                      href={`/projects/${activeProject.slug}`}
+                      className="text-bronze hover:text-charcoal uppercase tracking-wider text-[11px] font-semibold transition-colors inline-flex items-center gap-1"
+                    >
+                      <span>View Detail</span>
+                      <span>&rarr;</span>
+                    </Link>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </section>

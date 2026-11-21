@@ -159,3 +159,24 @@ export const UpdateProjectSchema = z
     sort_order: z.number().int().min(0).max(1000).optional(),
   })
   .strict();
+
+export const UpdateProjectImagesBatchSchema = z
+  .object({
+    expected_updated_at: z.string().datetime({ offset: true }),
+    coverImageId: z.string().uuid().optional().nullable(),
+    images: z
+      .array(
+        z
+          .object({
+            id: z.string().uuid(),
+            image_role: z.enum(PROJECT_IMAGE_ROLES),
+            alt_text: z.string().trim().max(300).optional().nullable(),
+            caption: z.string().trim().max(300).optional().nullable(),
+            pair_key: z.string().trim().max(64).optional().nullable(),
+            sort_order: z.number().int().min(0).max(500),
+          })
+          .strict()
+      )
+      .max(100),
+  })
+  .strict();

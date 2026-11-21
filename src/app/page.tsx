@@ -13,6 +13,7 @@ import {
   FinishExplorer,
 } from '@/components/home';
 import { HomeInsightsSection } from '@/components/home/HomeInsightsSection';
+import { HomeProjectsSection } from '@/components/home/HomeProjectsSection';
 
 export const metadata: Metadata = {
   title: {
@@ -35,7 +36,9 @@ export default function HomePage() {
       <OurExpertise />
 
       {/* SECTION E: FEATURED PROJECTS */}
-      <FeaturedProjects />
+      <Suspense fallback={<FeaturedProjects />}>
+        <HomeProjectsSection />
+      </Suspense>
 
       {/* TACTILE SUBSTRATE TRANSFORMATION (Interactive Before/After Slider) */}
       <BeforeAfterSlider />

@@ -335,9 +335,66 @@ async function run() {
     assert.ok(pubOverview.submissions !== null);
     assert.equal(pubOverview.pendingActions.some((a) => a.id === 'articles-in-review'), true);
 
-    // 3. Projects foundation CRUD + optimistic concurrency + list merge
+    // 3. Projects foundation RBAC, draft isolation, media upload, ordering & safe delete
     const initialProjects = await projectsMod.listProjectsForAdmin(pubStaff, adapter);
     assert.ok(initialProjects.length >= 4);
+
+    // Editor cannot create directly as published (403)
+    await assert.rejects(
+      () =>
+        projectsMod.createProjectRecord(
+          editorStaff,
+          {
+            title: 'Editor Direct Publish Blocked',
+            category: 'Heritage Restoration',
+            location: 'Adelaide, SA',
+            description: 'Attempt to bypass draft governance directly into published.',
+            visibility_status: 'published',
+          },
+          adapter
+        ),
+      (err) => err.status === 403
+    );
+
+    // Editor CAN create and edit a draft project
+    const editorDraft = await projectsMod.createProjectRecord(
+      editorStaff,
+      {
+        title: 'Editor Draft Sandstone Porch',
+        category: 'Heritage Restoration',
+        location: 'Norwood, SA',
+        description: 'Mineral silicate consolidation study authored by editorial staff.',
+        visibility_status: 'draft',
+      },
+      adapter
+    );
+    assert.equal(editorDraft.visibility_status, 'draft');
+
+    const editorEdited = await projectsMod.updateProjectRecord(
+      editorStaff,
+      editorDraft.id,
+      {
+        expected_updated_at: new Date(editorDraft.updated_at).toISOString(),
+        title: 'Editor Draft Sandstone Porch Updated',
+      },
+      adapter
+    );
+    assert.equal(editorEdited.title, 'Editor Draft Sandstone Porch Updated');
+
+    // Editor CANNOT publish a draft (403)
+    await assert.rejects(
+      () =>
+        projectsMod.updateProjectRecord(
+          editorStaff,
+          editorDraft.id,
+          {
+            expected_updated_at: new Date(editorEdited.updated_at).toISOString(),
+            visibility_status: 'published',
+          },
+          adapter
+        ),
+      (err) => err.status === 403
+    );
 
     const created = await projectsMod.createProjectRecord(
       pubStaff,
@@ -396,6 +453,31 @@ async function run() {
     );
     assert.equal(updated.title, 'Burnside Limestone Facade Restored');
 
+    // Editor CANNOT modify a published project (403)
+    await assert.rejects(
+      () =>
+        projectsMod.updateProjectRecord(
+          editorStaff,
+          updated.id,
+          {
+            expected_updated_at: new Date(updated.updated_at).toISOString(),
+            title: 'Unauthorized Editor Live Mutation',
+          },
+          adapter
+        ),
+      (err) => err.status === 403
+    );
+
+    // Verify anon RLS exposes strictly published projects (north adelaide + burnside)
+    await db.query('BEGIN');
+    await db.query('SET LOCAL ROLE anon');
+    const anonProjects = (await db.query(`SELECT slug FROM public.projects ORDER BY sort_order ASC`)).rows;
+    await db.query('COMMIT');
+    assert.deepEqual(
+      anonProjects.map((r) => r.slug).sort(),
+      ['burnside-limestone-facade', 'the-north-adelaide-residence']
+    );
+
     // 4. Client component isolation check
     for (const rel of [
       'src/lib/cms/adminNavigation.ts',
@@ -403,6 +485,9 @@ async function run() {
       'src/components/cms/AdminWorkspaceShell.tsx',
       'src/components/cms/AdminOverviewDashboard.tsx',
       'src/components/cms/AdminProjectsWorkspace.tsx',
+      'src/components/cms/NewProjectForm.tsx',
+      'src/components/cms/AdminProjectEditor.tsx',
+      'src/components/projects/PublicProjectsCatalog.tsx',
     ]) {
       const src = fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
       assert.equal(src.includes('serviceRole'), false, `${rel} must not reference serviceRole`);

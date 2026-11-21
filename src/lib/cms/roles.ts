@@ -30,8 +30,12 @@ export const EDITORIAL_ACTIONS = [
   'preview:create_token',
   'overview:read',
   'project:read',
+  'project:create_draft',
+  'project:edit_draft',
+  'project:edit_published',
   'project:write',
   'project:publish',
+  'project:archive',
   'staff:manage',
 ] as const;
 export type EditorialAction = (typeof EDITORIAL_ACTIONS)[number];

@@ -4,8 +4,11 @@ import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import Link from 'next/link';
 import Image from 'next/image';
-import { PROJECTS_DATA, ProjectData } from '@/data/projectsData';
-import { getProjectsWithOverrides, getProjectsWithOverridesAsync } from '@/lib/projectPhotos';
+import type { PublicProjectDetail } from '@/lib/cms/publicProjects';
+import {
+  getProjectsWithOverridesAsync,
+  getPublishedProjectDetailAsync,
+} from '@/lib/projectPhotos';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 
@@ -13,21 +16,27 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateStaticParams() {
-  return PROJECTS_DATA.map((project) => ({
-    slug: project.slug,
-  }));
-}
+export const instant = false;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  await connection();
   const { slug } = await params;
-  const projects = getProjectsWithOverrides();
-  const project = projects.find((p) => p.slug === slug);
-  if (!project) return { title: 'Project Not Found' };
+  const project = await getPublishedProjectDetailAsync(slug);
+  if (!project) {
+    return {
+      title: 'Project Not Found',
+      robots: { index: false, follow: false },
+    };
+  }
 
   return {
-    title: project.title,
-    description: project.description,
+    title: project.seoTitle,
+    description: project.seoDescription,
+    openGraph: {
+      title: `${project.seoTitle} | Strovyn Painting Co.`,
+      description: project.seoDescription,
+      images: project.heroImage ? [project.heroImage] : ['/images/strovyn-logo.png'],
+    },
   };
 }
 
@@ -35,8 +44,8 @@ function ProjectDetailBody({
   project,
   relatedProjects,
 }: {
-  project: ProjectData;
-  relatedProjects: ProjectData[];
+  project: PublicProjectDetail;
+  relatedProjects: PublicProjectDetail[];
 }) {
   return (
     <main className="w-full min-h-screen bg-ivory text-charcoal">
@@ -58,8 +67,8 @@ function ProjectDetailBody({
                   project.isDemonstrationSpec
                     ? 'warning'
                     : project.lifecycle === 'Completed'
-                    ? 'bronze'
-                    : 'warning'
+                      ? 'bronze'
+                      : 'warning'
                 }
               >
                 {project.isDemonstrationSpec ? 'Demonstration Study' : project.lifecycle}
@@ -90,145 +99,183 @@ function ProjectDetailBody({
         />
       </section>
 
-      {/* Split Case Study Content */}
-      <section className="py-20 px-6 sm:px-8 lg:px-12 max-w-7xl mx-auto border-b border-warm-grey/30">
+      {/* Metadata & Narrative */}
+      <section className="py-16 md:py-24 px-6 sm:px-8 lg:px-12 max-w-7xl mx-auto border-b border-warm-grey/30">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
-          {/* Left Column: Sticky Metadata & Specs */}
-          <div className="lg:col-span-5 space-y-8">
-            <div className="p-6 sm:p-8 bg-white border border-warm-grey/40 sticky top-28">
-              <span className="font-mono text-xs text-bronze uppercase tracking-widest block mb-4">
-                COMMISSION METADATA
-              </span>
-
-              <div className="space-y-4 text-sm divide-y divide-warm-grey/20">
-                <div className="pt-2">
-                  <span className="font-sans text-xs uppercase text-warm-grey-dark block mb-1">Architect / Design Collaborator</span>
-                  <p className="font-sans font-medium text-charcoal">{project.architect}</p>
-                </div>
-                <div className="pt-3">
-                  <span className="font-sans text-xs uppercase text-warm-grey-dark block mb-1">Builder / General Contractor</span>
-                  <p className="font-sans font-medium text-charcoal">{project.builder}</p>
-                </div>
-                <div className="pt-3">
-                  <span className="font-sans text-xs uppercase text-warm-grey-dark block mb-1">Location &amp; Delivery Year</span>
-                  <p className="font-sans font-medium text-charcoal">{project.location} &mdash; {project.year}</p>
-                </div>
-                <div className="pt-3">
-                  <span className="font-sans text-xs uppercase text-warm-grey-dark block mb-1">Finishes Schedule</span>
-                  <p className="font-mono text-xs text-charcoal bg-ivory p-2 border border-warm-grey/30">{project.finishes}</p>
-                </div>
-                <div className="pt-3">
-                  <span className="font-sans text-xs uppercase text-warm-grey-dark block mb-1">Calibrated Sheen Levels</span>
-                  <p className="font-sans text-xs text-charcoal/85">{project.sheenLevels}</p>
-                </div>
+          <div className="lg:col-span-4 space-y-6 bg-white border border-warm-grey/40 p-6 sm:p-8 self-start">
+            <h2 className="font-sans text-xs uppercase tracking-widest text-bronze font-semibold border-b border-warm-grey/30 pb-3">
+              Architectural Specification
+            </h2>
+            <div className="space-y-4 font-sans text-sm">
+              <div>
+                <span className="text-xs uppercase text-warm-grey-dark block">Year</span>
+                <span className="font-medium text-charcoal">{project.year}</span>
               </div>
-
-              <div className="mt-8 pt-6 border-t border-warm-grey/30">
-                <Button href="/contact" variant="primary" size="md" className="w-full text-center">
-                  Request Finishes Schedule
-                </Button>
-                <a
-                  href={`https://wa.me/61406646061?text=${encodeURIComponent(`Hello Strovyn Painting Co. I am viewing the ${project.title} study and would like to discuss a similar project in Adelaide.`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-3 w-full py-2.5 px-4 bg-emerald-800 hover:bg-emerald-700 text-white font-sans text-xs uppercase tracking-wider font-medium text-center flex items-center justify-center gap-2 transition-colors"
-                >
-                  <span>Chat on WhatsApp: 0406 646 061</span>
-                </a>
+              <div>
+                <span className="text-xs uppercase text-warm-grey-dark block">Location</span>
+                <span className="font-medium text-charcoal">{project.location}</span>
+              </div>
+              <div>
+                <span className="text-xs uppercase text-warm-grey-dark block">Architect / Specifier</span>
+                <span className="font-medium text-charcoal">{project.architect}</span>
+              </div>
+              <div>
+                <span className="text-xs uppercase text-warm-grey-dark block">Builder</span>
+                <span className="font-medium text-charcoal">{project.builder}</span>
+              </div>
+              {project.sheenLevels && (
+                <div>
+                  <span className="text-xs uppercase text-warm-grey-dark block">Sheen Calibration</span>
+                  <span className="font-mono text-xs text-charcoal/85">{project.sheenLevels}</span>
+                </div>
+              )}
+              <div>
+                <span className="text-xs uppercase text-warm-grey-dark block">Material System</span>
+                <span className="font-mono text-xs text-charcoal/85">{project.finishes}</span>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Narrative, Challenges, Gallery */}
-          <div className="lg:col-span-7 space-y-12">
+          <div className="lg:col-span-8 space-y-8">
             <div>
-              <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-2">
-                ARCHITECTURAL INTENT
-              </span>
-              <h2 className="type-section-title text-3xl sm:text-4xl text-charcoal mb-4">Project Overview</h2>
+              <h2 className="type-section-title text-2xl sm:text-3xl text-charcoal mb-4">
+                Project Overview
+              </h2>
               <p className="font-sans text-base sm:text-lg text-charcoal/85 leading-relaxed">
                 {project.description}
               </p>
             </div>
 
-            <div className="border-t border-warm-grey/30 pt-8">
-              <h3 className="type-card-title text-2xl text-charcoal mb-4">Execution Scope</h3>
-              <ul className="space-y-3 font-sans text-sm sm:text-base text-charcoal/85">
-                {project.scope.map((item) => (
-                  <li key={item} className="flex items-start gap-3">
-                    <span className="w-2 h-2 bg-bronze mt-2 flex-shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {project.challenges && (
+              <div>
+                <h3 className="font-sans text-sm uppercase tracking-widest text-bronze font-semibold mb-3">
+                  Technical Challenges &amp; Approach
+                </h3>
+                <p className="font-sans text-base text-charcoal/80 leading-relaxed">
+                  {project.challenges}
+                </p>
+              </div>
+            )}
 
-            <div className="border-t border-warm-grey/30 pt-8 bg-white p-6 border border-warm-grey/30">
-              <span className="font-sans text-xs uppercase tracking-wider text-bronze font-medium block mb-2">
-                TECHNICAL RESOLUTION
-              </span>
-              <h3 className="type-card-title text-xl sm:text-2xl text-charcoal mb-2">Substrate &amp; Light Challenges</h3>
-              <p className="font-sans text-sm sm:text-base text-charcoal/80 leading-relaxed">
-                {project.challenges}
-              </p>
-            </div>
-
-            {/* Gallery Images */}
-            {project.galleryImages && project.galleryImages.length > 0 && (
-              <div className="border-t border-warm-grey/30 pt-8 space-y-6">
-                <h3 className="type-card-title text-2xl text-charcoal mb-4">Finish &amp; Junction Photography</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {project.galleryImages.map((img, i) => (
-                    <div key={i} className="relative aspect-[4/3] bg-charcoal border border-warm-grey/30 overflow-hidden">
-                      <Image
-                        src={img}
-                        alt={`${project.title} detail ${i + 1}`}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 100vw, 30vw"
-                      />
-                    </div>
+            {project.scope.length > 0 && (
+              <div>
+                <h3 className="font-sans text-sm uppercase tracking-widest text-bronze font-semibold mb-4">
+                  Executed Scope of Works
+                </h3>
+                <ul className="space-y-3 font-sans text-sm sm:text-base text-charcoal/85">
+                  {project.scope.map((item, idx) => (
+                    <li key={idx} className="flex items-start gap-3">
+                      <span className="w-1.5 h-1.5 rounded-full bg-bronze mt-2 flex-shrink-0" />
+                      <span>{item}</span>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </div>
             )}
           </div>
         </div>
       </section>
 
-      {/* Related Projects */}
-      <section className="py-16 px-6 sm:px-8 lg:px-12 max-w-7xl mx-auto">
-        <h3 className="type-section-title text-2xl sm:text-3xl text-charcoal mb-8">Other Selected Commissions</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          {relatedProjects.map((p) => (
-            <Link key={p.slug} href={`/projects/${p.slug}`} className="group block border border-warm-grey/40 bg-white">
-              <div className="relative aspect-[16/10] bg-charcoal overflow-hidden">
-                <Image
-                  src={p.heroImage}
-                  alt={p.title}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                />
+      {/* Before / After Pairs (when configured) */}
+      {project.beforeAfterPairs.length > 0 && (
+        <section className="py-16 md:py-20 px-6 sm:px-8 lg:px-12 max-w-7xl mx-auto border-b border-warm-grey/30">
+          <div className="mb-10">
+            <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-2">
+              [ SUBSTRATE TRANSFORMATION ]
+            </span>
+            <h2 className="type-section-title text-3xl text-charcoal">
+              Before &amp; After Documentation
+            </h2>
+          </div>
+          <div className="space-y-8">
+            {project.beforeAfterPairs.map((pair) => (
+              <div key={pair.pairKey} className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white border border-warm-grey/40 p-5">
+                <figure className="space-y-2">
+                  <div className="relative aspect-[16/10] bg-charcoal overflow-hidden">
+                    <Image src={pair.beforeUrl} alt={pair.beforeAlt} fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
+                  </div>
+                  <figcaption className="font-mono text-[11px] uppercase tracking-wider text-warm-grey-dark">
+                    Before · {pair.beforeAlt}
+                  </figcaption>
+                </figure>
+                <figure className="space-y-2">
+                  <div className="relative aspect-[16/10] bg-charcoal overflow-hidden">
+                    <Image src={pair.afterUrl} alt={pair.afterAlt} fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
+                  </div>
+                  <figcaption className="font-mono text-[11px] uppercase tracking-wider text-bronze">
+                    After · {pair.afterAlt}
+                  </figcaption>
+                </figure>
               </div>
-              <div className="p-4">
-                <span className="font-sans text-[11px] uppercase text-bronze tracking-wider block mb-1">
-                  {p.category}
-                </span>
-                <h4 className="type-card-title text-lg sm:text-xl text-charcoal group-hover:text-bronze transition-colors">
-                  {p.title}
-                </h4>
-              </div>
-            </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Gallery */}
+      <section className="py-16 md:py-24 px-6 sm:px-8 lg:px-12 max-w-7xl mx-auto border-b border-warm-grey/30">
+        <div className="mb-12">
+          <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-2">
+            [ PHOTOGRAPHIC ARCHIVE ]
+          </span>
+          <h2 className="type-section-title text-3xl text-charcoal">
+            Detailed Surface Views
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {project.galleryImages.map((imgUrl, idx) => (
+            <div key={`${imgUrl}-${idx}`} className="relative aspect-[16/10] bg-charcoal border border-warm-grey/30 overflow-hidden">
+              <Image
+                src={imgUrl}
+                alt={`${project.title} - Detail view ${idx + 1}`}
+                fill
+                className="object-cover hover:scale-105 transition-transform duration-700"
+                sizes="(max-width: 768px) 100vw, 50vw"
+              />
+            </div>
           ))}
         </div>
       </section>
+
+      {/* Related Projects */}
+      {relatedProjects.length > 0 && (
+        <section className="py-16 md:py-24 px-6 sm:px-8 lg:px-12 max-w-7xl mx-auto">
+          <h3 className="font-sans text-xs uppercase tracking-widest text-warm-grey-dark mb-8">
+            Other Published Commissions
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {relatedProjects.map((p) => (
+              <Link key={p.slug} href={`/projects/${p.slug}`} className="group block border border-warm-grey/40 bg-white">
+                <div className="relative aspect-[16/10] bg-charcoal overflow-hidden">
+                  <Image
+                    src={p.heroImage}
+                    alt={p.title}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                  />
+                </div>
+                <div className="p-4">
+                  <span className="font-sans text-[11px] uppercase text-bronze tracking-wider block mb-1">
+                    {p.category}
+                  </span>
+                  <h4 className="type-card-title text-lg sm:text-xl text-charcoal group-hover:text-bronze transition-colors">
+                    {p.title}
+                  </h4>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </main>
   );
 }
 
-async function DynamicProjectDetail({ slug }: { slug: string }) {
+async function DynamicProjectDetail({ params }: Props) {
   await connection();
+  const { slug } = await params;
   const projects = await getProjectsWithOverridesAsync();
   const project = projects.find((p) => p.slug === slug);
 
@@ -240,24 +287,16 @@ async function DynamicProjectDetail({ slug }: { slug: string }) {
   return <ProjectDetailBody project={project} relatedProjects={relatedProjects} />;
 }
 
-export default async function ProjectDetailPage({ params }: Props) {
-  const { slug } = await params;
-  const fallbackProjects = getProjectsWithOverrides();
-  const fallbackProject = fallbackProjects.find((p) => p.slug === slug);
-
-  if (!fallbackProject) {
-    notFound();
-  }
-
-  const fallbackRelated = fallbackProjects
-    .filter((p) => p.slug !== fallbackProject.slug)
-    .slice(0, 3);
-
+export default function ProjectDetailPage({ params }: Props) {
   return (
     <Suspense
-      fallback={<ProjectDetailBody project={fallbackProject} relatedProjects={fallbackRelated} />}
+      fallback={
+        <main className="w-full min-h-screen bg-ivory text-charcoal flex items-center justify-center px-6 py-24 font-mono text-xs uppercase tracking-widest">
+          Loading Commission Case Study...
+        </main>
+      }
     >
-      <DynamicProjectDetail slug={slug} />
+      <DynamicProjectDetail params={params} />
     </Suspense>
   );
 }

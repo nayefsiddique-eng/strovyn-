@@ -16,6 +16,8 @@ const EDITOR_ACTIONS: readonly EditorialAction[] = [
   'preview:create_token',
   'overview:read',
   'project:read',
+  'project:create_draft',
+  'project:edit_draft',
 ];
 
 const PUBLISHER_ONLY_ACTIONS: readonly EditorialAction[] = [
@@ -26,8 +28,10 @@ const PUBLISHER_ONLY_ACTIONS: readonly EditorialAction[] = [
   'article:publish_now',
   'article:edit_published',
   'article:archive',
+  'project:edit_published',
   'project:write',
   'project:publish',
+  'project:archive',
 ];
 
 const ROLE_PERMISSION_SETS: Record<EditorialRole, ReadonlySet<EditorialAction>> = {

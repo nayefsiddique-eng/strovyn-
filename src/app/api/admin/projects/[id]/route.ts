@@ -4,12 +4,13 @@ import {
   EditorialHttpError,
   enforceCmsRateLimit,
   mapCmsErrorToResponse,
+  revalidatePublicPortfolioPaths,
 } from '@/lib/cms/http';
 import {
   getProjectByIdForAdmin,
   updateProjectRecord,
 } from '@/lib/cms/projectsService';
-import { requireStaffSession } from '@/lib/cms/staffAuth';
+import { requireStaffSession, resolveAuthenticatedStaff } from '@/lib/cms/staffAuth';
 import { UuidParamSchema } from '@/lib/cms/validators';
 import { readJsonBodyWithLimit } from '@/lib/security/requestLimits';
 
@@ -49,7 +50,7 @@ export async function PATCH(req: Request, context: RouteContext) {
 
     const { id } = await context.params;
     const projectId = parseProjectId(id);
-    const staff = await requireStaffSession({ action: 'project:write' });
+    const staff = await resolveAuthenticatedStaff();
 
     const bodyCheck = await readJsonBodyWithLimit(req, MAX_PROJECT_UPDATE_BYTES);
     if (!bodyCheck.ok) {
@@ -62,6 +63,7 @@ export async function PATCH(req: Request, context: RouteContext) {
     }
 
     const project = await updateProjectRecord(staff, projectId, bodyCheck.data);
+    revalidatePublicPortfolioPaths(project.slug);
     return NextResponse.json({ success: true, project });
   } catch (err) {
     return mapCmsErrorToResponse(err);

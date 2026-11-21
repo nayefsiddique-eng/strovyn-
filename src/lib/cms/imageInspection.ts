@@ -185,17 +185,18 @@ export function parseImageDimensions(
 export function inspectEditorialImageUpload(
   buffer: Buffer,
   originalFilename: string,
-  declaredMimeType: string
+  declaredMimeType: string,
+  maxBytes: number = MAX_EDITORIAL_IMAGE_BYTES
 ): InspectedEditorialImage {
   if (!buffer || buffer.length === 0) {
     return { valid: false, status: 400, error: 'Image file payload cannot be empty.' };
   }
 
-  if (buffer.length > MAX_EDITORIAL_IMAGE_BYTES) {
+  if (buffer.length > maxBytes) {
     return {
       valid: false,
       status: 413,
-      error: `Image exceeds the maximum permitted size of ${MAX_EDITORIAL_IMAGE_BYTES / (1024 * 1024)}MB.`,
+      error: `Image exceeds the maximum permitted size of ${Math.round(maxBytes / (1024 * 1024))}MB.`,
     };
   }
 
@@ -278,7 +279,7 @@ export function inspectEditorialImageUpload(
     trimmedName,
     declaredMimeType,
     [...ALLOWED_EDITORIAL_IMAGE_MIMES],
-    MAX_EDITORIAL_IMAGE_BYTES
+    maxBytes
   );
   if (!fileCheck.valid || !fileCheck.sanitizedFilename) {
     return {

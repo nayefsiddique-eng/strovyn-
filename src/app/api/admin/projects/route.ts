@@ -4,6 +4,7 @@ import {
   EditorialHttpError,
   enforceCmsRateLimit,
   mapCmsErrorToResponse,
+  revalidatePublicPortfolioPaths,
 } from '@/lib/cms/http';
 import {
   createProjectRecord,
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
   try {
     assertSameOriginCsrf(req);
     await enforceCmsRateLimit(req, 'projects_create', 30, 60_000);
-    const staff = await requireStaffSession({ action: 'project:write' });
+    const staff = await requireStaffSession({ action: 'project:create_draft' });
 
     const bodyCheck = await readJsonBodyWithLimit(req, MAX_PROJECT_JSON_BYTES);
     if (!bodyCheck.ok) {
@@ -44,6 +45,7 @@ export async function POST(req: Request) {
     }
 
     const project = await createProjectRecord(staff, bodyCheck.data);
+    revalidatePublicPortfolioPaths(project.slug);
     return NextResponse.json({ success: true, project }, { status: 201 });
   } catch (err) {
     return mapCmsErrorToResponse(err);

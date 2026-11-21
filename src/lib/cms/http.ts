@@ -181,3 +181,16 @@ export function revalidatePublicInsightsPaths(slug?: string | null): void {
     // Ignore when executed outside an active Next.js request context
   }
 }
+
+export function revalidatePublicPortfolioPaths(slug?: string | null): void {
+  try {
+    revalidatePath('/');
+    revalidatePath('/projects');
+    revalidatePath('/api/projects');
+    if (slug && typeof slug === 'string') {
+      revalidatePath(`/projects/${slug}`);
+    }
+  } catch {
+    // Ignore when executed outside an active Next.js request context
+  }
+}
