@@ -30,8 +30,15 @@ const MAX_DAILY_GLOBAL_TOKENS = 500_000;
 const MAX_DAILY_COST_MICROS_PER_STAFF = 250_000; // $0.25 USD/day
 const MAX_DAILY_GLOBAL_COST_MICROS = 1_000_000; // $1.00 USD/day
 
+export type AiProviderAvailabilityState =
+  | 'configured_unverified'
+  | 'verified'
+  | 'deterministic_fallback'
+  | 'unavailable';
+
 export interface AiProviderStatus {
   providerName: 'gemini_rest' | 'deterministic_fallback';
+  availabilityState: AiProviderAvailabilityState;
   model: string;
   apiKeyConfigured: boolean;
   timeoutMs: number;
@@ -488,11 +495,15 @@ export function getAiProviderStatus(): AiProviderStatus {
     process.env.STROVYN_AI_PROVIDER?.trim().toLowerCase() === 'deterministic';
   const model = process.env.STROVYN_AI_MODEL?.trim() || DEFAULT_AI_MODEL;
 
+  const isLiveConfigured = Boolean(apiKey && !forceDeterministic);
+
   return {
-    providerName:
-      apiKey && !forceDeterministic ? 'gemini_rest' : 'deterministic_fallback',
+    providerName: isLiveConfigured ? 'gemini_rest' : 'deterministic_fallback',
+    availabilityState: isLiveConfigured
+      ? 'configured_unverified'
+      : 'deterministic_fallback',
     model,
-    apiKeyConfigured: Boolean(apiKey && !forceDeterministic),
+    apiKeyConfigured: isLiveConfigured,
     timeoutMs: DEFAULT_TIMEOUT_MS,
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     maxRetries: MAX_RETRIES,

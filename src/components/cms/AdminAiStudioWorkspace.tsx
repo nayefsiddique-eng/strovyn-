@@ -78,6 +78,9 @@ export function AdminAiStudioWorkspace({
   );
   const [usage, setUsage] = useState<AiUsageRecord>(initialUsage);
   const [providerStatus] = useState<AiProviderStatus>(initialProviderStatus);
+  const [providerAvailability, setProviderAvailability] = useState(
+    initialProviderStatus.availabilityState
+  );
 
   // Mode A: Article Writer inputs
   const [artTopic, setArtTopic] = useState(
@@ -273,11 +276,20 @@ export function AdminAiStudioWorkspace({
       });
       const data = await res.json();
       if (!res.ok || !data.output) {
+        if (providerStatus.apiKeyConfigured && res.status >= 500) {
+          setProviderAvailability('unavailable');
+        }
         setBanner({
           type: 'error',
           message: data.error ?? 'AI draft generation failed.',
         });
         return;
+      }
+
+      if (data.provider === 'gemini_rest') {
+        setProviderAvailability('verified');
+      } else if (data.provider === 'deterministic_fallback') {
+        setProviderAvailability('deterministic_fallback');
       }
 
       if (data.usage) {
@@ -469,9 +481,13 @@ export function AdminAiStudioWorkspace({
         <div className="flex flex-wrap items-center gap-3 text-xs font-mono">
           <span className="px-3 py-1.5 border border-warm-grey/60 bg-ivory text-charcoal">
             Engine:{' '}
-            {providerStatus.apiKeyConfigured
-              ? `Live (${providerStatus.model})`
-              : 'Deterministic Grounded Drafter (No Paid API Key)'}
+            {providerAvailability === 'verified'
+              ? `Live Verified (${providerStatus.model})`
+              : providerAvailability === 'configured_unverified'
+                ? `Live Key Configured · Unverified (${providerStatus.model})`
+                : providerAvailability === 'unavailable'
+                  ? `Provider Unavailable (${providerStatus.model})`
+                  : 'Deterministic Fallback (No Paid API Key)'}
           </span>
           <span className="px-3 py-1.5 border border-warm-grey/60 bg-white text-warm-grey-dark">
             Quota Today: {usage.staffRequestsToday} / {usage.staffLimit}

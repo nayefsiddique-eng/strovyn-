@@ -184,7 +184,7 @@ export function AdminOverviewDashboard({
             Needs Attention
           </h2>
           <span className="font-mono text-[10px] text-warm-grey-dark">
-            Updated {new Date(snapshot.generatedAt).toLocaleTimeString('en-AU')}
+            Updated {new Date(snapshot.generatedAt).toLocaleTimeString('en-AU', { timeZone: 'Australia/Adelaide' })}
           </span>
         </div>
 

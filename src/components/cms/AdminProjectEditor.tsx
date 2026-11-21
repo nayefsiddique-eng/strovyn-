@@ -310,6 +310,9 @@ export function AdminProjectEditor({
 
     try {
       let latestProject = serverProject;
+      let uploadedCount = 0;
+      const failedMessages: string[] = [];
+
       for (const file of files) {
         const form = new FormData();
         form.append('file', file);
@@ -328,18 +331,34 @@ export function AdminProjectEditor({
           | null;
 
         if (!res.ok || !json || !json.success) {
-          setErrorMsg((json && !json.success && json.error) || `Upload failed for ${file.name}.`);
-          break;
+          const reason = (json && !json.success && json.error) || 'Upload failed.';
+          failedMessages.push(`${file.name}: ${reason}`);
+          continue;
         }
+        uploadedCount += 1;
         latestProject = json.project;
       }
-      setServerProject(latestProject);
-      setImagesBaseline(latestProject.images);
-      setImagesDraft(latestProject.images);
-      setCoverUrlDraft(latestProject.main_image_url);
-      setUploadAlt('');
-      setSuccessMsg(`Uploaded ${files.length} image${files.length === 1 ? '' : 's'} to project gallery.`);
-      router.refresh();
+
+      if (uploadedCount > 0) {
+        setServerProject(latestProject);
+        setImagesBaseline(latestProject.images);
+        setImagesDraft(latestProject.images);
+        setCoverUrlDraft(latestProject.main_image_url);
+        setUploadAlt('');
+        router.refresh();
+      }
+
+      if (failedMessages.length > 0) {
+        setErrorMsg(failedMessages.join(' | '));
+      }
+
+      if (uploadedCount > 0 && failedMessages.length === 0) {
+        setSuccessMsg(`Uploaded ${uploadedCount} image${uploadedCount === 1 ? '' : 's'} to project gallery.`);
+      } else if (uploadedCount > 0 && failedMessages.length > 0) {
+        setSuccessMsg(
+          `Uploaded ${uploadedCount} of ${files.length} image${files.length === 1 ? '' : 's'} to project gallery (${failedMessages.length} rejected).`
+        );
+      }
     } catch {
       setErrorMsg('Network error uploading project images.');
     } finally {
@@ -1052,7 +1071,7 @@ export function AdminProjectEditor({
             </h2>
             <dl className="space-y-1.5 text-xs font-mono text-warm-grey-dark">
               <div>Visibility: <strong className="text-charcoal uppercase">{serverProject.visibility_status}</strong></div>
-              <div>Updated: <strong className="text-charcoal">{new Date(serverProject.updated_at).toLocaleString('en-AU')}</strong></div>
+              <div>Updated: <strong className="text-charcoal">{new Date(serverProject.updated_at).toLocaleString('en-AU', { timeZone: 'Australia/Adelaide' })}</strong></div>
             </dl>
 
             {isDirty && (
