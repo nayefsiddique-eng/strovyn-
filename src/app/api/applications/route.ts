@@ -3,9 +3,12 @@ import { createHash } from 'crypto';
 import { validateVacancyForPublicApplication } from '@/lib/cms/careersService';
 import { EditorialHttpError } from '@/lib/cms/http';
 import { addApplication, AttachmentClaimError } from '@/lib/db/mockData';
+import {
+  buildApplicationNotificationEmail,
+  buildCustomerAcknowledgmentEmail,
+} from '@/lib/resend/templates';
 import { isServiceRoleConfigured } from '@/lib/supabase/serviceRole';
 import { applicationSchema } from '@/lib/security/schemas';
-import { escapeHtml } from '@/lib/security/escapeHtml';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
 import { readJsonBodyWithLimit } from '@/lib/security/requestLimits';
 import { executeIdempotentSubmission } from '@/lib/security/submissionHandler';
@@ -84,31 +87,32 @@ export async function POST(req: Request) {
     }
 
     const dedupKey = buildApplicationDedupKey(req.headers.get('idempotency-key'), validated);
-
-    const safeName = escapeHtml(validated.fullName);
-    const safePosition = escapeHtml(validated.position);
-    const safeEmail = escapeHtml(validated.email);
-    const safePhone = escapeHtml(validated.phone);
-    const safeExp = escapeHtml(validated.yearsOfExperience || '1+');
-    const safeResume = validated.resumeUrl ? escapeHtml(validated.resumeUrl) : '';
-    const safePortfolio = validated.portfolioUrl ? escapeHtml(validated.portfolioUrl) : '';
+    const appEmail = buildApplicationNotificationEmail({
+      fullName: validated.fullName,
+      email: validated.email,
+      phone: validated.phone,
+      position: validated.position,
+      yearsOfExperience: validated.yearsOfExperience,
+      portfolioUrl: validated.portfolioUrl,
+      hasResume: Boolean(validated.resumeUrl),
+    });
 
     const outcome = await executeIdempotentSubmission({
       dedupKey,
       logLabel: 'Application',
+      submissionType: 'job_application',
       ttlMs: APPLICATION_DEDUP_TTL_MS,
       emailPayload: {
-        subject: `New Candidate Application: ${safeName} (${safePosition})`,
-        html: `
-          <h2>New Strovyn Candidate Application</h2>
-          <p><strong>Applicant:</strong> ${safeName}</p>
-          <p><strong>Position:</strong> ${safePosition}</p>
-          <p><strong>Email:</strong> ${safeEmail}</p>
-          <p><strong>Phone:</strong> ${safePhone}</p>
-          <p><strong>Experience:</strong> ${safeExp}</p>
-          <p><strong>CV Reference:</strong> ${safeResume || 'None attached'}</p>
-          <p><strong>Portfolio:</strong> ${safePortfolio || 'None provided'}</p>
-        `,
+        ...appEmail,
+        recipientKind: 'recruitment',
+        replyTo: validated.email,
+      },
+      acknowledgmentPayload: {
+        to: validated.email,
+        ...buildCustomerAcknowledgmentEmail({
+          recipientName: validated.fullName,
+          submissionType: 'application',
+        }),
       },
       persistFn: (idempotencyKey) =>
         addApplication({

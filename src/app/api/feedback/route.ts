@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { addFeedback } from '@/lib/db/mockData';
+import {
+  buildContactEnquiryNotificationEmail,
+  buildCustomerAcknowledgmentEmail,
+} from '@/lib/resend/templates';
 import { feedbackSchema } from '@/lib/security/schemas';
-import { escapeHtml } from '@/lib/security/escapeHtml';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
 import { readJsonBodyWithLimit } from '@/lib/security/requestLimits';
 import { executeIdempotentSubmission } from '@/lib/security/submissionHandler';
@@ -73,26 +76,34 @@ export async function POST(req: Request) {
 
     const validated = parseResult.data;
     const dedupKey = buildFeedbackDedupKey(req.headers.get('idempotency-key'), validated);
-
-    const safeName = escapeHtml(validated.customerName);
-    const safeProject = escapeHtml(validated.projectReference || 'Unspecified');
-    const safeMessage = escapeHtml(validated.message);
+    const feedbackEmail = buildContactEnquiryNotificationEmail({
+      customerName: validated.customerName,
+      projectReference: validated.projectReference,
+      rating: validated.rating,
+      message: validated.message,
+    });
 
     const outcome = await executeIdempotentSubmission({
       dedupKey,
       logLabel: 'Feedback',
+      submissionType: 'customer_feedback',
       ttlMs: FEEDBACK_DEDUP_TTL_MS,
       emailPayload: {
-        subject: `New Client Evaluation (${validated.rating}/5): ${safeName}`,
-        html: `
-          <h2>New Strovyn Client Evaluation</h2>
-          <p><strong>Client:</strong> ${safeName}</p>
-          <p><strong>Rating:</strong> ${validated.rating}/5</p>
-          <p><strong>Project:</strong> ${safeProject}</p>
-          <p><strong>Message:</strong></p>
-          <p>${safeMessage}</p>
-        `,
+        ...feedbackEmail,
+        recipientKind: 'default',
+        ...(validated.email ? { replyTo: validated.email } : {}),
       },
+      ...(validated.email
+        ? {
+            acknowledgmentPayload: {
+              to: validated.email,
+              ...buildCustomerAcknowledgmentEmail({
+                recipientName: validated.customerName,
+                submissionType: 'feedback',
+              }),
+            },
+          }
+        : {}),
       persistFn: (idempotencyKey) =>
         addFeedback({
           customerName: validated.customerName,

@@ -50,6 +50,7 @@
     "@types/three": "^0.187.0",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
+    "netlify-cli": "^27.20.1",
     "playwright": "^1.65.1",
     "supabase": "^3.2.0",
     "tailwindcss": "4.3.3",

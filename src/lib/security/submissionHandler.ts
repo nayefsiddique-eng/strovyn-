@@ -1,4 +1,11 @@
-import { sendNotificationEmail } from '@/lib/resend/client';
+import {
+  sendNotificationEmail,
+  sendOptionalCustomerAcknowledgment,
+} from '@/lib/resend/client';
+import {
+  enqueueAndAttemptEmailNotification,
+  type OutboxSubmissionType,
+} from '@/lib/resend/outboxService';
 import {
   getRecentSubmissionRecord,
   saveSubmissionRecord,
@@ -6,6 +13,14 @@ import {
 } from '@/lib/security/rateLimiter';
 
 export interface NotificationEmailPayload {
+  subject: string;
+  html: string;
+  recipientKind?: 'default' | 'recruitment';
+  replyTo?: string;
+}
+
+export interface CustomerAcknowledgmentPayload {
+  to: string;
   subject: string;
   html: string;
 }
@@ -30,11 +45,21 @@ const DEFAULT_DEDUP_TTL_MS = 15 * 60 * 1000; // 15 minutes
 export async function executeIdempotentSubmission(options: {
   dedupKey: string;
   logLabel: string;
+  submissionType?: OutboxSubmissionType;
   persistFn: (idempotencyKey: string) => Promise<{ id: string; createdAt: string; deduplicated?: boolean }>;
   emailPayload: NotificationEmailPayload;
+  acknowledgmentPayload?: CustomerAcknowledgmentPayload;
   ttlMs?: number;
 }): Promise<SubmissionOutcome> {
-  const { dedupKey, logLabel, persistFn, emailPayload, ttlMs = DEFAULT_DEDUP_TTL_MS } = options;
+  const {
+    dedupKey,
+    logLabel,
+    submissionType,
+    persistFn,
+    emailPayload,
+    acknowledgmentPayload,
+    ttlMs = DEFAULT_DEDUP_TTL_MS,
+  } = options;
 
   return withSubmissionLock(dedupKey, async () => {
     const existingRecord = getRecentSubmissionRecord(dedupKey, ttlMs);
@@ -42,7 +67,17 @@ export async function executeIdempotentSubmission(options: {
       let notified = existingRecord.notified;
       if (!notified) {
         try {
-          const retryNotify = await sendNotificationEmail(emailPayload);
+          const retryNotify = submissionType
+            ? await enqueueAndAttemptEmailNotification({
+                submissionType,
+                submissionId: existingRecord.id,
+                idempotencyKey: dedupKey,
+                ...emailPayload,
+              })
+            : await sendNotificationEmail({
+                ...emailPayload,
+                idempotencyKey: dedupKey,
+              });
           notified = Boolean(retryNotify.success);
           if (notified) {
             saveSubmissionRecord(dedupKey, { ...existingRecord, notified: true });
@@ -86,7 +121,17 @@ export async function executeIdempotentSubmission(options: {
 
     let notified = false;
     try {
-      const notifyResult = await sendNotificationEmail(emailPayload);
+      const notifyResult = submissionType
+        ? await enqueueAndAttemptEmailNotification({
+            submissionType,
+            submissionId: saved.id,
+            idempotencyKey: dedupKey,
+            ...emailPayload,
+          })
+        : await sendNotificationEmail({
+            ...emailPayload,
+            idempotencyKey: dedupKey,
+          });
       notified = Boolean(notifyResult.success);
       if (notified) {
         saveSubmissionRecord(dedupKey, { ...baseRecord, notified: true });
@@ -95,11 +140,18 @@ export async function executeIdempotentSubmission(options: {
           `${logLabel} ${saved.id} persisted, but owner email notification was not delivered (configured=${Boolean(notifyResult.configured)}).`
         );
       }
-    } catch (notifyErr) {
+    } catch (err) {
       console.warn(
-        `${logLabel} ${saved.id} persisted, but email notification threw:`,
-        notifyErr instanceof Error ? notifyErr.message : 'Unknown error'
+        `${logLabel} ${saved.id} persisted, but notification threw:`,
+        err instanceof Error ? err.message : 'Unknown error'
       );
+    }
+
+    if (acknowledgmentPayload) {
+      await sendOptionalCustomerAcknowledgment({
+        ...acknowledgmentPayload,
+        idempotencyKey: dedupKey,
+      }).catch(() => {});
     }
 
     return {

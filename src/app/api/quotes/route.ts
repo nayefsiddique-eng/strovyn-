@@ -1,54 +1,16 @@
 import { NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { addQuote, AttachmentClaimError } from '@/lib/db/mockData';
+import {
+  buildCustomerAcknowledgmentEmail,
+  buildQuoteNotificationEmail,
+} from '@/lib/resend/templates';
 import { quoteRequestSchema } from '@/lib/security/schemas';
-import { escapeHtml } from '@/lib/security/escapeHtml';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
 import { readJsonBodyWithLimit } from '@/lib/security/requestLimits';
 import { executeIdempotentSubmission } from '@/lib/security/submissionHandler';
 
 const QUOTE_DEDUP_TTL_MS = 15 * 60 * 1000;
-
-function buildQuoteEmailPayload(validated: {
-  fullName: string;
-  email: string;
-  phone: string;
-  projectLocation: string;
-  serviceRequired: string;
-  propertyType?: string;
-  preferredContact: string;
-  description: string;
-  attachmentUrl?: string;
-}) {
-  const safeName = escapeHtml(validated.fullName);
-  const safeEmail = escapeHtml(validated.email);
-  const safePhone = escapeHtml(validated.phone);
-  const safeLocation = escapeHtml(validated.projectLocation || 'Metro Adelaide, SA');
-  const safeService = escapeHtml(validated.serviceRequired);
-  const safePropertyType = validated.propertyType
-    ? escapeHtml(validated.propertyType)
-    : 'Not specified';
-  const safePreferred = escapeHtml(validated.preferredContact);
-  const safeDescription = escapeHtml(validated.description);
-  const safeAttachment = validated.attachmentUrl ? escapeHtml(validated.attachmentUrl) : '';
-
-  return {
-    subject: `New Quotation Request: ${safeName} (${safeService})`,
-    html: `
-      <h2>New Strovyn Quotation Request</h2>
-      <p><strong>Client:</strong> ${safeName}</p>
-      <p><strong>Email:</strong> ${safeEmail}</p>
-      <p><strong>Phone:</strong> ${safePhone}</p>
-      <p><strong>Location:</strong> ${safeLocation}</p>
-      <p><strong>Service:</strong> ${safeService}</p>
-      <p><strong>Property Type:</strong> ${safePropertyType}</p>
-      <p><strong>Preferred Contact:</strong> ${safePreferred}</p>
-      <p><strong>Attachment Reference:</strong> ${safeAttachment || 'None'}</p>
-      <p><strong>Scope:</strong></p>
-      <p>${safeDescription}</p>
-    `,
-  };
-}
 
 function buildQuoteDedupKey(
   idempotencyHeader: string | null,
@@ -121,13 +83,28 @@ export async function POST(req: Request) {
 
     const validated = parseResult.data;
     const dedupKey = buildQuoteDedupKey(req.headers.get('idempotency-key'), validated);
-    const emailPayload = buildQuoteEmailPayload(validated);
+    const emailContent = buildQuoteNotificationEmail({
+      ...validated,
+      hasAttachment: Boolean(validated.attachmentUrl),
+    });
 
     const outcome = await executeIdempotentSubmission({
       dedupKey,
       logLabel: 'Quote',
+      submissionType: 'quote_request',
       ttlMs: QUOTE_DEDUP_TTL_MS,
-      emailPayload,
+      emailPayload: {
+        ...emailContent,
+        recipientKind: 'default',
+        replyTo: validated.email,
+      },
+      acknowledgmentPayload: {
+        to: validated.email,
+        ...buildCustomerAcknowledgmentEmail({
+          recipientName: validated.fullName,
+          submissionType: 'quote',
+        }),
+      },
       persistFn: (idempotencyKey) =>
         addQuote({
           fullName: validated.fullName,
