@@ -51,6 +51,9 @@ export const EDITORIAL_ACTIONS = [
   'career:publish',
   'career:toggle_open',
   'career:reorder',
+  'submission:read',
+  'submission:write',
+  'submission:download_attachment',
   'staff:manage',
 ] as const;
 export type EditorialAction = (typeof EDITORIAL_ACTIONS)[number];

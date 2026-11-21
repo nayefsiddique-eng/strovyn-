@@ -3,7 +3,8 @@ import {
   resolveAuthenticatedStaff,
   StaffAuthError,
 } from './staffAuth';
-import type { StaffProfile } from './roles';
+import { hasEditorialPermission } from './rbac';
+import type { EditorialAction, StaffProfile } from './roles';
 
 export type AdminGateResolution =
   | { status: 'authenticated'; staff: StaffProfile }
@@ -15,9 +16,19 @@ export type AdminGateResolution =
  * throwing on expected 401/403 states so pages render consistent sign-in or
  * access-denied UI gates.
  */
-export async function resolveAdminPageGate(): Promise<AdminGateResolution> {
+export async function resolveAdminPageGate(
+  requiredAction?: EditorialAction
+): Promise<AdminGateResolution> {
   try {
     const staff = await resolveAuthenticatedStaff();
+    if (requiredAction && !hasEditorialPermission(staff.role, requiredAction)) {
+      return {
+        status: 'denied',
+        code: 'INSUFFICIENT_ROLE',
+        httpStatus: 403,
+        message: `Role "${staff.role}" does not have permission (${requiredAction}) to access this workspace.`,
+      };
+    }
     return { status: 'authenticated', staff };
   } catch (err) {
     if (err instanceof StaffAuthError) {

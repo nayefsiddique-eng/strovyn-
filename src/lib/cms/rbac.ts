@@ -47,6 +47,9 @@ const PUBLISHER_ONLY_ACTIONS: readonly EditorialAction[] = [
   'career:publish',
   'career:toggle_open',
   'career:reorder',
+  'submission:read',
+  'submission:write',
+  'submission:download_attachment',
 ];
 
 const ROLE_PERMISSION_SETS: Record<EditorialRole, ReadonlySet<EditorialAction>> = {
