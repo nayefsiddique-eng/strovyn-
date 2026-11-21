@@ -39,6 +39,7 @@ const TRANSITION_LABELS: Record<
   approved: {
     draft: 'Return to Draft',
     review: 'Return to Review',
+    scheduled: 'Schedule Publication',
     published: 'Publish Now',
   },
   scheduled: {
@@ -106,9 +107,6 @@ export function getAvailableWorkflowTransitionsForRole(
   for (const [toStatusKey, action] of Object.entries(targets) as Array<
     [ArticleStatus, EditorialAction]
   >) {
-    if (toStatusKey === 'scheduled') {
-      continue;
-    }
     const check = canTransitionArticleStatus(role, currentStatus, toStatusKey);
     if (check.allowed) {
       result.push({

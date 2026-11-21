@@ -51,7 +51,11 @@ export interface EditorialArticleDetail {
   author_role?: string | null;
   approved_at?: string | null;
   archived_at?: string | null;
+  scheduled_at?: string | null;
   published_at?: string | null;
+  publish_attempts?: number;
+  last_publish_error?: string | null;
+  next_retry_at?: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -441,8 +441,8 @@ async function run() {
     assert.equal(pubApproved.permittedTransitions.some((t) => t.toStatus === 'published'), true);
     assert.equal(
       pubApproved.permittedTransitions.some((t) => t.toStatus === 'scheduled'),
-      false,
-      'Scheduling must remain disabled/deferred in Stage 1 / CMS-3'
+      true,
+      'Publisher must be permitted to schedule approved articles in Phase G'
     );
 
     // ------------------------------------------------------------------

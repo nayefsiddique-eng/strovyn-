@@ -128,6 +128,7 @@ export const UpdateArticleSchema = z
 export const TransitionArticleSchema = z
   .object({
     toStatus: z.enum(ARTICLE_STATUSES),
+    scheduled_at: z.string().datetime({ offset: true }).optional(),
     note: SafeText(1, 500, 'Transition note').optional(),
     expected_updated_at: z.string().datetime({ offset: true }).optional(),
   })

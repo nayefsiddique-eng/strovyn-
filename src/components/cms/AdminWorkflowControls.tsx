@@ -50,11 +50,26 @@ function getTransitionDialogMeta(
         acknowledgeText:
           'I confirm this published article should be archived and withdrawn from public visibility.',
       };
+    case 'scheduled':
+      return {
+        headline: 'Schedule Publication',
+        description:
+          'Schedules this approved article for automated publication at the chosen future time. It remains invisible to anonymous readers until published.',
+        requiresExplicitAcknowledge: true,
+        tone: 'primary',
+        acknowledgeText:
+          'I confirm this approved article is ready for automated publication at the scheduled time.',
+      };
     case 'approved':
       return {
-        headline: 'Approve Editorial Candidate',
+        headline:
+          fromStatus === 'scheduled'
+            ? 'Cancel Scheduled Publication'
+            : 'Approve Editorial Candidate',
         description:
-          'Approving locks the article against non-publisher edits until published or returned.',
+          fromStatus === 'scheduled'
+            ? 'Cancels the scheduled publication timestamp and returns the article to Approved status.'
+            : 'Approving locks the article against non-publisher edits until published or returned.',
         requiresExplicitAcknowledge: false,
         tone: 'primary',
       };
@@ -104,6 +119,13 @@ function formatGovernanceTimestamp(iso: string | null | undefined): string {
   }
 }
 
+function defaultScheduledLocalInput(): string {
+  const defaultDate = new Date(Date.now() + 60 * 60 * 1000);
+  return new Date(defaultDate.getTime() - defaultDate.getTimezoneOffset() * 60_000)
+    .toISOString()
+    .slice(0, 16);
+}
+
 export function AdminWorkflowControls({
   article,
   staffRole,
@@ -133,6 +155,7 @@ export function AdminWorkflowControls({
   const [pendingTransition, setPendingTransition] =
     useState<PermittedWorkflowActionSummary | null>(null);
   const [noteInput, setNoteInput] = useState('');
+  const [scheduledInput, setScheduledInput] = useState('');
   const [explicitAck, setExplicitAck] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dialogError, setDialogError] = useState<string | null>(null);
@@ -153,6 +176,11 @@ export function AdminWorkflowControls({
     if (isDirty || hasConflict) return;
     setPendingTransition(tr);
     setNoteInput('');
+    if (tr.toStatus === 'scheduled') {
+      setScheduledInput(defaultScheduledLocalInput());
+    } else {
+      setScheduledInput('');
+    }
     setExplicitAck(false);
     setDialogError(null);
   };
@@ -165,6 +193,16 @@ export function AdminWorkflowControls({
     if (meta.requiresExplicitAcknowledge && !explicitAck) {
       setDialogError('Please confirm the explicit publication/archival checkbox first.');
       return;
+    }
+
+    let scheduledAtUtc: string | undefined;
+    if (pendingTransition.toStatus === 'scheduled') {
+      const parsed = scheduledInput ? new Date(scheduledInput) : null;
+      if (!parsed || Number.isNaN(parsed.getTime()) || parsed.getTime() <= Date.now()) {
+        setDialogError('Please select a valid future date and time for scheduled publication.');
+        return;
+      }
+      scheduledAtUtc = parsed.toISOString();
     }
 
     const trimmedNote = noteInput.trim();
@@ -182,6 +220,9 @@ export function AdminWorkflowControls({
         toStatus: pendingTransition.toStatus,
         expected_updated_at: article.updated_at,
       };
+      if (scheduledAtUtc) {
+        payload.scheduled_at = scheduledAtUtc;
+      }
       if (trimmedNote.length > 0) {
         payload.note = trimmedNote;
       }
@@ -270,6 +311,41 @@ export function AdminWorkflowControls({
             <dd className="font-mono text-[11px] text-charcoal">
               {formatGovernanceTimestamp(article.approved_at)}
             </dd>
+          </div>
+        )}
+        {article.scheduled_at && (
+          <div className="flex items-center justify-between gap-2">
+            <dt className="font-mono text-[10px] uppercase tracking-wider text-warm-grey-dark">
+              Scheduled
+            </dt>
+            <dd className="font-mono text-[11px] text-bronze">
+              {formatGovernanceTimestamp(article.scheduled_at)}
+            </dd>
+          </div>
+        )}
+        {(article.publish_attempts ?? 0) > 0 && (
+          <div className="flex items-center justify-between gap-2">
+            <dt className="font-mono text-[10px] uppercase tracking-wider text-warm-grey-dark">
+              Publish Attempts
+            </dt>
+            <dd className="font-mono text-[11px] text-charcoal">
+              {article.publish_attempts}
+            </dd>
+          </div>
+        )}
+        {article.next_retry_at && (
+          <div className="flex items-center justify-between gap-2">
+            <dt className="font-mono text-[10px] uppercase tracking-wider text-warm-grey-dark">
+              Next Retry
+            </dt>
+            <dd className="font-mono text-[11px] text-charcoal">
+              {formatGovernanceTimestamp(article.next_retry_at)}
+            </dd>
+          </div>
+        )}
+        {article.last_publish_error && (
+          <div className="col-span-full border border-brand-red/40 bg-brand-red/5 px-2.5 py-1.5 text-[11px] text-brand-red-dark">
+            Last publish error: {article.last_publish_error}
           </div>
         )}
         {article.published_at && (
@@ -366,7 +442,7 @@ export function AdminWorkflowControls({
 
       <p className="font-mono text-[10px] text-warm-grey-dark flex items-center gap-1.5 pt-1">
         <Clock className="w-3 h-3 text-bronze flex-shrink-0" aria-hidden="true" />
-        <span>Scheduled publishing remains deferred to CMS-4.</span>
+        <span>Scheduled articles publish automatically via the authenticated cron publisher.</span>
       </p>
 
       {/* Transition Confirmation Dialog */}
@@ -431,6 +507,24 @@ export function AdminWorkflowControls({
             )}
 
             <form onSubmit={handleConfirmTransition} className="space-y-4">
+              {pendingTransition.toStatus === 'scheduled' && (
+                <div>
+                  <label
+                    htmlFor="cms-scheduled-at"
+                    className="block font-mono text-[10px] uppercase tracking-wider text-warm-grey-dark mb-1.5"
+                  >
+                    Scheduled Publication Time (Local &rarr; UTC)
+                  </label>
+                  <input
+                    id="cms-scheduled-at"
+                    type="datetime-local"
+                    required
+                    value={scheduledInput}
+                    onChange={(e) => setScheduledInput(e.target.value)}
+                    className="w-full bg-ivory-light border border-warm-grey px-3 py-2 text-xs font-mono text-charcoal focus-visible:outline-2 focus-visible:outline-bronze"
+                  />
+                </div>
+              )}
               <div>
                 <label
                   htmlFor="cms-transition-note"

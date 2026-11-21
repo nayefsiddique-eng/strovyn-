@@ -517,15 +517,26 @@ export async function transitionEditorialArticle(
     );
   }
 
-  const { toStatus, note, expected_updated_at } = parsed.data;
+  const { toStatus, scheduled_at, note, expected_updated_at } = parsed.data;
 
-  // CMS-2 explicitly forbids implementing scheduled publishing or cron
+  let normalizedScheduledAt: string | null = null;
   if (toStatus === 'scheduled') {
-    throw new EditorialHttpError(
-      422,
-      'SCHEDULING_DEFERRED',
-      'Scheduled publishing is deferred to CMS-4 and is disabled in CMS-2.'
-    );
+    if (!scheduled_at) {
+      throw new EditorialHttpError(
+        422,
+        'SCHEDULED_AT_REQUIRED',
+        'A future UTC publication timestamp (scheduled_at) is required to schedule an article.'
+      );
+    }
+    const parsedTime = Date.parse(scheduled_at);
+    if (!Number.isFinite(parsedTime) || parsedTime <= Date.now()) {
+      throw new EditorialHttpError(
+        422,
+        'INVALID_SCHEDULED_AT',
+        'scheduled_at must be a valid future UTC timestamp.'
+      );
+    }
+    normalizedScheduledAt = new Date(parsedTime).toISOString();
   }
 
   const client = getClient(clientOverride);
@@ -572,7 +583,12 @@ export async function transitionEditorialArticle(
 
   assertArticlePreconditionsForTransition(existing, toStatus);
 
-  if (toStatus === 'review' || toStatus === 'approved' || toStatus === 'published') {
+  if (
+    toStatus === 'review' ||
+    toStatus === 'approved' ||
+    toStatus === 'scheduled' ||
+    toStatus === 'published'
+  ) {
     await assertReferencedMediaAssetsExist(
       {
         featured_image_url: existing.featured_image_url,
@@ -593,7 +609,7 @@ export async function transitionEditorialArticle(
       p_to_status: toStatus,
       p_actor_staff_id: staff.id,
       p_actor_type: 'staff',
-      p_scheduled_at: null,
+      p_scheduled_at: normalizedScheduledAt,
       p_note: note ?? null,
     }
   );

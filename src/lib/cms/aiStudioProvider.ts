@@ -1,4 +1,9 @@
 import 'server-only';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  createServiceRoleClient,
+  isServiceRoleConfigured,
+} from '@/lib/supabase/serviceRole';
 import {
   ArticleWriterOutputSchema,
   ProjectDescriptionOutputSchema,
@@ -20,6 +25,10 @@ const MAX_RETRIES = 1;
 const MAX_OUTPUT_TOKENS = 2048;
 const MAX_DAILY_REQUESTS_PER_STAFF = 60;
 const MAX_DAILY_GLOBAL_REQUESTS = 250;
+const MAX_DAILY_TOKENS_PER_STAFF = 120_000;
+const MAX_DAILY_GLOBAL_TOKENS = 500_000;
+const MAX_DAILY_COST_MICROS_PER_STAFF = 250_000; // $0.25 USD/day
+const MAX_DAILY_GLOBAL_COST_MICROS = 1_000_000; // $1.00 USD/day
 
 export interface AiProviderStatus {
   providerName: 'gemini_rest' | 'deterministic_fallback';
@@ -37,6 +46,18 @@ export interface AiUsageRecord {
   estimatedOutputTokens: number;
   staffLimit: number;
   globalLimit: number;
+  staffTokensToday: number;
+  globalTokensToday: number;
+  staffTokenLimit: number;
+  globalTokenLimit: number;
+  staffCostMicrosToday: number;
+  globalCostMicrosToday: number;
+  staffCostLimitMicros: number;
+  globalCostLimitMicros: number;
+  reservedRequests?: number;
+  succeededRequests?: number;
+  failedRequests?: number;
+  quotaBackend: 'database' | 'process_memory';
 }
 
 export interface AiProviderAdapter {
@@ -50,17 +71,32 @@ export interface AiProviderAdapter {
 
 const staffUsageCounter = new Map<
   string,
-  { dayKey: string; count: number; inputTokens: number; outputTokens: number }
+  {
+    dayKey: string;
+    count: number;
+    inputTokens: number;
+    outputTokens: number;
+    costMicros: number;
+  }
 >();
 let globalUsageState = {
   dayKey: '',
   count: 0,
   inputTokens: 0,
   outputTokens: 0,
+  costMicros: 0,
 };
 
 function currentDayKey(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+export function estimateInputCostMicros(tokens: number): number {
+  return Math.max(1, Math.ceil(Math.max(0, tokens) * 0.15));
+}
+
+export function estimateOutputCostMicros(tokens: number): number {
+  return Math.max(1, Math.ceil(Math.max(0, tokens) * 0.6));
 }
 
 export function resetAiUsageForTesting(): void {
@@ -70,44 +106,100 @@ export function resetAiUsageForTesting(): void {
     count: 0,
     inputTokens: 0,
     outputTokens: 0,
+    costMicros: 0,
   };
 }
 
 export function checkAndReserveAiQuota(
   staffId: string,
-  estimatedInputTokens: number
+  estimatedInputTokens: number,
+  overrides?: {
+    staffReqLimit?: number;
+    globalReqLimit?: number;
+    staffTokenLimit?: number;
+    globalTokenLimit?: number;
+    staffCostLimitMicros?: number;
+    globalCostLimitMicros?: number;
+  }
 ): void {
   const day = currentDayKey();
   if (globalUsageState.dayKey !== day) {
-    globalUsageState = { dayKey: day, count: 0, inputTokens: 0, outputTokens: 0 };
+    globalUsageState = {
+      dayKey: day,
+      count: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      costMicros: 0,
+    };
   }
   const staffState = staffUsageCounter.get(staffId);
   const currentStaff =
     staffState && staffState.dayKey === day
       ? staffState
-      : { dayKey: day, count: 0, inputTokens: 0, outputTokens: 0 };
+      : { dayKey: day, count: 0, inputTokens: 0, outputTokens: 0, costMicros: 0 };
 
-  if (currentStaff.count >= MAX_DAILY_REQUESTS_PER_STAFF) {
+  const staffReqLimit = overrides?.staffReqLimit ?? MAX_DAILY_REQUESTS_PER_STAFF;
+  const globalReqLimit = overrides?.globalReqLimit ?? MAX_DAILY_GLOBAL_REQUESTS;
+  const staffTokenLimit = overrides?.staffTokenLimit ?? MAX_DAILY_TOKENS_PER_STAFF;
+  const globalTokenLimit = overrides?.globalTokenLimit ?? MAX_DAILY_GLOBAL_TOKENS;
+  const staffCostLimit = overrides?.staffCostLimitMicros ?? MAX_DAILY_COST_MICROS_PER_STAFF;
+  const globalCostLimit = overrides?.globalCostLimitMicros ?? MAX_DAILY_GLOBAL_COST_MICROS;
+
+  const estCost = estimateInputCostMicros(estimatedInputTokens);
+  const staffTokens = currentStaff.inputTokens + currentStaff.outputTokens;
+  const globalTokens = globalUsageState.inputTokens + globalUsageState.outputTokens;
+
+  if (currentStaff.count >= staffReqLimit) {
     throw new EditorialHttpError(
       429,
       'RATE_LIMITED',
       'Daily AI Studio generation quota reached for your staff account.'
     );
   }
-  if (globalUsageState.count >= MAX_DAILY_GLOBAL_REQUESTS) {
+  if (globalUsageState.count >= globalReqLimit) {
     throw new EditorialHttpError(
       429,
       'RATE_LIMITED',
       'Global daily AI Studio generation ceiling reached.'
     );
   }
+  if (staffTokens + estimatedInputTokens > staffTokenLimit) {
+    throw new EditorialHttpError(
+      429,
+      'RATE_LIMITED',
+      'Daily AI Studio token budget reached for your staff account.'
+    );
+  }
+  if (globalTokens + estimatedInputTokens > globalTokenLimit) {
+    throw new EditorialHttpError(
+      429,
+      'RATE_LIMITED',
+      'Global daily AI Studio token budget reached.'
+    );
+  }
+  if (currentStaff.costMicros + estCost > staffCostLimit) {
+    throw new EditorialHttpError(
+      429,
+      'RATE_LIMITED',
+      'Daily AI Studio cost ceiling reached for your staff account.'
+    );
+  }
+  if (globalUsageState.costMicros + estCost > globalCostLimit) {
+    throw new EditorialHttpError(
+      429,
+      'RATE_LIMITED',
+      'Global daily AI Studio cost ceiling reached.'
+    );
+  }
 
   currentStaff.count += 1;
   currentStaff.inputTokens += estimatedInputTokens;
+  currentStaff.costMicros += estCost;
   staffUsageCounter.set(staffId, currentStaff);
 
   globalUsageState.count += 1;
   globalUsageState.inputTokens += estimatedInputTokens;
+  globalUsageState.costMicros += estCost;
 }
 
 export function recordAiOutputUsage(
@@ -115,15 +207,19 @@ export function recordAiOutputUsage(
   estimatedOutputTokens: number
 ): AiUsageRecord {
   const day = currentDayKey();
+  const estCost = estimateOutputCostMicros(estimatedOutputTokens);
   const currentStaff = staffUsageCounter.get(staffId) ?? {
     dayKey: day,
     count: 1,
     inputTokens: 0,
     outputTokens: 0,
+    costMicros: 0,
   };
   currentStaff.outputTokens += estimatedOutputTokens;
+  currentStaff.costMicros += estCost;
   staffUsageCounter.set(staffId, currentStaff);
   globalUsageState.outputTokens += estimatedOutputTokens;
+  globalUsageState.costMicros += estCost;
 
   return getAiUsageSnapshot(staffId);
 }
@@ -134,11 +230,11 @@ export function getAiUsageSnapshot(staffId: string): AiUsageRecord {
   const s =
     staffState && staffState.dayKey === day
       ? staffState
-      : { dayKey: day, count: 0, inputTokens: 0, outputTokens: 0 };
+      : { dayKey: day, count: 0, inputTokens: 0, outputTokens: 0, costMicros: 0 };
   const g =
     globalUsageState.dayKey === day
       ? globalUsageState
-      : { dayKey: day, count: 0, inputTokens: 0, outputTokens: 0 };
+      : { dayKey: day, count: 0, inputTokens: 0, outputTokens: 0, costMicros: 0 };
 
   return {
     staffRequestsToday: s.count,
@@ -147,6 +243,231 @@ export function getAiUsageSnapshot(staffId: string): AiUsageRecord {
     estimatedOutputTokens: s.outputTokens,
     staffLimit: MAX_DAILY_REQUESTS_PER_STAFF,
     globalLimit: MAX_DAILY_GLOBAL_REQUESTS,
+    staffTokensToday: s.inputTokens + s.outputTokens,
+    globalTokensToday: g.inputTokens + g.outputTokens,
+    staffTokenLimit: MAX_DAILY_TOKENS_PER_STAFF,
+    globalTokenLimit: MAX_DAILY_GLOBAL_TOKENS,
+    staffCostMicrosToday: s.costMicros,
+    globalCostMicrosToday: g.costMicros,
+    staffCostLimitMicros: MAX_DAILY_COST_MICROS_PER_STAFF,
+    globalCostLimitMicros: MAX_DAILY_GLOBAL_COST_MICROS,
+    quotaBackend: 'process_memory',
+  };
+}
+
+function isMissingQuotaRpcError(err: { code?: string; message?: string } | null): boolean {
+  if (!err) return false;
+  return (
+    err.code === '42883' ||
+    err.code === 'PGRST202' ||
+    err.code === '42P01' ||
+    Boolean(err.message && err.message.includes('Could not find the function'))
+  );
+}
+
+function mapQuotaDenialMessage(reason: string | null | undefined): string {
+  switch (reason) {
+    case 'STAFF_REQUEST_LIMIT':
+      return 'Daily AI Studio generation quota reached for your staff account.';
+    case 'GLOBAL_REQUEST_LIMIT':
+      return 'Global daily AI Studio generation ceiling reached.';
+    case 'STAFF_TOKEN_BUDGET':
+      return 'Daily AI Studio token budget reached for your staff account.';
+    case 'GLOBAL_TOKEN_BUDGET':
+      return 'Global daily AI Studio token budget reached.';
+    case 'STAFF_COST_CEILING':
+      return 'Daily AI Studio cost ceiling reached for your staff account.';
+    case 'GLOBAL_COST_CEILING':
+      return 'Global daily AI Studio cost ceiling reached.';
+    default:
+      return 'Daily AI Studio quota ceiling reached.';
+  }
+}
+
+export function shouldUseDurableQuotaBackend(
+  clientOverride?: SupabaseClient
+): boolean {
+  if (clientOverride) {
+    return true;
+  }
+  if (process.env.STROVYN_AI_QUOTA_BACKEND?.trim().toLowerCase() === 'memory') {
+    return false;
+  }
+  return typeof isServiceRoleConfigured === 'function' && isServiceRoleConfigured();
+}
+
+export async function reserveDurableAiQuota(
+  staffId: string,
+  estimatedInputTokens: number,
+  maxOutputTokens: number = MAX_OUTPUT_TOKENS,
+  clientOverride?: SupabaseClient
+): Promise<{
+  backend: 'database' | 'process_memory';
+  reservedTokens: number;
+  reservedCostMicros: number;
+}> {
+  const safeInputTokens = Math.max(0, Math.floor(estimatedInputTokens));
+  const safeMaxOutputTokens = Math.max(0, Math.floor(maxOutputTokens));
+  const reservedTokens = safeInputTokens + safeMaxOutputTokens;
+  const reservedCostMicros =
+    estimateInputCostMicros(safeInputTokens) +
+    estimateOutputCostMicros(safeMaxOutputTokens);
+
+  if (!shouldUseDurableQuotaBackend(clientOverride)) {
+    checkAndReserveAiQuota(staffId, safeInputTokens);
+    return {
+      backend: 'process_memory',
+      reservedTokens: safeInputTokens,
+      reservedCostMicros: estimateInputCostMicros(safeInputTokens),
+    };
+  }
+
+  try {
+    const client = clientOverride ?? createServiceRoleClient();
+    const { data, error } = await client.rpc('cms_reserve_ai_studio_quota', {
+      p_staff_id: staffId,
+      p_est_input_tokens: reservedTokens,
+      p_est_input_cost_micros: reservedCostMicros,
+      p_staff_req_limit: MAX_DAILY_REQUESTS_PER_STAFF,
+      p_global_req_limit: MAX_DAILY_GLOBAL_REQUESTS,
+      p_staff_token_limit: MAX_DAILY_TOKENS_PER_STAFF,
+      p_global_token_limit: MAX_DAILY_GLOBAL_TOKENS,
+      p_staff_cost_limit_micros: MAX_DAILY_COST_MICROS_PER_STAFF,
+      p_global_cost_limit_micros: MAX_DAILY_GLOBAL_COST_MICROS,
+    });
+
+    if (error) {
+      const detail = isMissingQuotaRpcError(error)
+        ? 'Durable AI quota RPC is unavailable (Migration 015 required).'
+        : `Durable AI quota reservation failed: ${error.message}`;
+      throw new EditorialHttpError(503, 'INTERNAL_ERROR', detail);
+    }
+
+    const row = (Array.isArray(data) ? data[0] : data) as
+      | { allowed?: boolean; denial_reason?: string | null }
+      | undefined;
+
+    if (!row) {
+      throw new EditorialHttpError(
+        503,
+        'INTERNAL_ERROR',
+        'Durable AI quota reservation returned an empty result.'
+      );
+    }
+
+    if (row.allowed === false) {
+      throw new EditorialHttpError(
+        429,
+        'RATE_LIMITED',
+        mapQuotaDenialMessage(row.denial_reason)
+      );
+    }
+
+    return {
+      backend: 'database',
+      reservedTokens,
+      reservedCostMicros,
+    };
+  } catch (err) {
+    if (err instanceof EditorialHttpError) {
+      throw err;
+    }
+    throw new EditorialHttpError(
+      503,
+      'INTERNAL_ERROR',
+      err instanceof Error
+        ? `Durable AI quota service unavailable: ${err.message}`
+        : 'Durable AI quota service unavailable.'
+    );
+  }
+}
+
+export async function recordDurableAiOutputUsage(
+  staffId: string,
+  params: {
+    succeeded: boolean;
+    reservedTokens: number;
+    reservedCostMicros: number;
+    actualInputTokens: number;
+    actualOutputTokens: number;
+    backend: 'database' | 'process_memory';
+  },
+  clientOverride?: SupabaseClient
+): Promise<AiUsageRecord> {
+  if (params.backend === 'process_memory') {
+    if (!params.succeeded) {
+      return getAiUsageSnapshot(staffId);
+    }
+    return recordAiOutputUsage(staffId, params.actualOutputTokens);
+  }
+
+  const actualTotalTokens = params.succeeded
+    ? Math.max(0, params.actualInputTokens + params.actualOutputTokens)
+    : 0;
+  const actualTotalCostMicros = params.succeeded
+    ? estimateInputCostMicros(params.actualInputTokens) +
+      estimateOutputCostMicros(params.actualOutputTokens)
+    : 0;
+
+  const client = clientOverride ?? createServiceRoleClient();
+  const { data, error } = await client.rpc('cms_record_ai_studio_usage', {
+    p_staff_id: staffId,
+    p_succeeded: params.succeeded,
+    p_reserved_tokens: params.reservedTokens,
+    p_reserved_cost_micros: params.reservedCostMicros,
+    p_actual_total_tokens: actualTotalTokens,
+    p_actual_total_cost_micros: actualTotalCostMicros,
+  });
+
+  if (error) {
+    throw new EditorialHttpError(
+      503,
+      'INTERNAL_ERROR',
+      `Durable AI usage finalization failed: ${error.message}`
+    );
+  }
+
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | {
+        staff_requests_today?: number;
+        global_requests_today?: number;
+        staff_tokens_today?: number;
+        global_tokens_today?: number;
+        staff_cost_micros_today?: number;
+        global_cost_micros_today?: number;
+        staff_reserved_requests?: number;
+        staff_succeeded_requests?: number;
+        staff_failed_requests?: number;
+      }
+    | undefined;
+
+  if (!row) {
+    throw new EditorialHttpError(
+      503,
+      'INTERNAL_ERROR',
+      'Durable AI usage finalization returned an empty result.'
+    );
+  }
+
+  return {
+    staffRequestsToday: Number(row.staff_requests_today ?? 0),
+    globalRequestsToday: Number(row.global_requests_today ?? 0),
+    estimatedInputTokens: params.actualInputTokens,
+    estimatedOutputTokens: params.actualOutputTokens,
+    staffLimit: MAX_DAILY_REQUESTS_PER_STAFF,
+    globalLimit: MAX_DAILY_GLOBAL_REQUESTS,
+    staffTokensToday: Number(row.staff_tokens_today ?? 0),
+    globalTokensToday: Number(row.global_tokens_today ?? 0),
+    staffTokenLimit: MAX_DAILY_TOKENS_PER_STAFF,
+    globalTokenLimit: MAX_DAILY_GLOBAL_TOKENS,
+    staffCostMicrosToday: Number(row.staff_cost_micros_today ?? 0),
+    globalCostMicrosToday: Number(row.global_cost_micros_today ?? 0),
+    staffCostLimitMicros: MAX_DAILY_COST_MICROS_PER_STAFF,
+    globalCostLimitMicros: MAX_DAILY_GLOBAL_COST_MICROS,
+    reservedRequests: Number(row.staff_reserved_requests ?? 0),
+    succeededRequests: Number(row.staff_succeeded_requests ?? 0),
+    failedRequests: Number(row.staff_failed_requests ?? 0),
+    quotaBackend: 'database',
   };
 }
 
@@ -693,82 +1014,122 @@ export async function executeAiStudioGeneration(
     maxOutputTokens?: number;
     requireLiveKey?: boolean;
     providerOverride?: AiProviderAdapter;
+    clientOverride?: SupabaseClient;
   }
 ): Promise<{
   output: AiStudioOutput;
   provider: { name: string; model: string; apiKeyConfigured: boolean };
   usage: AiUsageRecord;
 }> {
+  const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const maxOutputTokens = options?.maxOutputTokens ?? MAX_OUTPUT_TOKENS;
   const inputChars = JSON.stringify(request).length;
   const estInputTokens = Math.max(1, Math.ceil(inputChars / 4));
-  checkAndReserveAiQuota(staffId, estInputTokens);
 
   const adapter = resolveAiProviderAdapter({
     requireLiveKey: options?.requireLiveKey,
     providerOverride: options?.providerOverride,
   });
 
-  const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const maxOutputTokens = options?.maxOutputTokens ?? MAX_OUTPUT_TOKENS;
+  const reservation = await reserveDurableAiQuota(
+    staffId,
+    estInputTokens,
+    maxOutputTokens,
+    options?.clientOverride
+  );
 
   let lastErr: unknown = null;
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
-    try {
-      const rawPromise = adapter.generateStructured(request, {
-        timeoutMs,
-        maxOutputTokens,
-      });
+  let finalized = false;
+  try {
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
+      try {
+        const rawPromise = adapter.generateStructured(request, {
+          timeoutMs,
+          maxOutputTokens,
+        });
 
-      const timedRaw = await Promise.race([
-        rawPromise,
-        new Promise<never>((_, reject) => {
-          setTimeout(
-            () =>
-              reject(
-                new EditorialHttpError(
-                  504,
-                  'INTERNAL_ERROR',
-                  'AI generation request timed out.'
-                )
-              ),
-            timeoutMs
-          );
-        }),
-      ]);
+        const timedRaw = await Promise.race([
+          rawPromise,
+          new Promise<never>((_, reject) => {
+            setTimeout(
+              () =>
+                reject(
+                  new EditorialHttpError(
+                    504,
+                    'INTERNAL_ERROR',
+                    'AI generation request timed out.'
+                  )
+                ),
+              timeoutMs
+            );
+          }),
+        ]);
 
-      const validated = validateStructuredAiOutput(request.mode, timedRaw);
-      const outputChars = JSON.stringify(validated).length;
-      const estOutputTokens = Math.max(1, Math.ceil(outputChars / 4));
-      const usage = recordAiOutputUsage(staffId, estOutputTokens);
-      const status = getAiProviderStatus();
+        const validated = validateStructuredAiOutput(request.mode, timedRaw);
+        const outputChars = JSON.stringify(validated).length;
+        const estOutputTokens = Math.max(1, Math.ceil(outputChars / 4));
+        const usage = await recordDurableAiOutputUsage(
+          staffId,
+          {
+            succeeded: true,
+            reservedTokens: reservation.reservedTokens,
+            reservedCostMicros: reservation.reservedCostMicros,
+            actualInputTokens: estInputTokens,
+            actualOutputTokens: estOutputTokens,
+            backend: reservation.backend,
+          },
+          options?.clientOverride
+        );
+        finalized = true;
+        const status = getAiProviderStatus();
 
-      return {
-        output: validated,
-        provider: {
-          name: adapter.name,
-          model: adapter.model,
-          apiKeyConfigured: status.apiKeyConfigured,
-        },
-        usage,
-      };
-    } catch (err) {
-      lastErr = err;
-      // Do not retry deterministic validation/safeguard rejections or timeouts
-      if (
-        err instanceof EditorialHttpError &&
-        (err.status === 422 || err.status === 504 || err.status === 503)
-      ) {
-        throw err;
+        return {
+          output: validated,
+          provider: {
+            name: adapter.name,
+            model: adapter.model,
+            apiKeyConfigured: status.apiKeyConfigured,
+          },
+          usage,
+        };
+      } catch (err) {
+        lastErr = err;
+        // Do not retry deterministic validation/safeguard rejections or timeouts
+        if (
+          err instanceof EditorialHttpError &&
+          (err.status === 422 || err.status === 504 || err.status === 503)
+        ) {
+          throw err;
+        }
+      }
+    }
+
+    if (lastErr instanceof EditorialHttpError) {
+      throw lastErr;
+    }
+    throw new EditorialHttpError(
+      502,
+      'INTERNAL_ERROR',
+      lastErr instanceof Error ? lastErr.message : 'AI generation failed.'
+    );
+  } finally {
+    if (!finalized) {
+      try {
+        await recordDurableAiOutputUsage(
+          staffId,
+          {
+            succeeded: false,
+            reservedTokens: reservation.reservedTokens,
+            reservedCostMicros: reservation.reservedCostMicros,
+            actualInputTokens: estInputTokens,
+            actualOutputTokens: 0,
+            backend: reservation.backend,
+          },
+          options?.clientOverride
+        );
+      } catch {
+        // Do not mask original provider failure if release also fails
       }
     }
   }
-
-  if (lastErr instanceof EditorialHttpError) {
-    throw lastErr;
-  }
-  throw new EditorialHttpError(
-    502,
-    'INTERNAL_ERROR',
-    lastErr instanceof Error ? lastErr.message : 'AI generation failed.'
-  );
 }

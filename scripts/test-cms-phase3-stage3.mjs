@@ -679,10 +679,10 @@ async function run() {
     assert.equal(currentArticle.status, 'review');
     currentArticle = (await (await doTransition(identities.publisher, 'approved', currentArticle.updated_at, 'Citation confirmed.')).json()).article;
 
-    // Publisher CANNOT schedule (CMS-4 deferral: 422 SCHEDULING_DEFERRED)
+    // Publisher scheduling without scheduled_at fails with 422 SCHEDULED_AT_REQUIRED
     const schedRes = await doTransition(identities.publisher, 'scheduled', currentArticle.updated_at);
     assert.equal(schedRes.status, 422);
-    assert.equal((await schedRes.json()).code, 'SCHEDULING_DEFERRED');
+    assert.equal((await schedRes.json()).code, 'SCHEDULED_AT_REQUIRED');
 
     // Publisher publishes approved -> published (200)
     const pubRes = await doTransition(identities.publisher, 'published', currentArticle.updated_at, 'Go live.');
