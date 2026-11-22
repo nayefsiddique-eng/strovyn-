@@ -361,9 +361,12 @@ export function StaffSignInCard({
         )}
 
         <div className="mt-7 pt-5 border-t border-warm-grey/40 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <span className="font-sans text-warm-grey-dark">
-            Invite-only access · No public registration
-          </span>
+          <Link
+            href="/admin/activate"
+            className="font-mono text-[11px] uppercase tracking-wider text-bronze hover:underline underline-offset-4"
+          >
+            Activate Your Account
+          </Link>
           <Link
             href="/insights"
             className="font-mono text-[11px] uppercase tracking-wider text-charcoal/80 hover:text-bronze underline underline-offset-4"

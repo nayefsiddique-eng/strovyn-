@@ -88,6 +88,7 @@ export function sanitizeAdminRedirectPath(
       '/admin/applications',
       '/admin/feedback',
       '/admin/ai-studio',
+      '/admin/staff',
     ];
     const isAllowed =
       parsed.pathname === '/admin' ||

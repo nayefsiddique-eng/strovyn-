@@ -47,6 +47,8 @@ function getModuleIcon(id: AdminModuleId) {
       return <Camera className="w-4 h-4" aria-hidden="true" />;
     case 'ai-content-studio':
       return <Sparkles className="w-4 h-4" aria-hidden="true" />;
+    case 'staff':
+      return <ShieldCheck className="w-4 h-4" aria-hidden="true" />;
   }
 }
 
@@ -61,9 +63,46 @@ export function AdminWorkspaceShell({
 }) {
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordStatus, setPasswordStatus] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [savingPassword, setSavingPassword] = useState(false);
 
   const navItems = getAdminNavigationForRole(staff.role);
   const roleMeta = describeStaffRole(staff.role);
+
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordStatus(null);
+    if (newPassword.length < 12) {
+      setPasswordError('Password must be at least 12 characters long.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Password confirmation does not match.');
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        setPasswordError(error.message || 'Unable to update password.');
+        return;
+      }
+      await fetch('/api/admin/staff/password', { method: 'POST' }).catch(() => {});
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordStatus('Password updated successfully.');
+    } catch {
+      setPasswordError('Unable to update password right now.');
+    } finally {
+      setSavingPassword(false);
+    }
+  };
 
   const handleSignOut = async () => {
     if (signingOut) return;
@@ -142,6 +181,17 @@ export function AdminWorkspaceShell({
             </Link>
             <button
               type="button"
+              onClick={() => {
+                setShowPasswordModal((v) => !v);
+                setPasswordError(null);
+                setPasswordStatus(null);
+              }}
+              className="px-3 py-1.5 border border-warm-grey text-xs font-mono uppercase tracking-wider text-charcoal hover:border-charcoal cursor-pointer transition-colors"
+            >
+              Change Password
+            </button>
+            <button
+              type="button"
               onClick={handleSignOut}
               disabled={signingOut}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-warm-grey text-xs font-mono uppercase tracking-wider text-charcoal hover:border-charcoal cursor-pointer disabled:opacity-50"
@@ -151,6 +201,75 @@ export function AdminWorkspaceShell({
             </button>
           </div>
         </header>
+
+        {showPasswordModal && (
+          <div className="bg-white border border-warm-grey/60 p-5 mb-6">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-bronze">
+                  Account Security
+                </p>
+                <h2 className="font-sans text-sm font-semibold text-charcoal mt-0.5">
+                  Update Your Staff Password
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPasswordModal(false)}
+                className="font-mono text-[11px] uppercase tracking-wider text-warm-grey-dark hover:text-charcoal cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+            <form onSubmit={handlePasswordUpdate} className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+              <div>
+                <label htmlFor="shell-new-pw" className="block font-mono text-[10px] uppercase tracking-wider text-charcoal/80 mb-1">
+                  New Password (Min 12 chars)
+                </label>
+                <input
+                  id="shell-new-pw"
+                  type="password"
+                  minLength={12}
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full bg-ivory-light border border-warm-grey px-3 py-2 text-sm text-charcoal"
+                />
+              </div>
+              <div>
+                <label htmlFor="shell-confirm-pw" className="block font-mono text-[10px] uppercase tracking-wider text-charcoal/80 mb-1">
+                  Confirm Password
+                </label>
+                <input
+                  id="shell-confirm-pw"
+                  type="password"
+                  minLength={12}
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full bg-ivory-light border border-warm-grey px-3 py-2 text-sm text-charcoal"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={savingPassword}
+                className="px-4 py-2 bg-charcoal text-ivory hover:bg-bronze font-mono text-xs uppercase tracking-wider cursor-pointer disabled:opacity-50"
+              >
+                {savingPassword ? 'Updating...' : 'Save Password'}
+              </button>
+            </form>
+            {passwordError && (
+              <p role="alert" className="mt-3 text-xs text-brand-red-dark font-sans">
+                {passwordError}
+              </p>
+            )}
+            {passwordStatus && (
+              <p role="status" className="mt-3 text-xs text-bronze font-sans">
+                {passwordStatus}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Mobile Horizontal Module Nav */}
         <nav

@@ -10,7 +10,8 @@ export type AdminModuleId =
   | 'job-applications'
   | 'customer-feedback'
   | 'media-library'
-  | 'ai-content-studio';
+  | 'ai-content-studio'
+  | 'staff';
 
 export type AdminModuleStatus = 'live' | 'foundation' | 'planned';
 
@@ -125,6 +126,16 @@ export const ADMIN_NAVIGATION_ITEMS: readonly AdminNavItem[] = [
     phaseLabel: 'Phase F',
     description: 'Staff-assisted drafting workspace (no automated publishing).',
     allowedRoles: ['editor', 'publisher', 'admin'],
+  },
+  {
+    id: 'staff',
+    label: 'Staff & Onboarding',
+    href: '/admin/staff',
+    group: 'core',
+    status: 'live',
+    phaseLabel: 'Admin RBAC',
+    description: 'Employee directory, invitations, role assignment, and access audit log.',
+    allowedRoles: ['admin'],
   },
 ] as const;
 
