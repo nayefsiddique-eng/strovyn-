@@ -144,11 +144,11 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
               />
 
               {/* Verified Project Badge */}
-              <div className="absolute bottom-6 left-6 z-10 bg-white/95 border border-warm-grey/40 px-4 py-2 pointer-events-none">
-                <span className="font-mono text-[10px] text-bronze uppercase tracking-widest font-semibold block mb-0.5">
+              <div className="absolute bottom-6 left-6 z-10 bg-[#181917]/95 border border-white/20 px-4 py-2 pointer-events-none">
+                <span className="font-mono text-[10px] text-[#C9B28F] uppercase tracking-widest font-semibold block mb-0.5">
                   COMPLETED WORK · ADELAIDE · DRAG TO COMPARE
                 </span>
-                <span className="type-card-title text-sm sm:text-base text-charcoal">
+                <span className="type-card-title text-sm sm:text-base text-[#F4F1EA]">
                   Adelaide Residence vs. Illustrative Surface Study
                 </span>
               </div>
