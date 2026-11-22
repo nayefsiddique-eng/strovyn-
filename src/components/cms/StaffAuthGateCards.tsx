@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Lock, LogOut, ShieldAlert, AlertTriangle } from 'lucide-react';
@@ -33,12 +33,91 @@ export function StaffSignInCard({
   onAccessDenied?: (denied: AccessDeniedState) => void;
 }) {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState('strovyn@gmail.com');
   const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSendingReset, setIsSendingReset] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const safeRedirect = sanitizeAdminRedirectPath(redirectTo);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecoveryMode(true);
+        setErrorMessage(null);
+        setStatusMessage('Enter a strong new administrator password (at least 12 characters).');
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSendPasswordReset = async () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setErrorMessage('Enter your registered staff email address first.');
+      return;
+    }
+    setIsSendingReset(true);
+    setErrorMessage(null);
+    setStatusMessage(null);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+        redirectTo: `${window.location.origin}/admin`,
+      });
+      if (error) {
+        setErrorMessage('Unable to send password recovery email right now. Try again shortly.');
+        return;
+      }
+      setStatusMessage(
+        `If ${trimmedEmail} is registered, a secure password setup/recovery link has been sent.`
+      );
+    } catch {
+      setErrorMessage('Unable to reach authentication service. Try again shortly.');
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
+
+  const handleRecoverySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 12) {
+      setErrorMessage('Administrator password must be at least 12 characters long.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setErrorMessage('Password confirmation does not match.');
+      return;
+    }
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        setErrorMessage(error.message || 'Could not update administrator password.');
+        return;
+      }
+      setNewPassword('');
+      setConfirmPassword('');
+      setIsRecoveryMode(false);
+      setStatusMessage('Password updated. Entering Strovyn Editorial Desk...');
+      router.push(safeRedirect);
+      router.refresh();
+    } catch {
+      setErrorMessage('Unable to update password right now.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,6 +217,78 @@ export function StaffSignInCard({
           </div>
         )}
 
+        {statusMessage && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="mb-5 border border-bronze/50 bg-ivory-light px-4 py-3 text-xs font-sans text-charcoal"
+          >
+            {statusMessage}
+          </div>
+        )}
+
+        {isRecoveryMode ? (
+          <form onSubmit={handleRecoverySubmit} className="space-y-5" noValidate>
+            <div>
+              <label
+                htmlFor="cms-staff-new-password"
+                className="block font-mono text-[11px] uppercase tracking-[0.16em] text-charcoal/85 mb-2"
+              >
+                New Strong Password (Min 12 chars)
+              </label>
+              <input
+                id="cms-staff-new-password"
+                name="newPassword"
+                type="password"
+                autoComplete="new-password"
+                minLength={12}
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter strong password"
+                className="w-full bg-ivory-light border border-warm-grey px-3.5 py-2.5 text-sm font-sans text-charcoal focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-bronze focus:border-charcoal"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="cms-staff-confirm-password"
+                className="block font-mono text-[11px] uppercase tracking-[0.16em] text-charcoal/85 mb-2"
+              >
+                Confirm New Password
+              </label>
+              <input
+                id="cms-staff-confirm-password"
+                name="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                minLength={12}
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm strong password"
+                className="w-full bg-ivory-light border border-warm-grey px-3.5 py-2.5 text-sm font-sans text-charcoal focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-bronze focus:border-charcoal"
+              />
+            </div>
+
+            {errorMessage && (
+              <div
+                role="alert"
+                aria-live="assertive"
+                className="border border-brand-red/30 bg-brand-red/5 px-3.5 py-2.5 text-xs font-sans text-brand-red-dark"
+              >
+                {errorMessage}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full py-3 px-5 bg-charcoal text-ivory hover:bg-bronze transition-colors font-mono text-xs uppercase tracking-[0.2em] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bronze"
+            >
+              {isSubmitting ? 'Saving Password...' : 'Set Administrator Password'}
+            </button>
+          </form>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-5" noValidate>
           <div>
             <label
@@ -154,18 +305,28 @@ export function StaffSignInCard({
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@strovynpainting.com"
+              placeholder="strovyn@gmail.com"
               className="w-full bg-ivory-light border border-warm-grey px-3.5 py-2.5 text-sm font-sans text-charcoal focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-bronze focus:border-charcoal"
             />
           </div>
 
           <div>
-            <label
-              htmlFor="cms-staff-password"
-              className="block font-mono text-[11px] uppercase tracking-[0.16em] text-charcoal/85 mb-2"
-            >
-              Password
-            </label>
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <label
+                htmlFor="cms-staff-password"
+                className="block font-mono text-[11px] uppercase tracking-[0.16em] text-charcoal/85"
+              >
+                Password
+              </label>
+              <button
+                type="button"
+                onClick={handleSendPasswordReset}
+                disabled={isSendingReset}
+                className="font-mono text-[10px] uppercase tracking-wider text-bronze hover:underline cursor-pointer disabled:opacity-50"
+              >
+                {isSendingReset ? 'Sending...' : 'Forgot / Set Password'}
+              </button>
+            </div>
             <input
               id="cms-staff-password"
               name="password"
@@ -197,6 +358,7 @@ export function StaffSignInCard({
             {isSubmitting ? 'Verifying Credentials...' : 'Enter Editorial Desk'}
           </button>
         </form>
+        )}
 
         <div className="mt-7 pt-5 border-t border-warm-grey/40 flex flex-wrap items-center justify-between gap-3 text-xs">
           <span className="font-sans text-warm-grey-dark">
