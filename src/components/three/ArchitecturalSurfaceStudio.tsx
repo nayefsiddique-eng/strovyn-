@@ -99,16 +99,33 @@ function parseRoughnessFromSheen(sheenLabel: string): number {
   return Math.max(0.32, Math.min(0.95, 0.96 - pct * 0.027));
 }
 
-const StudioScene: React.FC<StudioSceneProps> = ({
+const StudioScene: React.FC<StudioSceneProps & { isVisible: boolean }> = ({
   colorHex,
   category,
   sheenLabel,
   lightAngleDeg,
   lightTemp,
   resetTrigger,
+  isVisible,
 }) => {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
-  const { invalidate, camera } = useThree();
+  const { invalidate, camera, gl } = useThree();
+
+  useEffect(() => {
+    if (isVisible) invalidate();
+  }, [isVisible, invalidate]);
+
+  useEffect(() => {
+    const dom = gl.domElement;
+    const onLost = (e: Event) => e.preventDefault();
+    const onRestored = () => invalidate();
+    dom.addEventListener('webglcontextlost', onLost, false);
+    dom.addEventListener('webglcontextrestored', onRestored, false);
+    return () => {
+      dom.removeEventListener('webglcontextlost', onLost);
+      dom.removeEventListener('webglcontextrestored', onRestored);
+    };
+  }, [gl, invalidate]);
 
   const bumpMap = useMemo(() => createSurfaceMicroBump(category), [category]);
   useEffect(() => {
@@ -272,9 +289,9 @@ export const ArchitecturalSurfaceStudio: React.FC<
         frameloop={isVisible ? 'demand' : 'never'}
         dpr={[1, 1.75]}
         camera={{ position: [0.35, 0.15, 3.15], fov: 36 }}
-        gl={{ antialias: true, preserveDrawingBuffer: true, powerPreference: 'high-performance' }}
+        gl={{ antialias: true, preserveDrawingBuffer: false, powerPreference: 'high-performance' }}
       >
-        <StudioScene {...props} />
+        <StudioScene {...props} isVisible={isVisible} />
       </Canvas>
       <div className="pointer-events-none absolute top-3 left-3 bg-charcoal/85 text-white px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest">
         3D Surface Simulation · Drag to Inspect Angle

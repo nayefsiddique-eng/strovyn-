@@ -1,9 +1,37 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
+
+const WebGLLifecycleBridge: React.FC<{ isInView: boolean }> = ({ isInView }) => {
+  const { gl, invalidate } = useThree();
+
+  useEffect(() => {
+    if (isInView) {
+      invalidate();
+    }
+  }, [isInView, invalidate]);
+
+  useEffect(() => {
+    const dom = gl.domElement;
+    const onLost = (e: Event) => {
+      e.preventDefault();
+    };
+    const onRestored = () => {
+      invalidate();
+    };
+    dom.addEventListener('webglcontextlost', onLost, false);
+    dom.addEventListener('webglcontextrestored', onRestored, false);
+    return () => {
+      dom.removeEventListener('webglcontextlost', onLost);
+      dom.removeEventListener('webglcontextrestored', onRestored);
+    };
+  }, [gl, invalidate]);
+
+  return null;
+};
 
 export interface HeroFinishPreset {
   id: string;
@@ -399,10 +427,11 @@ export const HeroArchitecturalScene: React.FC<HeroArchitecturalSceneProps> = ({
             gl={{
               antialias: true,
               alpha: true,
-              preserveDrawingBuffer: true,
+              preserveDrawingBuffer: false,
               powerPreference: 'high-performance',
             }}
           >
+            <WebGLLifecycleBridge isInView={isInView} />
             <ArchitecturalAlcove
               activePreset={activePreset}
               isDark={isDark}

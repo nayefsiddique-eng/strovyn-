@@ -139,17 +139,20 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
                 max={90}
                 value={splitPct}
                 onChange={(e) => setSplitPct(Number(e.target.value))}
-                aria-label="Compare Completed Residence and Illustrative Surface Detail"
+                aria-label="Illustrative Finish Comparison between Adelaide Residence and Surface Texture Study"
                 className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-20"
               />
 
               {/* Verified Project Badge */}
-              <div className="absolute bottom-6 left-6 z-10 bg-[#181917]/95 border border-white/20 px-4 py-2 pointer-events-none">
+              <div className="absolute bottom-6 left-6 z-10 bg-[#181917]/95 border border-white/20 px-4 py-2 pointer-events-none max-w-[calc(100%-3rem)]">
                 <span className="font-mono text-[10px] text-[#C9B28F] uppercase tracking-widest font-semibold block mb-0.5">
-                  COMPLETED WORK · ADELAIDE · DRAG TO COMPARE
+                  ILLUSTRATIVE FINISH COMPARISON · DRAG TO INSPECT
                 </span>
-                <span className="type-card-title text-sm sm:text-base text-[#F4F1EA]">
-                  Adelaide Residence vs. Illustrative Surface Study
+                <span className="type-card-title text-sm sm:text-base text-[#F4F1EA] block">
+                  Completed Interior vs. Material Texture Study (Different Subjects)
+                </span>
+                <span className="font-sans text-[10px] text-white/75 block mt-0.5">
+                  Illustrative visual comparison only — not a before/after sequence of the same wall.
                 </span>
               </div>
             </div>
