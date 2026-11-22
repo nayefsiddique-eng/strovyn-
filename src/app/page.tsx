@@ -5,7 +5,6 @@ import {
   EditorialStatement,
   OurExpertise,
   FeaturedProjects,
-  BeforeAfterSlider,
   StrovynApproach,
   InsightsArticles,
   FinalContact,
@@ -13,6 +12,8 @@ import {
   FinishExplorer,
   TestimonialCarousel,
 } from '@/components/home';
+import { ClientExperiencesCarousel } from '@/components/home/ClientExperiencesCarousel';
+import { HomeClientExperiencesSection } from '@/components/home/HomeClientExperiencesSection';
 import { HomeInsightsSection } from '@/components/home/HomeInsightsSection';
 import { HomeProjectsSection } from '@/components/home/HomeProjectsSection';
 import { HomeTestimonialsSection } from '@/components/home/HomeTestimonialsSection';
@@ -42,8 +43,10 @@ export default function HomePage() {
         <HomeProjectsSection />
       </Suspense>
 
-      {/* TACTILE SUBSTRATE TRANSFORMATION (Interactive Before/After Slider) */}
-      <BeforeAfterSlider />
+      {/* SECTION 04: CLIENT EXPERIENCES (Interactive Testimonial Carousel) */}
+      <Suspense fallback={<ClientExperiencesCarousel isLoading />}>
+        <HomeClientExperiencesSection />
+      </Suspense>
 
       {/* FINISH EXPLORER (Tactile Sheen & Substrate Matrix) */}
       <FinishExplorer />
