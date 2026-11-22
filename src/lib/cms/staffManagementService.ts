@@ -540,16 +540,18 @@ export async function completeEmployeeActivation(
     throw new StaffAuthError(401, 'UNAUTHENTICATED', 'Authenticated user email is required.');
   }
 
-  // If already an active staff member, return existing record cleanly
-  const { data: existingStaff } = await client
-    .from('staff_users')
-    .select('*')
-    .eq('auth_user_id', authUser.id)
-    .maybeSingle();
+  // If already a staff member (by auth_user_id OR normalized email), block disabled accounts and return active ones
+  const [{ data: byAuth }, { data: byEmail }] = await Promise.all([
+    client.from('staff_users').select('*').eq('auth_user_id', authUser.id).maybeSingle(),
+    client.from('staff_users').select('*').ilike('email', email).maybeSingle(),
+  ]);
+  const existingStaff = byAuth || byEmail;
 
   if (existingStaff) {
     if (!existingStaff.is_active) {
-      throw new StaffAuthError(403, 'STAFF_INACTIVE',
+      throw new StaffAuthError(
+        403,
+        'STAFF_INACTIVE',
         'Your staff account has been deactivated by an administrator.'
       );
     }
@@ -599,6 +601,32 @@ export async function completeEmployeeActivation(
   }
 
   const nowIso = new Date().toISOString();
+
+  // Atomically claim the pending invitation to prevent concurrent double-acceptance
+  const { data: claimedInv, error: claimErr } = await client
+    .from('staff_invitations')
+    .update({
+      status: 'accepted',
+      auth_user_id: authUser.id,
+      accepted_at: nowIso,
+      updated_at: nowIso,
+    })
+    .eq('id', inv.id)
+    .eq('status', 'pending')
+    .select('*')
+    .maybeSingle();
+
+  if (claimErr) {
+    throw new EditorialHttpError(500, 'INTERNAL_ERROR', claimErr.message);
+  }
+  if (!claimedInv) {
+    throw new EditorialHttpError(
+      409,
+      'CONFLICT',
+      'This invitation has already been claimed or is no longer pending.'
+    );
+  }
+
   const { data: createdStaff, error: staffErr } = await client
     .from('staff_users')
     .insert({
@@ -614,6 +642,17 @@ export async function completeEmployeeActivation(
     .single();
 
   if (staffErr || !createdStaff) {
+    // Recoverable rollback: release invitation claim if staff_users insert fails
+    await client
+      .from('staff_invitations')
+      .update({
+        status: 'pending',
+        accepted_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', inv.id)
+      .eq('status', 'accepted');
+
     throw new EditorialHttpError(
       500,
       'INTERNAL_ERROR',
@@ -624,11 +663,8 @@ export async function completeEmployeeActivation(
   await client
     .from('staff_invitations')
     .update({
-      status: 'accepted',
-      auth_user_id: authUser.id,
       staff_user_id: createdStaff.id,
-      accepted_at: nowIso,
-      updated_at: nowIso,
+      updated_at: new Date().toISOString(),
     })
     .eq('id', inv.id);
 
