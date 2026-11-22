@@ -3,265 +3,288 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import {
+  CircularColourWheel,
+  ARCHITECTURAL_WHEEL_COLOURS,
+  type WheelColour,
+} from './CircularColourWheel';
 
 const ArchitecturalSurfaceStudio = dynamic(
   () => import('@/components/three/ArchitecturalSurfaceStudio'),
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-72 sm:h-80 border border-warm-grey/30 bg-[#EAE6DD] flex items-end p-5">
-        <span className="font-mono text-[11px] uppercase tracking-widest text-charcoal/70">
-          Initializing Architectural Surface Studio...
-        </span>
-      </div>
+      <div
+        aria-hidden="true"
+        className="w-full h-full min-h-[240px] bg-gradient-to-br from-[#F4F1EA] to-[#E5DFD3] dark:from-[#20211F] dark:to-[#141513] animate-pulse"
+      />
     ),
   }
 );
 
-interface PaletteOption {
-  name: string;
+export interface FinishOption {
+  id: 'smooth-matt' | 'limewash' | 'textured-plaster' | 'satin';
+  label: string;
   category: 'Architectural Mineral' | 'Warm Editorial' | 'Artisanal Limewash';
-  hex: string;
-  sheen: string;
-  recommendedSubstrate: string;
-  lightingBehavior: string;
+  sheenLabel: string;
+  textureStyle: string;
 }
 
-const PALETTES: PaletteOption[] = [
+const FINISH_OPTIONS: FinishOption[] = [
   {
-    name: 'Warm Ivory Mineral',
+    id: 'smooth-matt',
+    label: 'Smooth Matt',
     category: 'Architectural Mineral',
-    hex: '#F4F1EA',
-    sheen: 'Deep Velvet Matte (3%)',
-    recommendedSubstrate: 'Ceilings & Double-Height Living Pavilions',
-    lightingBehavior: 'Diffuses raking low-angle daylight softly without planar glare or flashing.',
+    sheenLabel: 'Smooth Matt (2% Sheen)',
+    textureStyle: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.14), rgba(0,0,0,0.06))',
   },
   {
-    name: 'Raw Limestone Chalk',
+    id: 'limewash',
+    label: 'Limewash',
     category: 'Artisanal Limewash',
-    hex: '#EBE7DF',
-    sheen: 'Dead Flat (1%)',
-    recommendedSubstrate: 'Internal Masonry, Bluestone, & Sandstone Accents',
-    lightingBehavior: 'Absorbs ambient light naturally, offering subtle chalky micro-mottling.',
+    sheenLabel: 'Artisanal Limewash (Mineral Matte)',
+    textureStyle:
+      'repeating-linear-gradient(125deg, rgba(255,255,255,0.16) 0px, rgba(255,255,255,0.02) 8px, rgba(0,0,0,0.08) 16px)',
   },
   {
-    name: 'Muted Bronze Ochre',
+    id: 'textured-plaster',
+    label: 'Textured Plaster',
     category: 'Warm Editorial',
-    hex: '#A78B65',
-    sheen: 'Low-Sheen Eggshell (8%)',
-    recommendedSubstrate: 'Dining Alcoves, Study Joinery & Feature Niches',
-    lightingBehavior: 'Develops deep, intimate warmth under evening 2700K incandescent illumination.',
+    sheenLabel: 'Textured Plaster (Hand-Trowelled)',
+    textureStyle:
+      'repeating-linear-gradient(35deg, rgba(255,255,255,0.18) 0px, rgba(0,0,0,0.1) 6px, rgba(255,255,255,0.08) 12px)',
   },
   {
-    name: 'Deep Architectural Charcoal',
+    id: 'satin',
+    label: 'Satin',
     category: 'Architectural Mineral',
-    hex: '#20211F',
-    sheen: 'Satin Finish (20%)',
-    recommendedSubstrate: 'Architectural Millwork, Doors, Window Reveals',
-    lightingBehavior: 'Provides grounding contrast against pale timber and raw natural stones.',
-  },
-  {
-    name: 'Adelaide Hills Slate',
-    category: 'Warm Editorial',
-    hex: '#7A7D79',
-    sheen: 'Velvet Low-Sheen (6%)',
-    recommendedSubstrate: 'Master Suites & Feature Wall Transitions',
-    lightingBehavior: 'Subtly shifts between warm olive and cool slate across the diurnal cycle.',
+    sheenLabel: 'Architectural Satin (18% Sheen)',
+    textureStyle:
+      'linear-gradient(135deg, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0.06) 55%, rgba(0,0,0,0.08) 100%)',
   },
 ];
 
+const DEFAULT_COLOUR = ARCHITECTURAL_WHEEL_COLOURS[0];
+const DEFAULT_FINISH = FINISH_OPTIONS[0];
+const DEFAULT_LIGHT_ANGLE = 42;
+const DEFAULT_LIGHT_TEMP: 'daylight' | 'warm' = 'daylight';
+
 export const FinishExplorer: React.FC = () => {
-  const [selected, setSelected] = useState<PaletteOption>(PALETTES[0]);
-  const [lightAngleDeg, setLightAngleDeg] = useState<number>(24);
-  const [lightTemp, setLightTemp] = useState<'daylight' | 'warm'>('daylight');
+  const [activeColour, setActiveColour] = useState<WheelColour>(DEFAULT_COLOUR);
+  const [activeFinish, setActiveFinish] = useState<FinishOption>(DEFAULT_FINISH);
+  const [lightAngleDeg, setLightAngleDeg] = useState<number>(DEFAULT_LIGHT_ANGLE);
+  const [lightTemp, setLightTemp] = useState<'daylight' | 'warm'>(DEFAULT_LIGHT_TEMP);
   const [resetTrigger, setResetTrigger] = useState<number>(0);
 
-  return (
-    <section aria-label="Colour and Finish Explorer" className="py-20 md:py-28 px-6 sm:px-8 lg:px-12 max-w-7xl mx-auto border-b border-warm-grey/30">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-        {/* Left Column: Explorer Details */}
-        <div className="lg:col-span-5 space-y-6">
-          <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block">
-            [ 02 / COLOUR AS CRAFT ]
-          </span>
-          <h2 className="type-section-title text-3xl sm:text-4xl text-charcoal">
-            Curated Colour &amp; Finish Explorer
-          </h2>
-          <p className="font-sans text-base text-charcoal/80 leading-relaxed">
-            Colour is treated as an architectural material, not a commodity. Explore our curated mineral pigments and low-sheen sheens formulated to interact harmoniously with natural daylight.
-          </p>
+  const handleReset = () => {
+    setActiveColour(DEFAULT_COLOUR);
+    setActiveFinish(DEFAULT_FINISH);
+    setLightAngleDeg(DEFAULT_LIGHT_ANGLE);
+    setLightTemp(DEFAULT_LIGHT_TEMP);
+    setResetTrigger((prev) => prev + 1);
+  };
 
-          <div className="space-y-2 pt-2">
-            <span className="font-mono text-xs uppercase text-warm-grey-dark tracking-wider block">
-              SELECT FINISH FORMULATION:
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {PALETTES.map((item) => (
-                <button
-                  key={item.name}
-                  type="button"
-                  onClick={() => setSelected(item)}
-                  className={`flex items-center gap-2.5 px-3.5 py-2 border text-xs font-sans transition-all cursor-pointer ${
-                    selected.name === item.name
-                      ? 'bg-charcoal text-white border-charcoal'
-                      : 'bg-white text-charcoal/80 border-warm-grey/30 hover:border-bronze'
-                  }`}
-                >
-                  <span
-                    className="w-3.5 h-3.5 border border-black/10 inline-block"
-                    style={{ backgroundColor: item.hex }}
-                  />
-                  <span>{item.name}</span>
-                </button>
-              ))}
+  return (
+    <section
+      id="finish-studio"
+      aria-labelledby="finish-studio-heading"
+      className="relative bg-ivory dark:bg-[#1C1A17] text-charcoal dark:text-[#F4F1EA] border-t border-warm-grey/30 dark:border-white/10 py-16 md:py-24 overflow-hidden"
+    >
+      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
+          {/* Left Column: Editorial Intro & Studio CTAs */}
+          <div className="lg:col-span-4 space-y-6">
+            <div className="space-y-3">
+              <p className="font-mono text-[11px] uppercase tracking-[0.26em] text-bronze dark:text-[#C9B28F]">
+                THE FINISH STUDIO
+              </p>
+              <h2
+                id="finish-studio-heading"
+                className="font-display font-normal text-4xl sm:text-5xl lg:text-[3.4rem] leading-[0.95] tracking-tight uppercase text-charcoal dark:text-white"
+              >
+                EXPLORE COLOURS &amp; FINISHES
+              </h2>
             </div>
+
+            <p className="font-sans text-sm sm:text-base leading-relaxed text-charcoal/75 dark:text-[#D5D0C7] max-w-md">
+              A curated palette of architectural colours and premium finishes. Select a
+              colour on the wheel to inspect its tone, sheen, and raking-light response in
+              real time.
+            </p>
+
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <Link
+                href={`/visualiser?color=${encodeURIComponent(activeColour.hex)}&finish=${encodeURIComponent(activeColour.name)}`}
+                className="inline-flex items-center justify-center gap-2 bg-bronze hover:bg-bronze/90 text-white px-5 py-3 font-mono text-xs uppercase tracking-[0.16em] font-semibold transition-colors shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-bronze"
+              >
+                <span>Browse All Finishes</span>
+                <span aria-hidden="true">&rarr;</span>
+              </Link>
+              <Link
+                href="/contact"
+                className="inline-flex items-center justify-center gap-2 border border-charcoal/30 dark:border-white/25 hover:border-bronze px-5 py-3 font-mono text-xs uppercase tracking-[0.16em] text-charcoal dark:text-[#F4F1EA] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-bronze"
+              >
+                <span>Request Sample Board</span>
+              </Link>
+            </div>
+
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-warm-grey-dark dark:text-[#9A958B]">
+              Illustrative finish &amp; colour studio — physical sample boards calibrated on site.
+            </p>
           </div>
 
-          {/* Wall Colour Visualiser Entry Point (Approach B) */}
-          <div className="pt-4 mt-4 border-t border-warm-grey/30 space-y-3">
-            <div>
-              <h3 className="type-card-title text-lg sm:text-xl text-charcoal">
-                Preview finishes on your own walls
-              </h3>
-              <p className="font-sans text-xs sm:text-sm text-charcoal/75 leading-relaxed mt-1">
-                Explore how a selected finish could look in your own room using the Strovyn Wall Colour Visualiser.
+          {/* Center Column: Interactive 12-Segment SVG Circular Colour Wheel */}
+          <div className="lg:col-span-4 flex flex-col items-center justify-center">
+            <CircularColourWheel
+              colours={ARCHITECTURAL_WHEEL_COLOURS}
+              activeId={activeColour.id}
+              onSelect={setActiveColour}
+            />
+          </div>
+
+          {/* Right Column: Live Selection Details, Finish Options, 3D Material Studio & Lighting Controls */}
+          <div className="lg:col-span-4 space-y-5">
+            {/* Active Colour Header */}
+            <div className="border-b border-warm-grey/30 dark:border-white/10 pb-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-bronze dark:text-[#C9B28F]">
+                    {activeColour.family}
+                  </span>
+                  <h3 className="font-display font-normal text-2xl sm:text-3xl tracking-tight uppercase text-charcoal dark:text-white mt-0.5">
+                    {activeColour.name}
+                  </h3>
+                </div>
+                <span className="font-mono text-xs uppercase tracking-[0.16em] px-2.5 py-1 bg-charcoal/5 dark:bg-white/10 border border-warm-grey/30 dark:border-white/15 text-charcoal dark:text-[#F4F1EA] shrink-0">
+                  {activeColour.hex}
+                </span>
+              </div>
+              <p className="mt-2 font-sans text-xs sm:text-sm leading-relaxed text-charcoal/75 dark:text-[#CFCAC0]">
+                {activeColour.description}
               </p>
             </div>
-            <Link
-              href={`/visualiser?finish=${encodeURIComponent(selected.name)}`}
-              className="inline-flex items-center justify-center gap-2.5 px-5 py-3 bg-bronze hover:bg-bronze-hover text-white font-mono text-xs uppercase tracking-[0.16em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bronze focus-visible:ring-offset-2"
-            >
-              <span>TRY THE WALL VISUALISER</span>
-              <span aria-hidden="true">&rarr;</span>
-            </Link>
-          </div>
-        </div>
 
-        {/* Right Column: Interactive Swatch Display */}
-        <div className="lg:col-span-7 bg-white border border-warm-grey/30 p-8 sm:p-10 shadow-sm space-y-6">
-          <div className="flex items-center justify-between border-b border-warm-grey/20 pb-4">
+            {/* Available Finishes (Smooth Matt, Limewash, Textured Plaster, Satin) */}
             <div>
-              <span className="font-mono text-xs text-bronze uppercase tracking-widest block">
-                {selected.category}
-              </span>
-              <h3 className="type-card-title text-2xl sm:text-3xl text-charcoal mt-1">{selected.name}</h3>
+              <div className="flex items-center justify-between gap-2 mb-2.5">
+                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-warm-grey-dark dark:text-[#A8A59E]">
+                  AVAILABLE FINISHES
+                </span>
+                <span className="font-mono text-[10px] uppercase tracking-wider text-bronze dark:text-[#C9B28F]">
+                  {activeFinish.sheenLabel}
+                </span>
+              </div>
+              <div
+                role="radiogroup"
+                aria-label="Select architectural finish type"
+                className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-2"
+              >
+                {FINISH_OPTIONS.map((finish) => {
+                  const isSelected = finish.id === activeFinish.id;
+                  return (
+                    <button
+                      key={finish.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      onClick={() => setActiveFinish(finish)}
+                      className={`group flex flex-col items-center gap-1.5 p-2 border text-center transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-bronze ${
+                        isSelected
+                          ? 'border-bronze bg-charcoal text-white dark:bg-[#F4F1EA] dark:text-charcoal shadow-sm'
+                          : 'border-warm-grey/35 dark:border-white/15 bg-white/70 dark:bg-[#26231F] text-charcoal dark:text-[#F4F1EA] hover:border-bronze'
+                      }`}
+                    >
+                      <span
+                        className="w-full h-7 border border-black/15 dark:border-white/15 block"
+                        style={{
+                          backgroundColor: activeColour.hex,
+                          backgroundImage: finish.textureStyle,
+                        }}
+                        aria-hidden="true"
+                      />
+                      <span className="font-mono text-[10px] uppercase tracking-wider leading-tight">
+                        {finish.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <span className="font-mono text-xs bg-ivory px-3 py-1 border border-warm-grey/30 text-charcoal font-medium">
-              HEX {selected.hex}
-            </span>
-          </div>
 
-          {/* Interactive 3D Architectural Surface Studio (Lazy-Loaded) */}
-          <div className="space-y-3">
-            <ArchitecturalSurfaceStudio
-              colorHex={selected.hex}
-              finishName={selected.name}
-              category={selected.category}
-              sheenLabel={selected.sheen}
-              lightAngleDeg={lightAngleDeg}
-              lightTemp={lightTemp}
-              resetTrigger={resetTrigger}
-            />
+            {/* Live 3D Architectural Surface Studio Viewport */}
+            <div className="relative h-[220px] sm:h-[245px] border border-warm-grey/40 dark:border-white/15 bg-[#EBE7DF] dark:bg-[#141513] overflow-hidden shadow-md">
+              <ArchitecturalSurfaceStudio
+                colorHex={activeColour.hex}
+                finishName={activeColour.name}
+                category={activeFinish.category}
+                sheenLabel={activeFinish.sheenLabel}
+                lightAngleDeg={lightAngleDeg}
+                lightTemp={lightTemp}
+                resetTrigger={resetTrigger}
+              />
+            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center bg-ivory border border-warm-grey/30 p-3.5 text-xs">
-              <label className="sm:col-span-6 flex flex-col gap-1.5 font-mono text-[10px] uppercase tracking-wider text-charcoal">
-                <span>Raking Light Angle ({lightAngleDeg}°)</span>
-                <input
-                  type="range"
-                  min={10}
-                  max={75}
-                  value={lightAngleDeg}
-                  onChange={(e) => setLightAngleDeg(Number(e.target.value))}
-                  aria-label="Raking Light Angle"
-                  className="w-full accent-[#A78B65] cursor-pointer"
-                />
-              </label>
-              <div className="sm:col-span-4 flex items-center gap-1.5 font-mono text-[10px]">
+            {/* Raking Light Angle, Colour Temperature & Reset Controls */}
+            <div className="bg-white/80 dark:bg-[#23201C] border border-warm-grey/35 dark:border-white/15 p-3.5 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <label
+                  htmlFor="finish-raking-light-angle"
+                  className="font-mono text-[10px] uppercase tracking-[0.18em] text-charcoal/80 dark:text-[#D5D0C7]"
+                >
+                  Raking Light Angle
+                </label>
+                <span className="font-mono text-[11px] text-bronze dark:text-[#C9B28F] font-semibold">
+                  {lightAngleDeg}°
+                </span>
+              </div>
+              <input
+                id="finish-raking-light-angle"
+                type="range"
+                min={15}
+                max={165}
+                step={1}
+                value={lightAngleDeg}
+                onChange={(e) => setLightAngleDeg(Number(e.target.value))}
+                className="w-full accent-[#A78B65] cursor-pointer"
+              />
+
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <div className="flex items-center gap-1.5" role="group" aria-label="Lighting colour temperature">
+                  <button
+                    type="button"
+                    onClick={() => setLightTemp('daylight')}
+                    aria-pressed={lightTemp === 'daylight'}
+                    className={`px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider border transition-colors cursor-pointer ${
+                      lightTemp === 'daylight'
+                        ? 'bg-charcoal text-white border-charcoal dark:bg-[#F4F1EA] dark:text-charcoal dark:border-[#F4F1EA]'
+                        : 'bg-transparent text-charcoal/80 dark:text-[#D5D0C7] border-warm-grey/40 dark:border-white/15 hover:border-bronze'
+                    }`}
+                  >
+                    5500K Day
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLightTemp('warm')}
+                    aria-pressed={lightTemp === 'warm'}
+                    className={`px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider border transition-colors cursor-pointer ${
+                      lightTemp === 'warm'
+                        ? 'bg-charcoal text-white border-charcoal dark:bg-[#F4F1EA] dark:text-charcoal dark:border-[#F4F1EA]'
+                        : 'bg-transparent text-charcoal/80 dark:text-[#D5D0C7] border-warm-grey/40 dark:border-white/15 hover:border-bronze'
+                    }`}
+                  >
+                    2700K Warm
+                  </button>
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => setLightTemp('daylight')}
-                  className={`flex-1 py-1.5 px-2 border transition-colors cursor-pointer ${
-                    lightTemp === 'daylight'
-                      ? 'bg-charcoal text-white border-charcoal'
-                      : 'bg-white text-charcoal border-warm-grey/40 hover:border-bronze'
-                  }`}
+                  onClick={handleReset}
+                  className="px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider border border-warm-grey/40 dark:border-white/15 text-charcoal/80 dark:text-[#D5D0C7] hover:border-brand-red hover:text-brand-red transition-colors cursor-pointer"
                 >
-                  5500K Day
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLightTemp('warm')}
-                  className={`flex-1 py-1.5 px-2 border transition-colors cursor-pointer ${
-                    lightTemp === 'warm'
-                      ? 'bg-charcoal text-white border-charcoal'
-                      : 'bg-white text-charcoal border-warm-grey/40 hover:border-bronze'
-                  }`}
-                >
-                  2700K Warm
+                  Reset
                 </button>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setLightAngleDeg(24);
-                  setLightTemp('daylight');
-                  setResetTrigger((n) => n + 1);
-                }}
-                className="sm:col-span-2 py-1.5 px-2 border border-warm-grey/50 bg-white hover:border-bronze font-mono text-[10px] uppercase tracking-wider text-charcoal transition-colors cursor-pointer"
-              >
-                Reset
-              </button>
             </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-2 px-1 font-mono text-[11px] text-warm-grey-dark">
-              <span>Calibrated Sheen (Simulated): {selected.sheen}</span>
-              <span className="text-[10px] uppercase tracking-widest text-bronze">
-                Illustrative Surface Simulation
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 text-xs">
-            <div className="p-4 bg-ivory border border-warm-grey/20">
-              <span className="font-sans uppercase text-warm-grey-dark block mb-1 font-medium">
-                Target Substrate
-              </span>
-              <p className="font-sans text-charcoal/85 leading-relaxed">
-                {selected.recommendedSubstrate}
-              </p>
-            </div>
-            <div className="p-4 bg-ivory border border-warm-grey/20">
-              <span className="font-sans uppercase text-warm-grey-dark block mb-1 font-medium">
-                Daylight Interaction
-              </span>
-              <p className="font-sans text-charcoal/85 leading-relaxed">
-                {selected.lightingBehavior}
-              </p>
-            </div>
-          </div>
-
-          {/* Contextual Action: Discuss this finish */}
-          <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-warm-grey/20">
-            <div>
-              <span className="font-mono text-[10px] text-bronze uppercase tracking-widest block font-medium">
-                FINISH ENQUIRY
-              </span>
-              <span className="font-sans text-xs text-charcoal/80 block">
-                Discuss this finish with Strovyn
-              </span>
-            </div>
-            <Link
-              href={`/contact?finish=${encodeURIComponent(selected.name)}`}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-charcoal hover:bg-black text-white font-mono text-xs uppercase tracking-[0.16em] transition-colors shrink-0"
-            >
-              <span>Discuss This Finish</span>
-              <span aria-hidden="true">&rarr;</span>
-            </Link>
-          </div>
-
-          {/* Disclaimer regarding real-world variance */}
-          <div className="pt-2 text-[10px] text-warm-grey-dark italic">
-            * Please Note: Digital on-screen colour and sheen representations may vary from actual painted finishes due to individual device display profiles, room orientation, and in-situ substrate porosity. Physical drawdown swatches are verified during our free on-site Adelaide consultation.
           </div>
         </div>
       </div>

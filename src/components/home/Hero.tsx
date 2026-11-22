@@ -1,32 +1,14 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import dynamic from 'next/dynamic';
 import {
   ensureGsapRegistered,
   gsap,
   prefersReducedMotion,
   attachMagneticInteraction,
 } from '@/lib/motion/gsapConfig';
-import {
-  HERO_FINISH_PRESETS,
-  type HeroFinishPreset,
-} from '@/components/three/HeroArchitecturalScene';
-
-const HeroArchitecturalScene = dynamic(
-  () => import('@/components/three/HeroArchitecturalScene'),
-  {
-    ssr: false,
-    loading: () => (
-      <div
-        aria-hidden="true"
-        className="w-full h-full bg-gradient-to-br from-[#FAF8F5] via-[#EBE7DF] to-[#DFD9CE] dark:from-[#242523] dark:via-[#1E1F1D] dark:to-[#161715]"
-      />
-    ),
-  }
-);
 
 export interface HeroProps {
   quoteHref?: string;
@@ -43,29 +25,7 @@ export const Hero: React.FC<HeroProps> = ({
   const secondaryBtnRef = useRef<HTMLAnchorElement | null>(null);
   const primaryPhotoWrapRef = useRef<HTMLDivElement | null>(null);
   const primaryPhotoInnerRef = useRef<HTMLDivElement | null>(null);
-  const alcoveCardRef = useRef<HTMLDivElement | null>(null);
   const pavilionCardRef = useRef<HTMLDivElement | null>(null);
-
-  const pointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [activePreset, setActivePreset] = useState<HeroFinishPreset>(
-    HERO_FINISH_PRESETS[0]
-  );
-  const [isDark, setIsDark] = useState<boolean>(false);
-  const [reducedMotion, setReducedMotion] = useState<boolean>(false);
-
-  // Sync Dark mode class from <html> and prefers-reduced-motion
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    setReducedMotion(prefersReducedMotion());
-
-    const root = document.documentElement;
-    const syncTheme = () => setIsDark(root.classList.contains('dark'));
-    syncTheme();
-
-    const observer = new MutationObserver(syncTheme);
-    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
 
   // Coordinated GSAP Entrance Timeline, ScrollTrigger Depth & Magnetic CTAs
   useEffect(() => {
@@ -146,22 +106,9 @@ export const Hero: React.FC<HeroProps> = ({
         });
       }
 
-      if (alcoveCardRef.current) {
-        gsap.to(alcoveCardRef.current, {
-          yPercent: -5,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: section,
-            start: 'top top',
-            end: 'bottom top',
-            scrub: 0.6,
-          },
-        });
-      }
-
       if (pavilionCardRef.current) {
         gsap.to(pavilionCardRef.current, {
-          yPercent: -9,
+          yPercent: -6,
           ease: 'none',
           scrollTrigger: {
             trigger: section,
@@ -199,8 +146,6 @@ export const Hero: React.FC<HeroProps> = ({
       const rect = section.getBoundingClientRect();
       const nx = ((e.clientX - rect.left) / Math.max(1, rect.width) - 0.5) * 2;
       const ny = ((e.clientY - rect.top) / Math.max(1, rect.height) - 0.5) * 2;
-      pointerRef.current.x = Math.max(-1, Math.min(1, nx));
-      pointerRef.current.y = Math.max(-1, Math.min(1, -ny));
 
       xQuick?.(nx * -6);
       yQuick?.(ny * -4);
@@ -209,8 +154,6 @@ export const Hero: React.FC<HeroProps> = ({
     };
 
     const handlePointerLeave = () => {
-      pointerRef.current.x = 0;
-      pointerRef.current.y = 0;
       xQuick?.(0);
       yQuick?.(0);
       rxQuick?.(0);
@@ -408,107 +351,37 @@ export const Hero: React.FC<HeroProps> = ({
                 </div>
               </div>
 
-              {/* Plane 2 & 3 (5 Cols Stack): Interactive 3D Raking-Light Plaster Alcove + Pavilion Visualiser Handoff */}
-              <div className="col-span-12 sm:col-span-5 min-w-0 flex flex-col justify-between gap-3">
-                {/* Plane 2: Live 3D Architectural Plaster & Shadow-Line Reveal Study */}
-                <div
-                  ref={alcoveCardRef}
-                  className="hero-visual-plane relative flex-1 min-h-[165px] sm:min-h-[175px] border border-warm-grey/50 dark:border-white/15 overflow-hidden shadow-lg"
-                >
-                  <HeroArchitecturalScene
-                    activePreset={activePreset}
-                    isDark={isDark}
-                    pointerRef={pointerRef}
-                    reducedMotion={reducedMotion}
-                  />
-
-                  <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none z-10">
-                    <span className="font-mono text-[9px] uppercase tracking-[0.18em] px-2 py-0.5 bg-white/90 dark:bg-[#141513]/90 text-charcoal dark:text-[#F4F1EA] border border-warm-grey/40 dark:border-white/15">
-                      3D RAKING LIGHT ALCOVE
-                    </span>
-                    <span
-                      className="w-3.5 h-3.5 border border-black/30 shadow-xs transition-colors duration-300"
-                      style={{ backgroundColor: activePreset.hex }}
-                    />
-                  </div>
-
-                  <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none z-10 font-mono text-[9px] uppercase tracking-wider text-charcoal dark:text-[#F4F1EA] bg-white/90 dark:bg-[#141513]/90 px-2.5 py-1 border border-warm-grey/30 dark:border-white/10">
-                    <span className="truncate">{activePreset.name}</span>
-                    <span className="text-bronze dark:text-[#C9B28F] ml-1 shrink-0">
-                      {activePreset.hex}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Plane 3: Architectural Pavilion Form & Direct Visualiser Entry */}
-                <div
-                  ref={pavilionCardRef}
-                  className="hero-visual-plane relative h-28 sm:h-32 border border-warm-grey/50 dark:border-white/15 bg-charcoal overflow-hidden group"
-                >
-                  <Image
-                    src="/images/architectural-pavilion.jpg"
-                    alt="Contemporary architectural pavilion highlighting natural light and surface planes"
-                    fill
-                    sizes="(max-width: 1024px) 100vw, 22vw"
-                    className="object-cover object-center filter contrast-[1.04] transition-transform duration-700 ease-out group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
-                  <div className="absolute inset-0 p-2.5 flex flex-col justify-between z-10">
-                    <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-white/85">
-                      DAYLIGHT GEOMETRY
-                    </span>
-                    <Link
-                      href={`/visualiser?finish=${encodeURIComponent(activePreset.name)}`}
-                      className="inline-flex items-center justify-between gap-2 w-full bg-white/95 hover:bg-white dark:bg-[#181917]/95 dark:hover:bg-black text-charcoal dark:text-white px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] border border-white/20 transition-colors"
-                    >
-                      <span>Test On Your Wall</span>
-                      <span aria-hidden="true">&rarr;</span>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Integrated 4-Finish Calibration Console directly beneath the 3D & Photographic Showcase */}
-            <div className="hero-visual-plane bg-white/85 dark:bg-[#20211F]/90 border border-warm-grey/40 dark:border-white/15 p-3">
-              <div className="flex flex-wrap items-center justify-start gap-x-3 gap-y-1 mb-2">
-                <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-warm-grey-dark dark:text-[#A8A59E]">
-                  CALIBRATE 3D ALCOVE FINISH (ILLUSTRATIVE):
-                </span>
-                <span className="font-mono text-[10px] uppercase tracking-wider text-bronze dark:text-[#C9B28F] font-semibold">
-                  {activePreset.sheenLabel}
-                </span>
-              </div>
+              {/* Plane 2 (5 Cols): Complementary Cinematic Architectural Inspiration */}
               <div
-                role="group"
-                aria-label="Calibrate Hero architectural finish study"
-                className="grid grid-cols-2 sm:grid-cols-4 gap-2"
+                ref={pavilionCardRef}
+                className="hero-visual-plane col-span-12 sm:col-span-5 min-w-0 relative h-64 sm:h-[300px] lg:h-[320px] border border-warm-grey/40 dark:border-white/15 bg-charcoal overflow-hidden shadow-lg group"
               >
-                {HERO_FINISH_PRESETS.map((preset) => {
-                  const isSelected = preset.id === activePreset.id;
-                  return (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => setActivePreset(preset)}
-                      aria-pressed={isSelected}
-                      className={`flex items-center gap-2 px-2.5 py-1.5 border text-left transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-charcoal dark:bg-[#F4F1EA] text-white dark:text-charcoal border-charcoal dark:border-[#F4F1EA]'
-                          : 'bg-ivory/80 dark:bg-[#181917] text-charcoal dark:text-[#F4F1EA] border-warm-grey/40 dark:border-white/15 hover:border-bronze'
-                      }`}
-                    >
-                      <span
-                        className="w-3 h-3 shrink-0 border border-black/25"
-                        style={{ backgroundColor: preset.hex }}
-                        aria-hidden="true"
-                      />
-                      <span className="font-mono text-[10px] uppercase tracking-wider truncate">
-                        {preset.name.split(' ').slice(0, 2).join(' ')}
-                      </span>
-                    </button>
-                  );
-                })}
+                <Image
+                  src="/images/architectural-pavilion.jpg"
+                  alt="Architectural pavilion interior showcasing warm daylight across textured plaster surfaces (illustrative inspiration)"
+                  fill
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 24vw"
+                  className="object-cover object-center filter contrast-[1.04] transition-transform duration-700 ease-out group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent pointer-events-none" />
+                <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none z-10">
+                  <span className="font-mono text-[9px] uppercase tracking-[0.2em] px-2.5 py-1 bg-black/75 text-white/90 border border-white/15 backdrop-blur-xs">
+                    ARCHITECTURAL INSPIRATION
+                  </span>
+                </div>
+                <div className="absolute bottom-3 left-3 right-3 flex flex-col gap-2 z-10">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/85 drop-shadow-sm">
+                    WARM DAYLIGHT SURFACE STUDY
+                  </p>
+                  <Link
+                    href="/visualiser"
+                    className="inline-flex items-center justify-between gap-2 w-full bg-white/95 hover:bg-white dark:bg-[#181917]/95 dark:hover:bg-black text-charcoal dark:text-white px-3 py-2 font-mono text-[10px] uppercase tracking-[0.16em] border border-white/20 transition-colors"
+                  >
+                    <span>Explore Finish Studio</span>
+                    <span aria-hidden="true">&rarr;</span>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>

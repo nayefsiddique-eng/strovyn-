@@ -15,9 +15,10 @@ export interface NavItem {
 
 export const navItems: NavItem[] = [
   { label: "Home", href: "/" },
-  { label: "About", href: "/about" },
   { label: "Services", href: "/services" },
   { label: "Projects", href: "/projects" },
+  { label: "Approach", href: "/#approach" },
+  { label: "About", href: "/about" },
   { label: "Insights", href: "/insights" },
   { label: "Careers", href: "/careers" },
   { label: "Contact", href: "/contact" },
@@ -123,28 +124,65 @@ export const Header: React.FC<HeaderProps> = ({
           className
         )}
       >
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="flex items-center justify-between h-16 md:h-20">
-              {/* Left: Brand Logo Text / Wordmark (official wordmark without trailing punctuation) */}
-              <Link
-                href="/"
-                className="group inline-flex items-center gap-2 focus-visible:outline-none"
-                aria-label="Strovyn Painting Co. - Return to homepage"
-              >
-                <span className="font-display font-normal tracking-[0.03em] text-2xl sm:text-3xl text-charcoal uppercase leading-none">
-                  STROVYN
-                </span>
-              </Link>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 md:h-20 gap-3">
+              {/* Far-Left: Unified 3-Line Hamburger Trigger + Brand Wordmark */}
+              <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(true)}
+                  aria-label="Open navigation menu"
+                  aria-expanded={mobileMenuOpen}
+                  aria-controls="site-navigation-drawer"
+                  className={cn(
+                    "flex flex-col justify-center items-center w-9 h-9 gap-[5px] border transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-bronze cursor-pointer",
+                    isSolid
+                      ? "border-warm-grey/35 dark:border-white/15 hover:border-bronze"
+                      : "border-white/25 hover:border-white/60"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "block w-5 h-[1.5px] transition-colors duration-200",
+                      isSolid ? "bg-charcoal" : "bg-white"
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      "block w-5 h-[1.5px] transition-colors duration-200",
+                      isSolid ? "bg-charcoal" : "bg-white"
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      "block w-5 h-[1.5px] transition-colors duration-200",
+                      isSolid ? "bg-charcoal" : "bg-white"
+                    )}
+                  />
+                </button>
+
+                <Link
+                  href="/"
+                  className="group inline-flex items-center gap-2 focus-visible:outline-none"
+                  aria-label="Strovyn Painting Co. - Return to homepage"
+                >
+                  <span className="font-display font-normal tracking-[0.03em] text-2xl sm:text-3xl text-charcoal uppercase leading-none">
+                    STROVYN
+                  </span>
+                </Link>
+              </div>
 
             {/* Center: Desktop Navigation Links */}
             <nav
-              className="hidden lg:flex items-center gap-5 xl:gap-8"
+              className="hidden lg:flex items-center gap-5 xl:gap-7"
               aria-label="Main Navigation"
             >
               {navItems.map((item) => {
                 const isActive =
                   item.href === "/"
                     ? pathname === "/"
+                    : item.href.startsWith("/#")
+                    ? false
                     : pathname === item.href ||
                       pathname?.startsWith(`${item.href}/`);
 
@@ -231,52 +269,25 @@ export const Header: React.FC<HeaderProps> = ({
                   <span className="!text-white font-semibold">GET A QUOTE</span>
                 </Link>
               </div>
-
-              {/* Mobile Hamburger Trigger (3 thin architectural lines) */}
-              <button
-                type="button"
-                onClick={() => setMobileMenuOpen(true)}
-                aria-label="Open mobile navigation menu"
-                aria-expanded={mobileMenuOpen}
-                className="lg:hidden flex flex-col justify-center items-center w-10 h-10 gap-1.5 focus:outline-none cursor-pointer"
-              >
-                <span
-                  className={cn(
-                    "block w-6 h-[1.5px] transition-colors duration-200",
-                    isSolid ? "bg-charcoal" : "bg-white"
-                  )}
-                />
-                <span
-                  className={cn(
-                    "block w-6 h-[1.5px] transition-colors duration-200",
-                    isSolid ? "bg-charcoal" : "bg-white"
-                  )}
-                />
-                <span
-                  className={cn(
-                    "block w-6 h-[1.5px] transition-colors duration-200",
-                    isSolid ? "bg-charcoal" : "bg-white"
-                  )}
-                />
-              </button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Fullscreen Mobile Navigation Menu */}
+      {/* Unified Left-Triggered Navigation Drawer */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
+            id="site-navigation-drawer"
             key="mobile-nav-menu"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.25, 1, 0.5, 1] }}
+            transition={{ duration: 0.25, ease: [0.25, 1, 0.5, 1] }}
             className="fixed inset-0 z-[60] bg-ivory text-charcoal flex flex-col justify-between overflow-y-auto"
             role="dialog"
             aria-modal="true"
-            aria-label="Mobile Navigation Menu"
+            aria-label="Site Navigation Menu"
           >
             {/* Top Bar inside Menu */}
             <div className="border-b border-warm-grey/30">
@@ -321,16 +332,18 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
 
-            {/* Mobile Navigation Links */}
-            <div className="max-w-7xl w-full mx-auto px-6 sm:px-8 py-10 flex-1 flex flex-col justify-center">
+            {/* Navigation Links */}
+            <div className="max-w-7xl w-full mx-auto px-6 sm:px-8 py-8 flex-1 flex flex-col justify-center">
               <nav
                 className="flex flex-col divide-y divide-warm-grey/20 border-y border-warm-grey/20"
-                aria-label="Mobile Navigation Links"
+                aria-label="Drawer Navigation Links"
               >
                 {navItems.map((item, index) => {
                   const isActive =
                     item.href === "/"
                       ? pathname === "/"
+                      : item.href.startsWith("/#")
+                      ? false
                       : pathname === item.href ||
                         pathname?.startsWith(`${item.href}/`);
 
@@ -340,8 +353,8 @@ export const Header: React.FC<HeaderProps> = ({
                       initial={{ opacity: 0, x: -16 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{
-                        delay: 0.05 * index,
-                        duration: 0.35,
+                        delay: 0.04 * index,
+                        duration: 0.3,
                         ease: [0.25, 1, 0.5, 1],
                       }}
                     >
@@ -349,7 +362,7 @@ export const Header: React.FC<HeaderProps> = ({
                         href={item.href}
                         onClick={() => setMobileMenuOpen(false)}
                         className={cn(
-                          "group py-4 sm:py-5 flex items-center justify-between text-2xl sm:text-3xl type-card-title uppercase tracking-[0.02em] transition-colors",
+                          "group py-3.5 sm:py-4 flex items-center justify-between text-xl sm:text-2xl type-card-title uppercase tracking-[0.02em] transition-colors",
                           isActive
                             ? "text-bronze"
                             : "text-charcoal hover:text-bronze"
@@ -374,6 +387,38 @@ export const Header: React.FC<HeaderProps> = ({
                   );
                 })}
               </nav>
+
+              {/* Clearly Separated Staff Portal Access */}
+              <div className="mt-6 pt-5 border-t border-warm-grey/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-warm-grey-dark">
+                    STROVYN INTERNAL
+                  </p>
+                  <p className="font-sans text-xs text-charcoal-muted mt-0.5">
+                    Business CMS &amp; Studio Operations
+                  </p>
+                </div>
+                <Link
+                  href="/admin"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="inline-flex items-center justify-center gap-2 border border-charcoal/30 hover:border-bronze px-4 py-2.5 font-mono text-xs uppercase tracking-[0.16em] text-charcoal hover:text-bronze transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-bronze"
+                >
+                  <svg
+                    className="w-3.5 h-3.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                  <span>Staff Sign In</span>
+                </Link>
+              </div>
             </div>
 
             {/* Bottom Callout & Action */}
