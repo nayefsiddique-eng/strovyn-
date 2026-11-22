@@ -373,8 +373,9 @@ export const ClientExperiencesCarousel: React.FC<ClientExperiencesCarouselProps>
               )}
             </div>
 
-            {/* Carousel Controls & Progress Indicator */}
-            <div className="mt-8 pb-4 sm:pb-0 flex flex-wrap items-center justify-between gap-4">
+            {/* Carousel Controls & Progress Indicator (only when > 1 testimonial) */}
+            {canNavigate && (
+              <div className="mt-8 pb-4 sm:pb-0 flex flex-wrap items-center justify-between gap-4">
               {/* Progress Bar & Slide Dots */}
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div
@@ -443,6 +444,7 @@ export const ClientExperiencesCarousel: React.FC<ClientExperiencesCarouselProps>
                 </button>
               </div>
             </div>
+            )}
           </div>
         )}
       </div>
