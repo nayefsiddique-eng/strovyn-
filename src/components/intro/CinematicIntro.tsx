@@ -450,8 +450,9 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
 
     raf1 = window.requestAnimationFrame(() => {
       raf2 = window.requestAnimationFrame(() => {
-        if (!isExitingRef.current) {
-          timelineRef.current?.play(0);
+        if (!isExitingRef.current && timelineRef.current) {
+          timelineRef.current.timeScale(1.65);
+          timelineRef.current.play(0);
         }
       });
     });

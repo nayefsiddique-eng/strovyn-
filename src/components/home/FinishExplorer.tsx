@@ -2,6 +2,21 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+const ArchitecturalSurfaceStudio = dynamic(
+  () => import('@/components/three/ArchitecturalSurfaceStudio'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-72 sm:h-80 border border-warm-grey/30 bg-[#EAE6DD] flex items-end p-5">
+        <span className="font-mono text-[11px] uppercase tracking-widest text-charcoal/70">
+          Initializing Architectural Surface Studio...
+        </span>
+      </div>
+    ),
+  }
+);
 
 interface PaletteOption {
   name: string;
@@ -57,6 +72,9 @@ const PALETTES: PaletteOption[] = [
 
 export const FinishExplorer: React.FC = () => {
   const [selected, setSelected] = useState<PaletteOption>(PALETTES[0]);
+  const [lightAngleDeg, setLightAngleDeg] = useState<number>(24);
+  const [lightTemp, setLightTemp] = useState<'daylight' | 'warm'>('daylight');
+  const [resetTrigger, setResetTrigger] = useState<number>(0);
 
   return (
     <section aria-label="Colour and Finish Explorer" className="py-20 md:py-28 px-6 sm:px-8 lg:px-12 max-w-7xl mx-auto border-b border-warm-grey/30">
@@ -133,13 +151,73 @@ export const FinishExplorer: React.FC = () => {
             </span>
           </div>
 
-          {/* Color & Texture Preview Swatch */}
-          <div
-            className="w-full h-44 sm:h-52 border border-warm-grey/40 relative shadow-inner flex items-end p-6 transition-colors duration-500"
-            style={{ backgroundColor: selected.hex }}
-          >
-            <div className="bg-white/95 backdrop-blur-sm p-3 text-xs border border-black/10 font-mono text-charcoal">
-              Calibrated Sheen: {selected.sheen}
+          {/* Interactive 3D Architectural Surface Studio (Lazy-Loaded) */}
+          <div className="space-y-3">
+            <ArchitecturalSurfaceStudio
+              colorHex={selected.hex}
+              finishName={selected.name}
+              category={selected.category}
+              sheenLabel={selected.sheen}
+              lightAngleDeg={lightAngleDeg}
+              lightTemp={lightTemp}
+              resetTrigger={resetTrigger}
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center bg-ivory border border-warm-grey/30 p-3.5 text-xs">
+              <label className="sm:col-span-6 flex flex-col gap-1.5 font-mono text-[10px] uppercase tracking-wider text-charcoal">
+                <span>Raking Light Angle ({lightAngleDeg}°)</span>
+                <input
+                  type="range"
+                  min={10}
+                  max={75}
+                  value={lightAngleDeg}
+                  onChange={(e) => setLightAngleDeg(Number(e.target.value))}
+                  aria-label="Raking Light Angle"
+                  className="w-full accent-[#A78B65] cursor-pointer"
+                />
+              </label>
+              <div className="sm:col-span-4 flex items-center gap-1.5 font-mono text-[10px]">
+                <button
+                  type="button"
+                  onClick={() => setLightTemp('daylight')}
+                  className={`flex-1 py-1.5 px-2 border transition-colors cursor-pointer ${
+                    lightTemp === 'daylight'
+                      ? 'bg-charcoal text-white border-charcoal'
+                      : 'bg-white text-charcoal border-warm-grey/40 hover:border-bronze'
+                  }`}
+                >
+                  5500K Day
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLightTemp('warm')}
+                  className={`flex-1 py-1.5 px-2 border transition-colors cursor-pointer ${
+                    lightTemp === 'warm'
+                      ? 'bg-charcoal text-white border-charcoal'
+                      : 'bg-white text-charcoal border-warm-grey/40 hover:border-bronze'
+                  }`}
+                >
+                  2700K Warm
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setLightAngleDeg(24);
+                  setLightTemp('daylight');
+                  setResetTrigger((n) => n + 1);
+                }}
+                className="sm:col-span-2 py-1.5 px-2 border border-warm-grey/50 bg-white hover:border-bronze font-mono text-[10px] uppercase tracking-wider text-charcoal transition-colors cursor-pointer"
+              >
+                Reset
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1 font-mono text-[11px] text-warm-grey-dark">
+              <span>Calibrated Sheen (Simulated): {selected.sheen}</span>
+              <span className="text-[10px] uppercase tracking-widest text-bronze">
+                Illustrative Surface Simulation
+              </span>
             </div>
           </div>
 

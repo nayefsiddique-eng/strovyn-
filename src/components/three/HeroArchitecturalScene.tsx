@@ -399,6 +399,7 @@ export const HeroArchitecturalScene: React.FC<HeroArchitecturalSceneProps> = ({
             gl={{
               antialias: true,
               alpha: true,
+              preserveDrawingBuffer: true,
               powerPreference: 'high-performance',
             }}
           >

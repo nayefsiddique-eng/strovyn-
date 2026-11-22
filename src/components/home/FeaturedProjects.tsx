@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import type { PublicProjectDetail } from '@/lib/cms/publicProjects';
 import Button from '@/components/ui/Button';
+import { ArchitecturalTiltCard } from '@/components/ui/ArchitecturalTiltCard';
 
 export interface VerifiedProjectGalleryItem {
   id: string;
@@ -307,14 +308,19 @@ export const FeaturedProjects: React.FC<FeaturedProjectsProps> = ({
           {activeProject.views.length > 1 && (
             <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-warm-grey/30 bg-ivory/20">
               {activeProject.views.slice(1).map((view, idx) => (
-                <motion.div
+                <ArchitecturalTiltCard
                   key={view.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: '-60px' }}
-                  transition={{ duration: 0.7, delay: 0.15 * (idx + 1), ease: [0.16, 1, 0.3, 1] }}
-                  className="group flex flex-col justify-between p-6 sm:p-8"
+                  maxTilt={3.2}
+                  sheenOpacity={0.07}
+                  className="bg-white/60"
                 >
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: '-60px' }}
+                    transition={{ duration: 0.7, delay: 0.12 * (idx + 1), ease: [0.16, 1, 0.3, 1] }}
+                    className="group flex flex-col justify-between p-6 sm:p-8"
+                  >
                   <Link
                     href={`/projects/${activeProject.slug}`}
                     className="relative aspect-[16/10] w-full overflow-hidden bg-charcoal block cursor-pointer mb-4"
@@ -347,6 +353,7 @@ export const FeaturedProjects: React.FC<FeaturedProjectsProps> = ({
                     </Link>
                   </div>
                 </motion.div>
+                </ArchitecturalTiltCard>
               ))}
             </div>
           )}

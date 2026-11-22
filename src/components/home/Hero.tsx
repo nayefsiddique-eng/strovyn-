@@ -180,6 +180,19 @@ export const Hero: React.FC<HeroProps> = ({
     const yQuick = primaryPhotoWrapRef.current
       ? gsap.quickTo(primaryPhotoWrapRef.current, 'y', { duration: 0.6, ease: 'power3.out' })
       : null;
+    const rxQuick = primaryPhotoWrapRef.current
+      ? gsap.quickTo(primaryPhotoWrapRef.current, 'rotateX', { duration: 0.7, ease: 'power3.out' })
+      : null;
+    const ryQuick = primaryPhotoWrapRef.current
+      ? gsap.quickTo(primaryPhotoWrapRef.current, 'rotateY', { duration: 0.7, ease: 'power3.out' })
+      : null;
+
+    if (primaryPhotoWrapRef.current && !isReduced) {
+      gsap.set(primaryPhotoWrapRef.current, {
+        transformPerspective: 1200,
+        transformStyle: 'preserve-3d',
+      });
+    }
 
     const handlePointerMove = (e: PointerEvent) => {
       if (isReduced) return;
@@ -191,6 +204,8 @@ export const Hero: React.FC<HeroProps> = ({
 
       xQuick?.(nx * -6);
       yQuick?.(ny * -4);
+      rxQuick?.(-ny * 2.2);
+      ryQuick?.(nx * 2.2);
     };
 
     const handlePointerLeave = () => {
@@ -198,6 +213,8 @@ export const Hero: React.FC<HeroProps> = ({
       pointerRef.current.y = 0;
       xQuick?.(0);
       yQuick?.(0);
+      rxQuick?.(0);
+      ryQuick?.(0);
     };
 
     section.addEventListener('pointermove', handlePointerMove, { passive: true });
@@ -216,7 +233,7 @@ export const Hero: React.FC<HeroProps> = ({
     <section
       ref={sectionRef}
       aria-label="Strovyn Brand Opening & Introduction"
-      className={`relative w-full min-h-screen bg-ivory dark:bg-[#181917] text-charcoal dark:text-[#F4F1EA] flex flex-col justify-between pt-20 sm:pt-24 pb-20 sm:pb-16 px-6 sm:px-8 lg:px-12 xl:px-16 overflow-hidden selection:bg-brand-red selection:text-white transition-colors duration-300 ${className}`}
+      className={`relative w-full min-h-screen bg-ivory dark:bg-[#181917] text-charcoal dark:text-[#F4F1EA] flex flex-col justify-between pt-20 sm:pt-24 pb-28 sm:pb-16 px-6 sm:px-8 lg:px-12 xl:px-16 overflow-hidden selection:bg-brand-red selection:text-white transition-colors duration-300 ${className}`}
     >
       {/* Background Architectural Drafting Grid & Subtle Raking Daylight Wash */}
       <div

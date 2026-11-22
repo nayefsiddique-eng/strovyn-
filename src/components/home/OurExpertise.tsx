@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import Button from '@/components/ui/Button';
+import { ArchitecturalTiltCard } from '@/components/ui/ArchitecturalTiltCard';
 
 export interface ExpertiseItem {
   number: string;
@@ -138,18 +139,23 @@ export const OurExpertise: React.FC<OurExpertiseProps> = ({ className = '' }) =>
         {/* Haven-Inspired Architectural Portfolio Grid (Large Image Cards) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10">
           {expertiseServices.map((service, index) => (
-            <motion.article
+            <ArchitecturalTiltCard
               key={service.slug}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-60px' }}
-              transition={{
-                duration: 0.7,
-                ease: [0.16, 1, 0.3, 1],
-                delay: index * 0.1,
-              }}
-              className="group border border-white/10 bg-[#2A2B29] flex flex-col justify-between transition-all duration-300 hover:shadow-xl hover:border-bronze/50"
+              maxTilt={3.5}
+              sheenOpacity={0.07}
+              className="flex"
             >
+              <motion.article
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-60px' }}
+                transition={{
+                  duration: 0.7,
+                  ease: [0.16, 1, 0.3, 1],
+                  delay: index * 0.08,
+                }}
+                className="group w-full border border-white/10 bg-[#2A2B29] flex flex-col justify-between transition-all duration-300 hover:shadow-xl hover:border-bronze/50"
+              >
               <div>
                 {/* Large Architectural Photograph */}
                 <Link
@@ -205,6 +211,7 @@ export const OurExpertise: React.FC<OurExpertiseProps> = ({ className = '' }) =>
                 </Link>
               </div>
             </motion.article>
+            </ArchitecturalTiltCard>
           ))}
         </div>
       </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -45,7 +45,10 @@ const educationalStages: PreparationStage[] = [
 
 export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
   className,
+  initialPosition = 62,
 }) => {
+  const [splitPct, setSplitPct] = useState<number>(initialPosition);
+
   return (
     <section
       id="surface-transformation"
@@ -91,25 +94,62 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
           className="border border-warm-grey/40 bg-white mb-12 sm:mb-16 overflow-hidden shadow-none"
         >
           <div className="grid grid-cols-1 lg:grid-cols-12">
-            {/* Primary Verified Project Photograph (8 Cols) */}
-            <div className="lg:col-span-8 relative min-h-[380px] sm:min-h-[460px] lg:min-h-[520px] bg-charcoal overflow-hidden group">
+            {/* Interactive Surface & Space Comparison (8 Cols) */}
+            <div className="lg:col-span-8 relative min-h-[380px] sm:min-h-[460px] lg:min-h-[520px] bg-charcoal overflow-hidden select-none">
+              {/* Base Layer: Illustrative Surface Texture Study */}
               <Image
-                src="/images/projects/adelaide-luxury-residence/living-dining-2.jpg"
-                alt="Adelaide Residence · Architectural Residential Interior by Strovyn Painting Co."
+                src="/images/architectural-paint-swatch.jpg"
+                alt="Illustrative Architectural Surface Texture Study"
                 fill
                 sizes="(max-width: 1024px) 100vw, 66vw"
-                className="object-cover object-center transition-transform duration-700 ease-out group-hover:scale-[1.02]"
-                priority
+                className="object-cover object-center"
               />
-              <div className="absolute inset-0 bg-charcoal/10 pointer-events-none" />
+
+              {/* Clipped Top Layer: Verified Completed Adelaide Residence */}
+              <div
+                className="absolute inset-0 overflow-hidden"
+                style={{ clipPath: `inset(0 ${100 - splitPct}% 0 0)` }}
+              >
+                <Image
+                  src="/images/projects/adelaide-luxury-residence/living-dining-2.jpg"
+                  alt="Adelaide Residence · Architectural Residential Interior by Strovyn Painting Co."
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 66vw"
+                  className="object-cover object-center"
+                  priority
+                />
+                <div className="absolute inset-0 bg-charcoal/10 pointer-events-none" />
+              </div>
+
+              {/* Vertical Comparison Divider & Handle */}
+              <div
+                aria-hidden="true"
+                className="absolute top-0 bottom-0 w-[2px] bg-white shadow-[0_0_12px_rgba(0,0,0,0.45)] pointer-events-none z-10"
+                style={{ left: `${splitPct}%` }}
+              >
+                <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-9 h-9 bg-charcoal border-2 border-bronze text-white flex items-center justify-center font-mono text-[10px] shadow-lg">
+                  &harr;
+                </div>
+              </div>
+
+              {/* Accessible Range Input Overlay */}
+              <input
+                type="range"
+                min={10}
+                max={90}
+                value={splitPct}
+                onChange={(e) => setSplitPct(Number(e.target.value))}
+                aria-label="Compare Completed Residence and Illustrative Surface Detail"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-20"
+              />
 
               {/* Verified Project Badge */}
               <div className="absolute bottom-6 left-6 z-10 bg-white/95 border border-warm-grey/40 px-4 py-2 pointer-events-none">
                 <span className="font-mono text-[10px] text-bronze uppercase tracking-widest font-semibold block mb-0.5">
-                  COMPLETED WORK · ADELAIDE
+                  COMPLETED WORK · ADELAIDE · DRAG TO COMPARE
                 </span>
                 <span className="type-card-title text-sm sm:text-base text-charcoal">
-                  Adelaide Residence · Architectural Residential Interior
+                  Adelaide Residence vs. Illustrative Surface Study
                 </span>
               </div>
             </div>

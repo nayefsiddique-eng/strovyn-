@@ -348,7 +348,7 @@ export const AIAssistant: React.FC = () => {
       {/* Coordinated Bottom-Right Concierge Trigger (directly above WhatsApp on md+, above mobile bar on < md) */}
       <div
         data-floating-stro="true"
-        className="fixed right-3.5 bottom-[calc(4.15rem+env(safe-area-inset-bottom))] md:right-5 md:bottom-[72px] z-40 font-sans"
+        className="fixed right-3.5 bottom-[calc(4.45rem+env(safe-area-inset-bottom))] md:right-5 md:bottom-[72px] z-40 font-sans [perspective:1000px]"
       >
         <button
           ref={launcherBtnRef}
@@ -367,10 +367,10 @@ export const AIAssistant: React.FC = () => {
               ? 'Close STRO Digital Assistant'
               : 'Open STRO — Strovyn Digital Assistant'
           }
-          className={`group flex items-center gap-2.5 h-11 px-3.5 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.32)] border transition-[transform,border-color] duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bronze ${
+          className={`group flex items-center gap-2.5 h-11 px-3.5 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.32)] border transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bronze ${
             isOpen
               ? 'bg-[#20211F] text-[#F4F1EA] border-bronze/70 dark:bg-[#F4F1EA] dark:text-[#20211F] dark:border-bronze'
-              : 'bg-ivory-light/98 dark:bg-[#1E1F1D]/98 text-charcoal dark:text-[#F4F1EA] border-charcoal/25 dark:border-white/20 hover:border-bronze hover:-translate-y-0.5'
+              : 'bg-ivory-light/98 dark:bg-[#1E1F1D]/98 text-charcoal dark:text-[#F4F1EA] border-charcoal/25 dark:border-white/20 hover:border-bronze hover:-translate-y-0.5 hover:shadow-[0_16px_36px_-8px_rgba(0,0,0,0.38)]'
           }`}
         >
           <StroLogo size={20} className="shrink-0" />

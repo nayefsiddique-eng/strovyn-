@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import { ArchitecturalTiltCard } from '@/components/ui/ArchitecturalTiltCard';
 
 export interface ProcessStep {
   number: string;
@@ -101,18 +102,23 @@ export const StrovynApproach: React.FC<StrovynApproachProps> = ({ className = ''
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-8 relative z-10">
             {processStages.map((step, idx) => (
-              <motion.div
+              <ArchitecturalTiltCard
                 key={step.number}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-60px' }}
-                transition={{
-                  duration: 0.7,
-                  ease: [0.16, 1, 0.3, 1],
-                  delay: idx * 0.12,
-                }}
-                className="bg-[#20211F] border border-white/15 p-6 sm:p-8 flex flex-col justify-between group hover:border-bronze/60 transition-all duration-300"
+                maxTilt={2.5}
+                sheenOpacity={0.05}
+                className="flex"
               >
+                <motion.div
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-60px' }}
+                  transition={{
+                    duration: 0.7,
+                    ease: [0.16, 1, 0.3, 1],
+                    delay: idx * 0.1,
+                  }}
+                  className="w-full bg-[#20211F] border border-white/15 p-6 sm:p-8 flex flex-col justify-between group hover:border-bronze/60 transition-all duration-300"
+                >
                 <div>
                   {/* Step Header with Node */}
                   <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/10">
@@ -147,6 +153,7 @@ export const StrovynApproach: React.FC<StrovynApproachProps> = ({ className = ''
                   </span>
                 </div>
               </motion.div>
+              </ArchitecturalTiltCard>
             ))}
           </div>
         </div>
