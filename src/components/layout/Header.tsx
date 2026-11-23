@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -38,6 +38,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
 
   // Scroll listener to detect when page is scrolled past ~50px
@@ -71,16 +72,19 @@ export const Header: React.FC<HeaderProps> = ({
     setMobileMenuOpen(false);
   }, [pathname]);
 
-  // Close mobile menu on Escape key press
+  // Close mobile menu on Escape key press and restore focus to trigger
   useEffect(() => {
+    if (!mobileMenuOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        e.preventDefault();
         setMobileMenuOpen(false);
+        requestAnimationFrame(() => menuTriggerRef.current?.focus());
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [mobileMenuOpen]);
 
   const [isDark, setIsDark] = useState(false);
 
@@ -127,6 +131,7 @@ export const Header: React.FC<HeaderProps> = ({
               {/* Far-Left: Unified 3-Line Hamburger Trigger + Brand Wordmark */}
               <div className="flex items-center gap-3 sm:gap-4 shrink-0">
                 <button
+                  ref={menuTriggerRef}
                   type="button"
                   onClick={() => setMobileMenuOpen(true)}
                   aria-label="Open navigation menu"
@@ -309,7 +314,10 @@ export const Header: React.FC<HeaderProps> = ({
                 {/* Close Button (X) */}
                 <button
                   type="button"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    requestAnimationFrame(() => menuTriggerRef.current?.focus());
+                  }}
                   aria-label="Close mobile navigation menu"
                   className="w-10 h-10 flex items-center justify-center text-charcoal hover:text-bronze transition-colors focus:outline-none cursor-pointer"
                 >

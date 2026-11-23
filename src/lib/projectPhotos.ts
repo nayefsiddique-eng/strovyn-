@@ -165,14 +165,37 @@ export async function savePhotoOverrideAsync(
   return savePhotoOverride(slug, override);
 }
 
+function applyPhotoOverride(
+  project: PublicProjectDetail,
+  override?: PhotoOverride
+): PublicProjectDetail {
+  if (!override) return project;
+  const heroImage = override.heroImage || project.heroImage;
+  const galleryImages =
+    override.galleryImages && override.galleryImages.length > 0
+      ? override.galleryImages
+      : project.galleryImages;
+  return {
+    ...project,
+    heroImage,
+    galleryImages,
+  };
+}
+
 export async function getProjectsWithOverridesAsync(): Promise<PublicProjectDetail[]> {
-  const overrides = await getPhotoOverridesAsync();
-  return listPublishedProjectsFromDb({ overridesMap: overrides });
+  const [overrides, projects] = await Promise.all([
+    getPhotoOverridesAsync(),
+    listPublishedProjectsFromDb(),
+  ]);
+  return projects.map((project) => applyPhotoOverride(project, overrides[project.slug]));
 }
 
 export async function getPublishedProjectDetailAsync(
   slug: string
 ): Promise<PublicProjectDetail | null> {
-  const overrides = await getPhotoOverridesAsync();
-  return getPublishedProjectBySlugFromDb(slug, { overridesMap: overrides });
+  const [overrides, project] = await Promise.all([
+    getPhotoOverridesAsync(),
+    getPublishedProjectBySlugFromDb(slug),
+  ]);
+  return project ? applyPhotoOverride(project, overrides[slug]) : null;
 }

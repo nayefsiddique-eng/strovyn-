@@ -68,9 +68,15 @@ export const Hero: React.FC<HeroProps> = ({
         )
         .fromTo(
           wordmarkRef.current,
-          { yPercent: 16, opacity: 0 },
-          { yPercent: 0, opacity: 1, duration: 0.7, ease: 'power4.out' },
+          { yPercent: 10 },
+          { yPercent: 0, duration: 0.65, ease: 'power4.out' },
           0.06
+        )
+        .fromTo(
+          '.hero-lcp-h1',
+          { y: 12 },
+          { y: 0, duration: 0.55 },
+          0.1
         )
         .fromTo(
           '.hero-copy-item',
@@ -80,12 +86,11 @@ export const Hero: React.FC<HeroProps> = ({
         )
         .fromTo(
           '.hero-visual-plane',
-          { y: 20, opacity: 0, clipPath: 'inset(6% 0% 6% 0%)' },
+          { y: 16, clipPath: 'inset(4% 0% 4% 0%)' },
           {
             y: 0,
-            opacity: 1,
             clipPath: 'inset(0% 0% 0% 0%)',
-            duration: 0.8,
+            duration: 0.75,
             stagger: 0.09,
             ease: 'power3.out',
           },
@@ -271,7 +276,7 @@ export const Hero: React.FC<HeroProps> = ({
               </span>
 
               {/* Verified Approved Homepage H1 */}
-              <h1 className="hero-copy-item type-hero text-[2.25rem] sm:text-5xl md:text-[3.35rem] xl:text-[3.75rem] text-charcoal dark:text-white mb-4">
+              <h1 className="hero-lcp-h1 type-hero text-[2.25rem] sm:text-5xl md:text-[3.35rem] xl:text-[3.75rem] text-charcoal dark:text-white mb-4">
                 Transforming Spaces. Perfecting Every Finish.
               </h1>
 

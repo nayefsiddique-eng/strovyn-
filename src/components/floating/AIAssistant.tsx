@@ -122,10 +122,16 @@ export const AIAssistant: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const idempotencyKeyRef = useRef<string>('');
 
-  // Auto-scroll newest reply into view
+  // Auto-scroll newest reply into view (respecting reduced-motion)
   useEffect(() => {
     if (isOpen && panelView === 'chat') {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      const prefersReducedMotion =
+        typeof window !== 'undefined' &&
+        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      messagesEndRef.current?.scrollIntoView({
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        block: 'end',
+      });
     }
   }, [messages, loading, isOpen, panelView]);
 
@@ -134,8 +140,9 @@ export const AIAssistant: React.FC = () => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        e.preventDefault();
         setIsOpen(false);
-        launcherBtnRef.current?.focus();
+        requestAnimationFrame(() => launcherBtnRef.current?.focus());
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -364,8 +371,8 @@ export const AIAssistant: React.FC = () => {
           aria-controls="stro-assistant-dialog"
           aria-label={
             isOpen
-              ? 'Close STRO Digital Assistant'
-              : 'Open STRO — Strovyn Digital Assistant'
+              ? 'STRO Finish Guide — Close Digital Assistant'
+              : 'STRO Finish Guide — Open Digital Assistant'
           }
           className={`group flex items-center gap-2.5 h-11 px-3.5 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.32)] border transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bronze ${
             isOpen
@@ -377,7 +384,7 @@ export const AIAssistant: React.FC = () => {
           <div className="flex flex-col items-start text-left leading-none">
             <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.2em]">
               STRO
-            </span>
+            </span>{' '}
             <span
               className={`hidden sm:block text-[9.5px] font-sans tracking-wide mt-0.5 ${
                 isOpen
@@ -440,7 +447,7 @@ export const AIAssistant: React.FC = () => {
                 type="button"
                 onClick={() => {
                   setIsOpen(false);
-                  launcherBtnRef.current?.focus();
+                  requestAnimationFrame(() => launcherBtnRef.current?.focus());
                 }}
                 aria-label="Close STRO assistant"
                 className="p-1.5 text-[#B8B5AE] hover:text-white transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bronze"

@@ -14,9 +14,8 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { spawn } from 'child_process';
 import { normalizeCanonicalUrl } from './lib/urlNormalizer.mjs';
-import { HistoryLedger, generateStableId } from './lib/historyLedger.mjs';
+import { HistoryLedger } from './lib/historyLedger.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -150,7 +149,6 @@ async function runTests() {
   ledgerE.registerDiscovered(fixtureAnnouncements[0]);
   ledgerE.save();
 
-  const originalStats = fs.statSync(ledgerPathE);
   const originalJson = fs.readFileSync(ledgerPathE, 'utf-8');
 
   // Simulate an interrupted write by pointing write to a read-only or invalid destination

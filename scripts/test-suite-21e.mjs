@@ -193,7 +193,6 @@ async function runTests() {
   });
   ledgerF.save();
 
-  const testId = '4ae1a2d5eec3'; // generated ID
   const itemRecord = Object.values(ledgerF.data.records)[0];
   const itemId = itemRecord.id;
 
