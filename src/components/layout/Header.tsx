@@ -174,7 +174,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Center: Desktop Navigation Links */}
             <nav
-              className="hidden lg:flex items-center gap-5 xl:gap-7"
+              className="hidden lg:flex items-center gap-3 xl:gap-6 min-w-0"
               aria-label="Main Navigation"
             >
               {navItems.map((item) => {
@@ -191,7 +191,7 @@ export const Header: React.FC<HeaderProps> = ({
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      "group relative py-2 text-xs font-sans uppercase tracking-[0.16em] transition-colors duration-200",
+                      "group relative py-2 text-[11px] xl:text-xs font-sans uppercase tracking-[0.08em] xl:tracking-[0.15em] whitespace-nowrap transition-colors duration-200",
                       isActive
                         ? isSolid
                           ? "text-charcoal font-semibold"
