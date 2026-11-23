@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { WHATSAPP_DETAILS } from '@/lib/constants';
 
@@ -13,7 +12,6 @@ export interface FinalContactProps {
 
 export const FinalContact: React.FC<FinalContactProps> = ({
   className = '',
-  quoteHref = '/contact',
 }) => {
   return (
     <section

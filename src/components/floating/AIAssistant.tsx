@@ -345,10 +345,10 @@ export const AIAssistant: React.FC = () => {
 
   return (
     <>
-      {/* Coordinated Bottom-Right Concierge Trigger (directly above WhatsApp on md+, above mobile bar on < md) */}
+      {/* Coordinated Bottom-Right Concierge Trigger (paired beside WhatsApp on md+, above mobile bar on < md) */}
       <div
         data-floating-stro="true"
-        className="fixed right-3.5 bottom-[calc(4.45rem+env(safe-area-inset-bottom))] md:right-5 md:bottom-[72px] z-40 font-sans [perspective:1000px]"
+        className="fixed right-3.5 bottom-[calc(4.45rem+env(safe-area-inset-bottom))] md:right-[76px] md:bottom-5 z-40 font-sans [perspective:1000px]"
       >
         <button
           ref={launcherBtnRef}

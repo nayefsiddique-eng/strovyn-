@@ -34,7 +34,6 @@ export interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  forceSolid = false,
   className,
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -110,7 +109,6 @@ export const Header: React.FC<HeaderProps> = ({
     }
   };
 
-  const isHome = pathname === "/";
   const isSolid = true; // Reference design uses clean white background with crisp charcoal links
 
   return (
