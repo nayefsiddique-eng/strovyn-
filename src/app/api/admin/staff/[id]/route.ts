@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
   assertSameOriginCsrf,
+  EditorialHttpError,
   enforceCmsRateLimit,
   mapCmsErrorToResponse,
 } from '@/lib/cms/http';
@@ -24,7 +25,14 @@ export async function PATCH(
     const staff = await requireStaffSession({ action: 'staff:manage' });
     const { id } = await context.params;
     const bodyResult = await readJsonBodyWithLimit(req, 16 * 1024);
-    const body = (bodyResult.ok && bodyResult.data ? bodyResult.data : {}) as {
+    if (!bodyResult.ok) {
+      throw new EditorialHttpError(
+        bodyResult.status === 413 ? 413 : 400,
+        bodyResult.status === 413 ? 'PAYLOAD_TOO_LARGE' : 'BAD_REQUEST',
+        bodyResult.error || 'Invalid JSON request body.'
+      );
+    }
+    const body = (bodyResult.data ?? {}) as {
       role?: EditorialRole;
       isActive?: boolean;
     };
