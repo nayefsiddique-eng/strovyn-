@@ -90,6 +90,7 @@ export const SearchableFAQ: React.FC = () => {
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-warm-grey-dark" />
             <input
               type="text"
+              aria-label="Search frequently asked questions"
               placeholder="Search painting questions, preparation, VOCs, consults..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}

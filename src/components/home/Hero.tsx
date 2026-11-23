@@ -354,7 +354,7 @@ export const Hero: React.FC<HeroProps> = ({
               {/* Plane 2 (5 Cols): Complementary Cinematic Architectural Inspiration */}
               <div
                 ref={pavilionCardRef}
-                className="hero-visual-plane col-span-12 sm:col-span-5 min-w-0 relative h-64 sm:h-[280px] lg:h-[288px] border border-warm-grey/40 dark:border-white/15 bg-charcoal overflow-hidden shadow-lg group"
+                className="hero-visual-plane col-span-12 sm:col-span-5 min-w-0 relative h-64 sm:h-[270px] lg:h-[252px] border border-warm-grey/40 dark:border-white/15 bg-charcoal overflow-hidden shadow-lg group"
               >
                 <Image
                   src="/images/architectural-pavilion.jpg"
