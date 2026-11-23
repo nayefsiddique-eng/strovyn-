@@ -33,8 +33,8 @@ export const FloatingContact: React.FC = () => {
         className="fixed bottom-5 right-5 z-40 hidden md:flex items-center gap-3 font-sans"
       >
         <span
-          className={`px-3 py-1.5 text-[11px] font-mono uppercase tracking-[0.16em] bg-ivory-light dark:bg-[#1E1F1D] text-charcoal dark:text-[#F4F1EA] border border-warm-grey/50 dark:border-white/15 shadow-md pointer-events-none transition-all duration-200 whitespace-nowrap ${
-            labelVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-1'
+          className={`absolute bottom-14 right-0 px-3 py-1.5 text-[11px] font-mono uppercase tracking-[0.16em] bg-ivory-light dark:bg-[#1E1F1D] text-charcoal dark:text-[#F4F1EA] border border-warm-grey/50 dark:border-white/15 shadow-md pointer-events-none transition-all duration-200 whitespace-nowrap ${
+            labelVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'
           }`}
           aria-hidden="true"
         >
