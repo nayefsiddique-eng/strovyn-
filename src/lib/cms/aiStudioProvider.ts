@@ -864,9 +864,9 @@ export class GeminiRestProvider implements AiProviderAdapter {
     const requestId = options.requestId;
 
     try {
-      const endpoint = `${this.baseUrl}/v1beta/models/${encodeURIComponent(
-        this.model
-      )}:generateContent`;
+      const endpoint = /\/v1(?:beta)?$/i.test(this.baseUrl)
+        ? `${this.baseUrl}/models/${encodeURIComponent(this.model)}:generateContent`
+        : `${this.baseUrl}/v1beta/models/${encodeURIComponent(this.model)}:generateContent`;
 
       const systemInstruction = [
         'You are the Strovyn Painting Co. Business CMS Drafting Assistant (Adelaide, South Australia).',
@@ -878,12 +878,11 @@ export class GeminiRestProvider implements AiProviderAdapter {
 
       const generationConfig: Record<string, unknown> = {
         temperature: 0.2,
-        maxOutputTokens: options.maxOutputTokens,
+        maxOutputTokens: /^gemini-2\.5-/i.test(this.model)
+          ? Math.max(options.maxOutputTokens, 4096)
+          : options.maxOutputTokens,
         responseMimeType: 'application/json',
       };
-      if (/^gemini-2\.5-/i.test(this.model)) {
-        generationConfig.thinkingConfig = { thinkingBudget: 0 };
-      }
 
       const res = await fetch(endpoint, {
         method: 'POST',

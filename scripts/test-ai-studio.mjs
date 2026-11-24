@@ -103,7 +103,7 @@ async function run() {
     assert.equal(status.providerName, 'gemini_rest');
     assert.equal(status.model, 'gemini-2.5-flash');
 
-    // 7. Mocked GeminiRestProvider: Valid 200 with fenced JSON + x-goog-api-key + thinkingBudget: 0
+    // 7. Mocked GeminiRestProvider: Valid 200 with fenced JSON + x-goog-api-key + baseUrl /v1beta dedup
     resetAiUsageForTesting();
     let capturedHeaders = null;
     let capturedUrl = null;
@@ -130,12 +130,21 @@ async function run() {
       );
     };
     const liveOk = await executeAiStudioGeneration(activeAdmin.id, validProjectReq, {
-      providerOverride: new GeminiRestProvider('AIzaSyTestKey1234567890', 'gemini-2.5-flash'),
+      providerOverride: new GeminiRestProvider(
+        'AIzaSyTestKey1234567890',
+        'gemini-2.5-flash',
+        'https://gateway.example.test/gemini/v1beta'
+      ),
     });
     assert.equal(liveOk.output.mode, 'project_description');
     assert.ok(!capturedUrl.includes('key='), 'API key must not be in URL query string');
+    assert.equal(
+      capturedUrl,
+      'https://gateway.example.test/gemini/v1beta/models/gemini-2.5-flash:generateContent'
+    );
     assert.equal(capturedHeaders['x-goog-api-key'], 'AIzaSyTestKey1234567890');
-    assert.equal(capturedBody.generationConfig.thinkingConfig.thinkingBudget, 0);
+    assert.equal(capturedBody.generationConfig.maxOutputTokens, 4096);
+    assert.equal(capturedBody.generationConfig.thinkingConfig, undefined);
 
     // 8. Provider HTTP 400 (API_KEY_INVALID) -> 503 AI_CONFIG_ERROR, ZERO duplicate retries
     let calls = 0;
