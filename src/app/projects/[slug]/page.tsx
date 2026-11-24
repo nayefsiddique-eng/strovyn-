@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
@@ -273,7 +273,7 @@ function ProjectDetailBody({
   );
 }
 
-async function DynamicProjectDetail({ params }: Props) {
+export default async function ProjectDetailPage({ params }: Props) {
   await connection();
   const { slug } = await params;
   const projects = await getProjectsWithOverridesAsync();
@@ -285,18 +285,4 @@ async function DynamicProjectDetail({ params }: Props) {
 
   const relatedProjects = projects.filter((p) => p.slug !== project.slug).slice(0, 3);
   return <ProjectDetailBody project={project} relatedProjects={relatedProjects} />;
-}
-
-export default function ProjectDetailPage({ params }: Props) {
-  return (
-    <Suspense
-      fallback={
-        <main className="w-full min-h-screen bg-ivory text-charcoal flex items-center justify-center px-6 py-24 font-mono text-xs uppercase tracking-widest">
-          Loading Commission Case Study...
-        </main>
-      }
-    >
-      <DynamicProjectDetail params={params} />
-    </Suspense>
-  );
 }
