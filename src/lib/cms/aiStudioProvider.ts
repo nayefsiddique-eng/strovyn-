@@ -958,7 +958,7 @@ export class GeminiRestProvider implements AiProviderAdapter {
           throw new EditorialHttpError(
             502,
             'AI_PROVIDER_INVALID_REQUEST',
-            'Draft generation could not be processed with the current service configuration. Your project details have been preserved.',
+            `Draft generation could not be processed with the current service configuration (${res.status} ${providerStatus ?? 'UNKNOWN'}: ${sanitizeProviderLogMessage(providerMessage).slice(0, 120)}). Your project details have been preserved.`,
             undefined,
             { requestId, retryable: false }
           );
