@@ -301,6 +301,10 @@ html.dark main {
 html.dark main .bg-ivory {
   background-color: #20211F !important;
 }
+html.dark main .bg-ivory-light {
+  background-color: #1E1F1D !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+}
 html.dark main .bg-white,
 html.dark main .bg-white\/70,
 html.dark main .bg-\[\#FAF9F5\] {

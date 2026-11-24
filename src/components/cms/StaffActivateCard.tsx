@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { KeyRound, ShieldCheck } from 'lucide-react';
+import { AlertCircle, KeyRound, ShieldCheck } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 export function StaffActivateCard() {
@@ -128,21 +128,21 @@ export function StaffActivateCard() {
     <main className="w-full min-h-screen bg-ivory text-charcoal pt-28 pb-24 px-4 sm:px-6 flex items-center justify-center">
       <div className="w-full max-w-md bg-white border border-warm-grey/60 p-8 sm:p-10 shadow-sm">
         <div className="border-b border-warm-grey/40 pb-6 mb-6">
-          <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.2em] text-bronze mb-3">
+          <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.2em] text-bronze dark:text-[#C9B28F] mb-3">
             <KeyRound className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Strovyn Staff Onboarding</span>
           </div>
-          <h1 className="type-section-title text-3xl text-charcoal">
+          <h1 className="type-section-title text-3xl text-charcoal dark:text-[#F4F1EA]">
             Activate Your Account
           </h1>
-          <p className="font-sans text-sm text-charcoal/75 mt-2 leading-relaxed">
+          <p className="font-sans text-sm text-charcoal/85 dark:text-[#D5D1C8] mt-2 leading-relaxed">
             Set your personal administrator or editorial password from your single-use Strovyn
             invitation link.
           </p>
         </div>
 
         {checkingSession ? (
-          <p className="font-mono text-xs uppercase tracking-widest text-warm-grey-dark py-6">
+          <p className="font-mono text-xs uppercase tracking-widest text-charcoal/80 dark:text-[#D5D1C8] py-6">
             Verifying invitation session...
           </p>
         ) : !userEmail ? (
@@ -150,12 +150,13 @@ export function StaffActivateCard() {
             {errorMessage && (
               <div
                 role="alert"
-                className="border border-brand-red/30 bg-brand-red/5 px-3.5 py-2.5 text-xs font-sans text-brand-red-dark"
+                className="border border-brand-red/40 dark:border-[#C41E1E]/60 bg-brand-red/5 dark:bg-[#2A1818] px-3.5 py-2.5 text-xs font-sans text-brand-red-dark dark:text-[#FCA5A5] flex items-start gap-2"
               >
-                {errorMessage}
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
+                <span>{errorMessage}</span>
               </div>
             )}
-            <div className="border border-warm-grey/50 bg-ivory-light p-4 text-xs font-sans text-charcoal/85 leading-relaxed">
+            <div className="border border-warm-grey/60 dark:border-white/20 bg-ivory-light dark:bg-[#1E1F1D] p-4 text-xs font-sans text-charcoal dark:text-[#F4F1EA] leading-relaxed">
               No active invitation session was detected. Open the single-use invitation link
               sent to your email inbox by a Strovyn administrator, or return to Staff Sign In if
               you have already activated your account.
@@ -169,17 +170,17 @@ export function StaffActivateCard() {
           </div>
         ) : (
           <form onSubmit={handleActivate} className="space-y-5" noValidate>
-            <div className="border border-warm-grey/50 bg-ivory-light px-3.5 py-2.5 flex items-center gap-2 text-xs font-sans text-charcoal">
-              <ShieldCheck className="w-4 h-4 text-bronze shrink-0" aria-hidden="true" />
+            <div className="border border-warm-grey/60 dark:border-white/20 bg-ivory-light dark:bg-[#1E1F1D] px-3.5 py-2.5 flex items-center gap-2 text-xs font-sans text-charcoal dark:text-[#F4F1EA]">
+              <ShieldCheck className="w-4 h-4 text-bronze dark:text-[#C9B28F] shrink-0" aria-hidden="true" />
               <span className="truncate">
-                Verified invitation for <strong>{userEmail}</strong>
+                Verified invitation for <strong className="font-semibold text-charcoal dark:text-white">{userEmail}</strong>
               </span>
             </div>
 
             <div>
               <label
                 htmlFor="activate-password"
-                className="block font-mono text-[11px] uppercase tracking-[0.16em] text-charcoal/85 mb-2"
+                className="block font-mono text-[11px] uppercase tracking-[0.16em] text-charcoal dark:text-[#E8E4DC] mb-2"
               >
                 Create Strong Password (Min 12 chars)
               </label>
@@ -192,14 +193,14 @@ export function StaffActivateCard() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Minimum 12 characters"
-                className="w-full bg-ivory-light border border-warm-grey px-3.5 py-2.5 text-sm font-sans text-charcoal focus-visible:outline-2 focus-visible:outline-bronze"
+                className="w-full bg-ivory-light dark:bg-[#1E1F1D] border border-warm-grey dark:border-white/25 px-3.5 py-2.5 text-sm font-sans text-charcoal dark:text-[#F4F1EA] placeholder:text-charcoal/55 dark:placeholder:text-[#A8A59E] focus-visible:outline-2 focus-visible:outline-bronze"
               />
             </div>
 
             <div>
               <label
                 htmlFor="activate-confirm"
-                className="block font-mono text-[11px] uppercase tracking-[0.16em] text-charcoal/85 mb-2"
+                className="block font-mono text-[11px] uppercase tracking-[0.16em] text-charcoal dark:text-[#E8E4DC] mb-2"
               >
                 Confirm Password
               </label>
@@ -212,24 +213,26 @@ export function StaffActivateCard() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Re-enter your password"
-                className="w-full bg-ivory-light border border-warm-grey px-3.5 py-2.5 text-sm font-sans text-charcoal focus-visible:outline-2 focus-visible:outline-bronze"
+                className="w-full bg-ivory-light dark:bg-[#1E1F1D] border border-warm-grey dark:border-white/25 px-3.5 py-2.5 text-sm font-sans text-charcoal dark:text-[#F4F1EA] placeholder:text-charcoal/55 dark:placeholder:text-[#A8A59E] focus-visible:outline-2 focus-visible:outline-bronze"
               />
             </div>
 
             {errorMessage && (
               <div
                 role="alert"
-                className="border border-brand-red/30 bg-brand-red/5 px-3.5 py-2.5 text-xs font-sans text-brand-red-dark"
+                className="border border-brand-red/40 dark:border-[#C41E1E]/60 bg-brand-red/5 dark:bg-[#2A1818] px-3.5 py-2.5 text-xs font-sans text-brand-red-dark dark:text-[#FCA5A5] flex items-start gap-2"
               >
-                {errorMessage}
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
+                <span>{errorMessage}</span>
               </div>
             )}
             {statusMessage && (
               <div
                 role="status"
-                className="border border-bronze/50 bg-ivory-light px-3.5 py-2.5 text-xs font-sans text-charcoal"
+                className="border border-bronze/50 dark:border-[#C9B28F]/50 bg-ivory-light dark:bg-[#1E1F1D] px-3.5 py-2.5 text-xs font-sans text-charcoal dark:text-[#F4F1EA] flex items-start gap-2"
               >
-                {statusMessage}
+                <ShieldCheck className="w-4 h-4 text-bronze dark:text-[#C9B28F] shrink-0 mt-0.5" aria-hidden="true" />
+                <span>{statusMessage}</span>
               </div>
             )}
 

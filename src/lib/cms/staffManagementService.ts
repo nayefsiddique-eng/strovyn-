@@ -72,6 +72,25 @@ function assertAdmin(actor: StaffProfile) {
   }
 }
 
+/**
+ * Resolve the trusted base origin for invitation and activation redirects
+ * from server-configured NEXT_PUBLIC_SITE_URL (never untrusted Host headers).
+ */
+export function resolveTrustedInvitationOrigin(requestUrl: string): string {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  const candidate = configured || new URL(requestUrl).origin;
+  const parsed = new URL(candidate);
+  const isLocal = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
+  if (parsed.protocol !== 'https:' && !(isLocal && parsed.protocol === 'http:')) {
+    throw new EditorialHttpError(
+      500,
+      'INTERNAL_ERROR',
+      'Invalid NEXT_PUBLIC_SITE_URL configuration for staff invitation redirect.'
+    );
+  }
+  return parsed.origin;
+}
+
 function getClient(override?: SupabaseClient): SupabaseClient {
   if (override) return override;
   if (!isCmsSupabaseConfigured()) {

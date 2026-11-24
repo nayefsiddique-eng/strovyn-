@@ -10,6 +10,7 @@ import { requireStaffSession } from '@/lib/cms/staffAuth';
 import {
   inviteEmployee,
   listStaffDirectory,
+  resolveTrustedInvitationOrigin,
 } from '@/lib/cms/staffManagementService';
 import type { EditorialRole } from '@/lib/cms/roles';
 
@@ -50,9 +51,7 @@ export async function POST(req: Request) {
       role?: EditorialRole;
     };
 
-    const origin =
-      process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-      new URL(req.url).origin;
+    const origin = resolveTrustedInvitationOrigin(req.url);
 
     const invitation = await inviteEmployee(staff, {
       fullName: String(body.fullName || ''),

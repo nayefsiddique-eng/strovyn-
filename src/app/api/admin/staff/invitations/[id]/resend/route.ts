@@ -5,7 +5,10 @@ import {
   mapCmsErrorToResponse,
 } from '@/lib/cms/http';
 import { requireStaffSession } from '@/lib/cms/staffAuth';
-import { resendStaffInvitation } from '@/lib/cms/staffManagementService';
+import {
+  resendStaffInvitation,
+  resolveTrustedInvitationOrigin,
+} from '@/lib/cms/staffManagementService';
 
 const PRIVATE_NO_STORE = {
   'Cache-Control': 'private, no-store, no-cache, must-revalidate, max-age=0',
@@ -21,9 +24,7 @@ export async function POST(
     await enforceCmsRateLimit(req, 'staff_resend_invite', 20, 60_000);
     const staff = await requireStaffSession({ action: 'staff:manage' });
     const { id } = await context.params;
-    const origin =
-      process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-      new URL(req.url).origin;
+    const origin = resolveTrustedInvitationOrigin(req.url);
 
     const invitation = await resendStaffInvitation(staff, id, origin);
     return NextResponse.json(
