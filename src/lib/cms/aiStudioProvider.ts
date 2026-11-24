@@ -827,14 +827,32 @@ function stripJsonCodeFences(raw: string): string {
   return match ? match[1].trim() : trimmed;
 }
 
+function resolveGeminiBaseUrl(): string {
+  const raw = (
+    process.env.STROVYN_AI_BASE_URL?.trim() ||
+    process.env.GOOGLE_GEMINI_BASE_URL?.trim() ||
+    ''
+  ).replace(/\/+$/, '');
+  if (raw && /^https:\/\//i.test(raw)) {
+    return raw;
+  }
+  return 'https://generativelanguage.googleapis.com';
+}
+
 export class GeminiRestProvider implements AiProviderAdapter {
   readonly name = 'gemini_rest' as const;
   readonly model: string;
   private readonly apiKey: string;
+  private readonly baseUrl: string;
 
-  constructor(apiKey: string, model: string = DEFAULT_AI_MODEL) {
+  constructor(
+    apiKey: string,
+    model: string = DEFAULT_AI_MODEL,
+    baseUrl: string = resolveGeminiBaseUrl()
+  ) {
     this.apiKey = apiKey;
     this.model = model;
+    this.baseUrl = baseUrl.replace(/\/+$/, '');
   }
 
   async generateStructured(
@@ -846,7 +864,7 @@ export class GeminiRestProvider implements AiProviderAdapter {
     const requestId = options.requestId;
 
     try {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+      const endpoint = `${this.baseUrl}/v1beta/models/${encodeURIComponent(
         this.model
       )}:generateContent`;
 

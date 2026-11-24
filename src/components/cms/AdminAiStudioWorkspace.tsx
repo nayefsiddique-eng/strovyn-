@@ -528,7 +528,7 @@ export function AdminAiStudioWorkspace({
               </span>
               <span
                 className={`font-sans text-[11px] block mt-1 ${
-                  isActive ? 'text-ivory/80' : 'text-warm-grey-dark'
+                  isActive ? 'text-ivory opacity-80' : 'text-warm-grey-dark'
                 }`}
               >
                 {tab.subtitle}
