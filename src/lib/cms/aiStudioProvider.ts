@@ -1,4 +1,5 @@
 import 'server-only';
+import crypto from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   createServiceRoleClient,
@@ -72,7 +73,7 @@ export interface AiProviderAdapter {
   readonly model: string;
   generateStructured(
     request: AiStudioGenerateRequest,
-    options: { timeoutMs: number; maxOutputTokens: number }
+    options: { timeoutMs: number; maxOutputTokens: number; requestId?: string }
   ): Promise<unknown>;
 }
 
@@ -479,10 +480,13 @@ export async function recordDurableAiOutputUsage(
 }
 
 function resolveConfiguredApiKey(): string | null {
-  const raw =
+  const raw = (
     process.env.STROVYN_AI_API_KEY?.trim() ||
     process.env.GEMINI_API_KEY?.trim() ||
-    '';
+    ''
+  )
+    .replace(/^['"]+|['"]+$/g, '')
+    .trim();
   if (!raw || raw.includes('placeholder') || raw.length < 16) {
     return null;
   }
@@ -808,6 +812,21 @@ export class DeterministicGroundingProvider implements AiProviderAdapter {
   }
 }
 
+function sanitizeProviderLogMessage(raw: string): string {
+  return raw
+    .replace(/AIza[0-9A-Za-z_-]{20,}/g, '[REDACTED_KEY]')
+    .replace(/([?&]key=)[^&\s]+/gi, '$1[REDACTED]')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 240);
+}
+
+function stripJsonCodeFences(raw: string): string {
+  const trimmed = raw.trim();
+  const match = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  return match ? match[1].trim() : trimmed;
+}
+
 export class GeminiRestProvider implements AiProviderAdapter {
   readonly name = 'gemini_rest' as const;
   readonly model: string;
@@ -820,15 +839,16 @@ export class GeminiRestProvider implements AiProviderAdapter {
 
   async generateStructured(
     request: AiStudioGenerateRequest,
-    options: { timeoutMs: number; maxOutputTokens: number }
+    options: { timeoutMs: number; maxOutputTokens: number; requestId?: string }
   ): Promise<unknown> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), options.timeoutMs);
+    const requestId = options.requestId;
 
     try {
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
         this.model
-      )}:generateContent?key=${encodeURIComponent(this.apiKey)}`;
+      )}:generateContent`;
 
       const systemInstruction = [
         'You are the Strovyn Painting Co. Business CMS Drafting Assistant (Adelaide, South Australia).',
@@ -838,9 +858,21 @@ export class GeminiRestProvider implements AiProviderAdapter {
         'Internal links must only use approved routes: /, /about, /services, /services/interior-architectural-painting, /services/exterior-facade-restoration, /services/fine-cabinetry-millwork, /services/artisanal-plasters-lime-washes, /services/historic-heritage-conservation, /services/commercial-hospitality-finishes, /projects, /insights, /careers, /contact, /visualiser, /feedback.',
       ].join(' ');
 
+      const generationConfig: Record<string, unknown> = {
+        temperature: 0.2,
+        maxOutputTokens: options.maxOutputTokens,
+        responseMimeType: 'application/json',
+      };
+      if (/^gemini-2\.5-/i.test(this.model)) {
+        generationConfig.thinkingConfig = { thinkingBudget: 0 };
+      }
+
       const res = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': this.apiKey,
+        },
         signal: controller.signal,
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemInstruction }] },
@@ -850,19 +882,77 @@ export class GeminiRestProvider implements AiProviderAdapter {
               parts: [{ text: JSON.stringify(request) }],
             },
           ],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: options.maxOutputTokens,
-            responseMimeType: 'application/json',
-          },
+          generationConfig,
         }),
       });
 
       if (!res.ok) {
+        let providerStatus: string | undefined;
+        let providerMessage = '';
+        try {
+          const rawErr = await res.text();
+          const parsedErr = JSON.parse(rawErr) as {
+            error?: { status?: string; message?: string };
+          };
+          providerStatus = parsedErr?.error?.status;
+          providerMessage = parsedErr?.error?.message || rawErr;
+        } catch {
+          providerMessage = `HTTP ${res.status}`;
+        }
+
+        console.error('[AI_STUDIO] Provider request failed:', {
+          requestId,
+          httpStatus: res.status,
+          providerStatus: providerStatus ?? 'UNKNOWN',
+          model: this.model,
+          detail: sanitizeProviderLogMessage(providerMessage),
+        });
+
+        const isConfigIssue =
+          res.status === 401 ||
+          res.status === 403 ||
+          (res.status === 400 &&
+            (/API_KEY_INVALID|API key not valid|PERMISSION_DENIED/i.test(
+              `${providerStatus ?? ''} ${providerMessage}`
+            ) ||
+              providerStatus === 'FAILED_PRECONDITION'));
+
+        if (isConfigIssue) {
+          throw new EditorialHttpError(
+            503,
+            'AI_CONFIG_ERROR',
+            'AI generation is unavailable due to a service configuration issue. Contact the site administrator.',
+            undefined,
+            { requestId, retryable: false }
+          );
+        }
+
+        if (res.status === 429 || providerStatus === 'RESOURCE_EXHAUSTED') {
+          throw new EditorialHttpError(
+            429,
+            'RATE_LIMITED',
+            'The AI service is busy. Please try again shortly.',
+            undefined,
+            { requestId, retryable: false }
+          );
+        }
+
+        if (res.status === 400 || res.status === 404) {
+          throw new EditorialHttpError(
+            502,
+            'AI_PROVIDER_INVALID_REQUEST',
+            'Draft generation could not be processed with the current service configuration. Your project details have been preserved.',
+            undefined,
+            { requestId, retryable: false }
+          );
+        }
+
         throw new EditorialHttpError(
           502,
-          'INTERNAL_ERROR',
-          `AI provider request failed with HTTP ${res.status}.`
+          'AI_PROVIDER_UNAVAILABLE',
+          'Draft generation is temporarily unavailable. Your project details have been preserved.',
+          undefined,
+          { requestId, retryable: true }
         );
       }
 
@@ -872,30 +962,50 @@ export class GeminiRestProvider implements AiProviderAdapter {
         }>;
       };
       const rawText = payload.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!rawText) {
+      if (!rawText || !rawText.trim()) {
         throw new EditorialHttpError(
           502,
-          'INTERNAL_ERROR',
-          'AI provider returned an empty response.'
+          'AI_INVALID_RESPONSE',
+          'Draft generation returned an incomplete response. Your project details have been preserved.',
+          undefined,
+          { requestId, retryable: false }
         );
       }
 
-      return JSON.parse(rawText);
+      return JSON.parse(stripJsonCodeFences(rawText));
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
         throw new EditorialHttpError(
           504,
-          'INTERNAL_ERROR',
-          'AI generation request timed out.'
+          'AI_TIMEOUT',
+          'Draft generation timed out. Your project details have been preserved.',
+          undefined,
+          { requestId, retryable: false }
         );
       }
       if (err instanceof EditorialHttpError) {
         throw err;
       }
+      if (err instanceof SyntaxError) {
+        throw new EditorialHttpError(
+          502,
+          'AI_INVALID_RESPONSE',
+          'Draft generation returned an incomplete response. Your project details have been preserved.',
+          undefined,
+          { requestId, retryable: false }
+        );
+      }
+      console.error('[AI_STUDIO] Provider transport failure:', {
+        requestId,
+        model: this.model,
+        detail: sanitizeProviderLogMessage(err instanceof Error ? err.message : String(err)),
+      });
       throw new EditorialHttpError(
         502,
-        'INTERNAL_ERROR',
-        'AI provider failed to produce valid JSON.'
+        'AI_PROVIDER_UNAVAILABLE',
+        'Draft generation is temporarily unavailable. Your project details have been preserved.',
+        undefined,
+        { requestId, retryable: true }
       );
     } finally {
       clearTimeout(timer);
@@ -1026,12 +1136,15 @@ export async function executeAiStudioGeneration(
     requireLiveKey?: boolean;
     providerOverride?: AiProviderAdapter;
     clientOverride?: SupabaseClient;
+    requestId?: string;
   }
 ): Promise<{
+  requestId: string;
   output: AiStudioOutput;
   provider: { name: string; model: string; apiKeyConfigured: boolean };
   usage: AiUsageRecord;
 }> {
+  const requestId = options?.requestId || crypto.randomUUID();
   const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const maxOutputTokens = options?.maxOutputTokens ?? MAX_OUTPUT_TOKENS;
   const inputChars = JSON.stringify(request).length;
@@ -1057,6 +1170,7 @@ export async function executeAiStudioGeneration(
         const rawPromise = adapter.generateStructured(request, {
           timeoutMs,
           maxOutputTokens,
+          requestId,
         });
 
         const timedRaw = await Promise.race([
@@ -1067,8 +1181,10 @@ export async function executeAiStudioGeneration(
                 reject(
                   new EditorialHttpError(
                     504,
-                    'INTERNAL_ERROR',
-                    'AI generation request timed out.'
+                    'AI_TIMEOUT',
+                    'Draft generation timed out. Your project details have been preserved.',
+                    undefined,
+                    { requestId, retryable: false }
                   )
                 ),
               timeoutMs
@@ -1095,6 +1211,7 @@ export async function executeAiStudioGeneration(
         const status = getAiProviderStatus();
 
         return {
+          requestId,
           output: validated,
           provider: {
             name: adapter.name,
@@ -1105,23 +1222,30 @@ export async function executeAiStudioGeneration(
         };
       } catch (err) {
         lastErr = err;
-        // Do not retry deterministic validation/safeguard rejections or timeouts
-        if (
-          err instanceof EditorialHttpError &&
-          (err.status === 422 || err.status === 504 || err.status === 503)
-        ) {
+        if (err instanceof EditorialHttpError && !err.requestId) {
+          err.requestId = requestId;
+        }
+        // Only retry transient 5xx / network errors; never retry 4xx, config, timeout, or invalid-schema responses
+        const isRetryable =
+          err instanceof EditorialHttpError
+            ? err.retryable === true
+            : true;
+        if (!isRetryable) {
           throw err;
         }
       }
     }
 
     if (lastErr instanceof EditorialHttpError) {
+      if (!lastErr.requestId) lastErr.requestId = requestId;
       throw lastErr;
     }
     throw new EditorialHttpError(
       502,
-      'INTERNAL_ERROR',
-      lastErr instanceof Error ? lastErr.message : 'AI generation failed.'
+      'AI_PROVIDER_UNAVAILABLE',
+      'Draft generation is temporarily unavailable. Your project details have been preserved.',
+      undefined,
+      { requestId, retryable: true }
     );
   } finally {
     if (!finalized) {

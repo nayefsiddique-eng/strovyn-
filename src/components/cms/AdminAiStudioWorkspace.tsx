@@ -176,6 +176,9 @@ export function AdminAiStudioWorkspace({
   const [banner, setBanner] = useState<{
     type: 'success' | 'error';
     message: string;
+    code?: string;
+    requestId?: string;
+    retryable?: boolean;
   } | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
@@ -281,14 +284,21 @@ export function AdminAiStudioWorkspace({
         }
         setBanner({
           type: 'error',
-          message: data.error ?? 'AI draft generation failed.',
+          message:
+            data.error ??
+            'Draft generation is temporarily unavailable. Your project details have been preserved.',
+          code: data.code,
+          requestId: data.requestId,
+          retryable: res.status !== 401 && res.status !== 403 && data.code !== 'AI_CONFIG_ERROR',
         });
         return;
       }
 
-      if (data.provider === 'gemini_rest') {
+      const providerName =
+        typeof data.provider === 'string' ? data.provider : data.provider?.name;
+      if (providerName === 'gemini_rest') {
         setProviderAvailability('verified');
-      } else if (data.provider === 'deterministic_fallback') {
+      } else if (providerName === 'deterministic_fallback') {
         setProviderAvailability('deterministic_fallback');
       }
 
@@ -533,19 +543,38 @@ export function AdminAiStudioWorkspace({
           role="alert"
           className={`border p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-sans ${
             banner.type === 'success'
-              ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
-              : 'bg-red-50 border-red-300 text-red-900'
+              ? 'bg-emerald-50 border-emerald-300 text-emerald-900 dark:bg-emerald-950/60 dark:border-emerald-800 dark:text-emerald-100'
+              : 'bg-red-50 border-red-300 text-red-900 dark:bg-red-950/60 dark:border-red-800 dark:text-red-100'
           }`}
         >
-          <span>{banner.message}</span>
-          {savedArticleLink && (
-            <Link
-              href={`/admin/insights/articles/${savedArticleLink.id}`}
-              className="px-3 py-1.5 bg-charcoal text-ivory font-mono text-[10px] uppercase tracking-wider shrink-0"
-            >
-              Open Article Draft &rarr;
-            </Link>
-          )}
+          <div className="space-y-1">
+            <span className="block">{banner.message}</span>
+            {banner.requestId && (
+              <span className="block font-mono text-[10px] opacity-75">
+                Ref: {banner.requestId.slice(0, 8)}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {banner.type === 'error' && banner.retryable !== false && !generating && (
+              <button
+                type="button"
+                onClick={() => handleGenerate()}
+                className="px-3 py-1.5 border border-current/30 bg-white/80 dark:bg-charcoal/80 text-current font-mono text-[10px] uppercase tracking-wider hover:opacity-90 cursor-pointer inline-flex items-center gap-1.5"
+              >
+                <RefreshCw className="w-3 h-3" />
+                Retry
+              </button>
+            )}
+            {savedArticleLink && (
+              <Link
+                href={`/admin/insights/articles/${savedArticleLink.id}`}
+                className="px-3 py-1.5 bg-charcoal text-ivory font-mono text-[10px] uppercase tracking-wider shrink-0"
+              >
+                Open Article Draft &rarr;
+              </Link>
+            )}
+          </div>
         </div>
       )}
 

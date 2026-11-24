@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
 import {
   getAiProviderStatus,
@@ -32,6 +33,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const requestId = crypto.randomUUID();
   try {
     assertSameOriginCsrf(req);
     await enforceCmsRateLimit(req, 'ai_studio_generate', 20, 60_000);
@@ -42,11 +44,13 @@ export async function POST(req: Request) {
       throw new EditorialHttpError(
         bodyCheck.status === 413 ? 413 : 400,
         bodyCheck.status === 413 ? 'PAYLOAD_TOO_LARGE' : 'BAD_REQUEST',
-        bodyCheck.error ?? 'Invalid request body.'
+        bodyCheck.error ?? 'Some project details need attention. Review the highlighted fields.',
+        undefined,
+        { requestId, retryable: false }
       );
     }
 
-    const result = await generateAiStudioContent(staff, bodyCheck.data);
+    const result = await generateAiStudioContent(staff, bodyCheck.data, { requestId });
     return NextResponse.json(
       {
         success: true,
@@ -55,6 +59,9 @@ export async function POST(req: Request) {
       { headers: { 'Cache-Control': 'private, no-store' } }
     );
   } catch (err) {
+    if (err instanceof EditorialHttpError && !err.requestId) {
+      err.requestId = requestId;
+    }
     return mapCmsErrorToResponse(err);
   }
 }

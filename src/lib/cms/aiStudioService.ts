@@ -41,8 +41,10 @@ export async function generateAiStudioContent(
     maxOutputTokens?: number;
     requireLiveKey?: boolean;
     providerOverride?: AiProviderAdapter;
+    requestId?: string;
   }
 ): Promise<{
+  requestId: string;
   output: AiStudioOutput;
   provider: { name: string; model: string; apiKeyConfigured: boolean };
   usage: AiUsageRecord;
@@ -51,10 +53,15 @@ export async function generateAiStudioContent(
 
   const parsed = AiStudioGenerateRequestSchema.safeParse(rawRequest);
   if (!parsed.success) {
+    const issueMsg = parsed.error.issues[0]?.message;
     throw new EditorialHttpError(
       400,
       'BAD_REQUEST',
-      parsed.error.issues[0]?.message ?? 'Invalid AI Content Studio generation request.'
+      issueMsg
+        ? `Some project details need attention: ${issueMsg}`
+        : 'Some project details need attention. Review the highlighted fields.',
+      undefined,
+      { requestId: options?.requestId, retryable: false }
     );
   }
 

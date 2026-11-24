@@ -19,24 +19,34 @@ export type EditorialHttpErrorCode =
   | 'SCHEDULING_DEFERRED'
   | 'RATE_LIMITED'
   | 'STORAGE_ERROR'
+  | 'AI_CONFIG_ERROR'
+  | 'AI_PROVIDER_INVALID_REQUEST'
+  | 'AI_PROVIDER_UNAVAILABLE'
+  | 'AI_TIMEOUT'
+  | 'AI_INVALID_RESPONSE'
   | 'INTERNAL_ERROR';
 
 export class EditorialHttpError extends Error {
   readonly status: number;
   readonly code: EditorialHttpErrorCode;
   readonly retryAfterSec?: number;
+  requestId?: string;
+  retryable?: boolean;
 
   constructor(
     status: number,
     code: EditorialHttpErrorCode,
     message: string,
-    retryAfterSec?: number
+    retryAfterSec?: number,
+    options?: { requestId?: string; retryable?: boolean }
   ) {
     super(message);
     this.name = 'EditorialHttpError';
     this.status = status;
     this.code = code;
     this.retryAfterSec = retryAfterSec;
+    this.requestId = options?.requestId;
+    this.retryable = options?.retryable;
   }
 }
 
@@ -127,6 +137,8 @@ export function mapCmsErrorToResponse(err: unknown): NextResponse {
         success: false,
         code: err.code,
         error: err.message,
+        ...(err.requestId ? { requestId: err.requestId } : {}),
+        ...(typeof err.retryable === 'boolean' ? { retryable: err.retryable } : {}),
       },
       { status: err.status, headers }
     );
