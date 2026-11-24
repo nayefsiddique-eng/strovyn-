@@ -164,6 +164,24 @@ async function run() {
     );
     assert.equal(calls, 1, 'HTTP 400 API_KEY_INVALID must not retry');
 
+    // 8b. Provider HTTP 400 (unable to find suitable provider from Netlify AI Gateway) -> 503 AI_CONFIG_ERROR, 1 call only
+    calls = 0;
+    globalThis.fetch = async () => {
+      calls++;
+      return new Response(
+        JSON.stringify({ error: { message: 'unable to find suitable provider for gemini/gemini-2.5-flash' } }),
+        { status: 400 }
+      );
+    };
+    await assert.rejects(
+      () =>
+        executeAiStudioGeneration(activeAdmin.id, validProjectReq, {
+          providerOverride: new GeminiRestProvider('gw-token-1234567890', 'gemini-2.5-flash'),
+        }),
+      (err) => err.status === 503 && err.code === 'AI_CONFIG_ERROR' && !err.message.includes('unable to find suitable provider')
+    );
+    assert.equal(calls, 1, 'HTTP 400 unable to find suitable provider must not retry');
+
     // 9. Provider HTTP 400 (INVALID_ARGUMENT non-key) -> 502 AI_PROVIDER_INVALID_REQUEST, 1 call only
     calls = 0;
     globalThis.fetch = async () => {

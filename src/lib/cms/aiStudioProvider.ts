@@ -929,7 +929,7 @@ export class GeminiRestProvider implements AiProviderAdapter {
           res.status === 401 ||
           res.status === 403 ||
           (res.status === 400 &&
-            (/API_KEY_INVALID|API key not valid|PERMISSION_DENIED/i.test(
+            (/API_KEY_INVALID|API key not valid|PERMISSION_DENIED|unable to find suitable provider/i.test(
               `${providerStatus ?? ''} ${providerMessage}`
             ) ||
               providerStatus === 'FAILED_PRECONDITION'));
@@ -958,7 +958,7 @@ export class GeminiRestProvider implements AiProviderAdapter {
           throw new EditorialHttpError(
             502,
             'AI_PROVIDER_INVALID_REQUEST',
-            `Draft generation could not be processed with the current service configuration (${res.status} ${providerStatus ?? 'UNKNOWN'}: ${sanitizeProviderLogMessage(providerMessage).slice(0, 120)}). Your project details have been preserved.`,
+            'Draft generation could not be processed with the current service configuration. Your project details have been preserved.',
             undefined,
             { requestId, retryable: false }
           );
