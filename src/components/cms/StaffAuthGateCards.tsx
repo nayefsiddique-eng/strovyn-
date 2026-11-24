@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Lock, LogOut, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { Lock, LogOut, ShieldAlert, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { sanitizeAdminRedirectPath } from '@/lib/cms/stage1Access';
 import type { EditorialRole } from '@/lib/cms/roles';
@@ -33,8 +33,9 @@ export function StaffSignInCard({
   onAccessDenied?: (denied: AccessDeniedState) => void;
 }) {
   const router = useRouter();
-  const [email, setEmail] = useState('strovyn@gmail.com');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isRecoveryMode, setIsRecoveryMode] = useState(false);
@@ -44,6 +45,28 @@ export function StaffSignInCard({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const safeRedirect = sanitizeAdminRedirectPath(redirectTo);
+
+  useEffect(() => {
+    try {
+      const remembered = window.sessionStorage.getItem('strovyn-staff-email');
+      if (remembered) setEmail(remembered);
+    } catch {
+      // Ignore storage errors in restricted contexts
+    }
+  }, []);
+
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    try {
+      if (value.trim()) {
+        window.sessionStorage.setItem('strovyn-staff-email', value.trim());
+      } else {
+        window.sessionStorage.removeItem('strovyn-staff-email');
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  };
 
   useEffect(() => {
     const supabase = createClient();
@@ -71,14 +94,19 @@ export function StaffSignInCard({
     try {
       const supabase = createClient();
       const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
-        redirectTo: `${window.location.origin}/admin`,
+        redirectTo: `${window.location.origin}/admin/activate`,
       });
       if (error) {
-        setErrorMessage('Unable to send password recovery email right now. Try again shortly.');
+        const msg = (error.message || '').toLowerCase();
+        setErrorMessage(
+          msg.includes('rate') || msg.includes('limit') || error.status === 429
+            ? 'Too many attempts; retry later.'
+            : 'Recovery email unavailable. Try again shortly or contact an administrator.'
+        );
         return;
       }
       setStatusMessage(
-        `If ${trimmedEmail} is registered, a secure password setup/recovery link has been sent.`
+        `If ${trimmedEmail} is an active or invited staff account, a recovery link has been sent.`
       );
     } catch {
       setErrorMessage('Unable to reach authentication service. Try again shortly.');
@@ -138,7 +166,12 @@ export function StaffSignInCard({
       });
 
       if (error || !data?.user) {
-        setErrorMessage('Invalid credentials or inactive session. Verify your details and retry.');
+        const msg = (error?.message || '').toLowerCase();
+        setErrorMessage(
+          msg.includes('rate') || msg.includes('limit') || error?.status === 429
+            ? 'Too many attempts; retry later.'
+            : 'Incorrect email or password.'
+        );
         return;
       }
 
@@ -304,9 +337,9 @@ export function StaffSignInCard({
               autoComplete="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="strovyn@gmail.com"
-              className="w-full bg-ivory-light border border-warm-grey px-3.5 py-2.5 text-sm font-sans text-charcoal focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-bronze focus:border-charcoal"
+              onChange={(e) => handleEmailChange(e.target.value)}
+              placeholder="name@strovyn.com"
+              className="w-full bg-ivory-light dark:bg-[#1E1F1D] border border-warm-grey dark:border-white/25 px-3.5 py-2.5 text-sm font-sans text-charcoal dark:text-[#F4F1EA] placeholder:text-charcoal/50 dark:placeholder:text-[#A8A59E] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-bronze focus:border-charcoal"
             />
           </div>
 
@@ -314,7 +347,7 @@ export function StaffSignInCard({
             <div className="flex items-center justify-between gap-2 mb-2">
               <label
                 htmlFor="cms-staff-password"
-                className="block font-mono text-[11px] uppercase tracking-[0.16em] text-charcoal/85"
+                className="block font-mono text-[11px] uppercase tracking-[0.16em] text-charcoal/85 dark:text-[#E8E4DC]"
               >
                 Password
               </label>
@@ -322,29 +355,44 @@ export function StaffSignInCard({
                 type="button"
                 onClick={handleSendPasswordReset}
                 disabled={isSendingReset}
-                className="font-mono text-[10px] uppercase tracking-wider text-bronze hover:underline cursor-pointer disabled:opacity-50"
+                className="font-mono text-[10px] uppercase tracking-wider text-bronze dark:text-[#C9B28F] hover:underline cursor-pointer disabled:opacity-50"
               >
-                {isSendingReset ? 'Sending...' : 'Forgot / Set Password'}
+                {isSendingReset ? 'Sending...' : 'Forgot Password'}
               </button>
             </div>
-            <input
-              id="cms-staff-password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter staff password"
-              className="w-full bg-ivory-light border border-warm-grey px-3.5 py-2.5 text-sm font-sans text-charcoal focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-bronze focus:border-charcoal"
-            />
+            <div className="relative">
+              <input
+                id="cms-staff-password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter staff password"
+                className="w-full bg-ivory-light dark:bg-[#1E1F1D] border border-warm-grey dark:border-white/25 pl-3.5 pr-11 py-2.5 text-sm font-sans text-charcoal dark:text-[#F4F1EA] placeholder:text-charcoal/50 dark:placeholder:text-[#A8A59E] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-bronze focus:border-charcoal"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
+                className="absolute inset-y-0 right-0 px-3 flex items-center justify-center text-charcoal/70 dark:text-[#C9B28F] hover:text-charcoal dark:hover:text-white cursor-pointer focus-visible:outline-2 focus-visible:outline-bronze"
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4" aria-hidden="true" />
+                ) : (
+                  <Eye className="w-4 h-4" aria-hidden="true" />
+                )}
+              </button>
+            </div>
           </div>
 
           {errorMessage && (
             <div
               role="alert"
               aria-live="assertive"
-              className="border border-brand-red/30 bg-brand-red/5 px-3.5 py-2.5 text-xs font-sans text-brand-red-dark"
+              className="border border-brand-red/40 dark:border-[#C41E1E]/60 bg-brand-red/5 dark:bg-[#2A1818] px-3.5 py-2.5 text-xs font-sans text-brand-red-dark dark:text-[#FCA5A5]"
             >
               {errorMessage}
             </div>
@@ -355,7 +403,7 @@ export function StaffSignInCard({
             disabled={isSubmitting}
             className="w-full py-3 px-5 bg-charcoal text-ivory hover:bg-bronze transition-colors font-mono text-xs uppercase tracking-[0.2em] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bronze"
           >
-            {isSubmitting ? 'Verifying Credentials...' : 'Enter Editorial Desk'}
+            {isSubmitting ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
         )}
@@ -363,9 +411,9 @@ export function StaffSignInCard({
         <div className="mt-7 pt-5 border-t border-warm-grey/40 flex flex-wrap items-center justify-between gap-3 text-xs">
           <Link
             href="/admin/activate"
-            className="font-mono text-[11px] uppercase tracking-wider text-bronze hover:underline underline-offset-4"
+            className="font-mono text-[11px] uppercase tracking-wider text-bronze dark:text-[#C9B28F] hover:underline underline-offset-4"
           >
-            Activate Your Account
+            Activate Invitation
           </Link>
           <Link
             href="/insights"
