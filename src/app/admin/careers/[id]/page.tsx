@@ -12,8 +12,6 @@ import {
   StaffSignInCard,
 } from '@/components/cms/StaffAuthGateCards';
 
-export const instant = false;
-
 type PageProps = {
   params: Promise<{ id: string }>;
 };

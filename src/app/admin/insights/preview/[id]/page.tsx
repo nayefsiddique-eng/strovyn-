@@ -9,8 +9,6 @@ import { isApprovedPreviewImageUrl } from '@/lib/cms/mediaUrlPolicy';
 import { requireStaffSession, StaffAuthError } from '@/lib/cms/staffAuth';
 import { UuidParamSchema } from '@/lib/cms/validators';
 
-export const instant = false;
-
 export const metadata: Metadata = {
   title: 'Editorial Preview | STROVYN',
   description: 'Authenticated internal editorial preview.',

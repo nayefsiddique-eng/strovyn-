@@ -11,8 +11,6 @@ import {
   StaffSignInCard,
 } from '@/components/cms/StaffAuthGateCards';
 
-export const instant = false;
-
 async function AuthenticatedInsightsGate({
   searchParams,
 }: {

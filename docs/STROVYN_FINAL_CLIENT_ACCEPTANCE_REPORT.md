@@ -13,7 +13,7 @@
 ## 2. Git Commit & Deployed Build
 - **Repository:** `https://github.com/nayefsiddique-eng/strovyn-`
 - **Production Branch (`main`) & Development Branch (`design/strovyn-cinematic-3d`):** Synchronized at **`4e1857d`**.
-- **Handover Documentation Branch:** `docs/client-handover` (preserves `docs/` and `/projects/[slug]/page.tsx` top-level `notFound()` cleanup; `main` untouched at `4e1857d`).
+- **Handover Documentation Branch:** `docs/client-handover` (preserves `docs/`, the true HTTP `404` dynamic-route fix across `next.config.ts` and route pages, and `scripts/test-invalid-slugs-404.mjs`; `main` untouched at `4e1857d`).
 - **Netlify Production Deploy ID:** `6b04f8786d5faec7a7335f60` (`state: ready`, `https://strovynpaints.netlify.app`).
 
 ## 3. Complete Route & Component Inventory
@@ -30,6 +30,7 @@
 | `npm run lint` & `npx tsc --noEmit` | Static analysis & TypeScript | **PASS** (`0` errors, `0` warnings) |
 | `npm run build` | Production build (`69/69` routes) | **PASS** |
 | `npm run test:cms` (8 suites) | PGlite PostgreSQL RLS/RPC/triggers + unit/RBAC | **PASS** |
+| Invalid & Draft Slug HTTP Status (`test-invalid-slugs-404.mjs`) | Live local prod-build (`next start`) + staging DB | **PASS** (`404` on invalid/draft, `200` on valid) |
 | Testimonials (`phase-c`) & Careers (`phase-d`) | PGlite DB + service RBAC & consent/deadlines | **PASS** |
 | Resend & Outbox (`test-netlify-resend.mjs`) | Mocked Resend + durable outbox/backoff | **PASS** |
 | Staff Onboarding (`test-staff-onboarding-staging.mjs`) | Live staging Supabase DB + Auth | **PASS** (cleaned up) |
@@ -43,8 +44,15 @@
 | `strovynpaints.com` HTTPS, DNS, live Resend SMTP & CDN field telemetry | External infrastructure | **BLOCKED** (domain unregistered) |
 
 ## 5. Invalid Slug Investigation Outcome
-- **Finding:** Under Next.js 16 `cacheComponents: true` (Partial Prerendering, `◐`), `/projects/[slug]`, `/insights/[slug]`, and `/services/[slug]` stream the outer `RootLayout` shell with initial `HTTP 200` headers before dynamic route resolution runs, rendering `not-found.tsx` + `<meta name="robots" content="noindex">` in the HTML response rather than returning a raw `404` status code.
-- **Improvement Applied:** Updated [src/app/projects/[slug]/page.tsx](file:///C:/Users/Admin%20pc/.gemini/antigravity/scratch/strovyn-painting/src/app/projects/[slug]/page.tsx) to invoke `notFound()` directly at the top level of `ProjectDetailPage` (matching `/insights/[slug]` and `/services/[slug]`) and added `scripts/test-invalid-slugs-404.mjs` to assert `not-found` + `noindex` rendering with zero draft leakage.
+- **Root Cause:** Under Next.js 16 `cacheComponents: true` + `partialPrefetching: true` (Partial Prerendering, `◐`), `/projects/[slug]`, `/insights/[slug]`, and `/services/[slug]` streamed the outer `RootLayout` shell with `HTTP 200` headers before dynamic route resolution executed `notFound()`.
+- **Fix Applied:** Disabled `cacheComponents` and `partialPrefetching` in [next.config.ts](../next.config.ts), removed `export const instant = false` across all 18 route pages, and invoked `notFound()` directly at the top level of `ProjectDetailPage` in [src/app/projects/[slug]/page.tsx](../src/app/projects/[slug]/page.tsx) (matching `/insights/[slug]` and `/services/[slug]`).
+- **Verification (`scripts/test-invalid-slugs-404.mjs` against `next start -p 3000`):**
+  - `/projects/nonexistent-qa-slug-check` → `HTTP 404`
+  - `/projects/adelaide-hills-coastal-estate` (unpublished staging draft) → `HTTP 404`
+  - `/projects/the-north-adelaide-residence` (published staging project) → `HTTP 200`
+  - `/insights/nonexistent-qa-slug-check` → `HTTP 404`
+  - `/services/nonexistent-qa-slug-check` → `HTTP 404`
+  - `/services/interior-architectural-painting` → `HTTP 200`
 
 ## 6. Business Launch Blockers (Exact Status)
 | Blocker | Current Status | Required Owner / Client Action |

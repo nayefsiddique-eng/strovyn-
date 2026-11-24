@@ -14,8 +14,6 @@ import {
   StaffSignInCard,
 } from '@/components/cms/StaffAuthGateCards';
 
-export const instant = false;
-
 async function AdminAiStudioContent() {
   await connection();
   const gate = await resolveAdminPageGate('ai_studio:use');

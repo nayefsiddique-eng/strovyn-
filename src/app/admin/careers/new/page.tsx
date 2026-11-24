@@ -8,8 +8,6 @@ import {
   StaffSignInCard,
 } from '@/components/cms/StaffAuthGateCards';
 
-export const instant = false;
-
 async function AdminNewVacancyContent() {
   await connection();
   const gate = await resolveAdminPageGate();

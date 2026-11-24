@@ -9,8 +9,6 @@ import {
   StaffSignInCard,
 } from '@/components/cms/StaffAuthGateCards';
 
-export const instant = false;
-
 async function AdminQuotesContent() {
   await connection();
   const gate = await resolveAdminPageGate('submission:read');

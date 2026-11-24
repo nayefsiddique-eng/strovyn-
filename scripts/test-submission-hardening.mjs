@@ -942,14 +942,14 @@ async function run() {
     );
     assert.ok(revalidatedPaths.includes('/api/projects'), 'Expected revalidatePath(/api/projects)');
 
-    // Verify Project Detail page source uses dynamic async loader inside Suspense + connection()
+    // Verify Project Detail page source uses dynamic async loader + connection() + top-level notFound()
     const projectDetailSource = fs.readFileSync(
       path.join(REPO_ROOT, 'src', 'app', 'projects', '[slug]', 'page.tsx'),
       'utf8'
     );
     assert.ok(projectDetailSource.includes('getProjectsWithOverridesAsync'));
     assert.ok(projectDetailSource.includes('connection()'));
-    assert.ok(projectDetailSource.includes('<Suspense'));
+    assert.ok(projectDetailSource.includes('notFound()'));
 
     console.log('ALL PHASE 2.13 TESTS PASSED');
   } finally {

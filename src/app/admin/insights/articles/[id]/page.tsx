@@ -17,8 +17,6 @@ import {
   StaffSignInCard,
 } from '@/components/cms/StaffAuthGateCards';
 
-export const instant = false;
-
 export const metadata: Metadata = {
   title: 'Article Workspace | STROVYN Editorial Desk',
   robots: {
