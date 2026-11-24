@@ -1,7 +1,7 @@
 # STROVYN Painting Co. — Client Operations Guide
 
 ## 1. Signing In to the Admin Portal
-- **URL:** `https://strovynpaints.netlify.app/admin` (or `https://strovynpaints.com/admin` once your custom domain is connected).
+- **URL:** `https://strovynpainting.netlify.app/admin` (or `https://strovynpaints.com/admin` once your custom domain is connected).
 - *(Note: While the website is in Private pre-launch mode, visitors must first sign in through Netlify's site access prompt before `/admin` loads.)*
 - Enter your staff email (`strovyn@gmail.com` or `nayefsiddique@gmail.com`) and your personal password, then click **Sign In**. Use the eye icon to verify password typing, and use the header **Sun/Moon** button anytime to switch between Light and Dark mode.
 
@@ -33,7 +33,7 @@
 - **Rate Limits:** Until custom SMTP (`strovynpaints.com` via Resend) is connected, Supabase's built-in mailer is limited to **2 emails per hour** — use normal email/password login for daily work.
 
 ## 7. Service Ownership & Support
-- **Hosting (Netlify):** Site `strovynpaints` (`bc5329ac-218d-4e9f-b0fc-da52f6e29700`) — pending in-place transfer to client's Netlify team.
+- **Hosting (Netlify):** Site `strovynpainting` (`bc5329ac-218d-4e9f-b0fc-da52f6e29700`) — pending in-place transfer to client's Netlify team.
 - **Database & Auth (Supabase):** `qktgxxbmdvmpyipltamo` (`Strovyn` organization). Upgrading to Supabase Pro (`$25/mo`) is recommended before live customer traffic to prevent 7-day inactivity pausing and enable daily backups.
 - **Domain & Email:** Register `strovynpaints.com` under client ownership, verify it in Resend (`DKIM`/`SPF`), and then enable customer acknowledgments and scheduled jobs.
-- **Rollback Support:** If any deployment issue occurs, an Administrator/Developer can restore the previous build in one click from **Netlify → `strovynpaints` → Deploys → Publish deploy**.
+- **Rollback Support:** If any deployment issue occurs, an Administrator/Developer can restore the previous build in one click from **Netlify → `strovynpainting` → Deploys → Publish deploy**.

@@ -12,9 +12,9 @@
 
 ## 2. Git Commit & Deployed Build
 - **Repository:** `https://github.com/nayefsiddique-eng/strovyn-`
-- **Production Branch (`main`) & Development Branch (`design/strovyn-cinematic-3d`):** Synchronized at **`4e1857d`**.
-- **Handover Documentation Branch:** `docs/client-handover` (preserves `docs/`, the true HTTP `404` dynamic-route fix across `next.config.ts` and route pages, and `scripts/test-invalid-slugs-404.mjs`; `main` untouched at `4e1857d`).
-- **Netlify Production Deploy ID:** `6b04f8786d5faec7a7335f60` (`state: ready`, `https://strovynpaints.netlify.app`).
+- **Production Branch (`main`), Development Branch (`design/strovyn-cinematic-3d`), & Handover Branch (`docs/client-handover`):** Synchronized at **`e78efc3`**.
+- **Netlify Production Site:** `https://strovynpainting.netlify.app` (Site ID `bc5329ac-218d-4e9f-b0fc-da52f6e29700`, renamed from `strovynpaints.netlify.app`).
+- **Netlify Staging Preview:** `https://design-strovyn-cinematic-3d--strovynpainting.netlify.app`.
 
 ## 3. Complete Route & Component Inventory
 - **App Router Pages:** `30` (`page.tsx` routes)
@@ -68,6 +68,6 @@
 | Staff Login | `strovyn@gmail.com` & `nayefsiddique@gmail.com` active Admins | Sign in at `/admin` with owner-established passwords |
 
 ## 7. Rollback & Recovery Procedures
-- **Netlify Instant Rollback:** Netlify → `strovynpaints` → **Deploys** → select previous deploy (`6b04de34b4bff1778b31dcf2` or `6aff4431cae90ef45f5c5c31`) → **Publish deploy**.
+- **Netlify Instant Rollback:** Netlify → `strovynpainting` → **Deploys** → select previous deploy (`6b04f468bbffd14ba63e6f10` or `6b04de34b4bff1778b31dcf2`) → **Publish deploy**.
 - **Emergency Privacy Lock:** Re-enable `sso_login: true` in Netlify Site Access.
 - **Database:** Never auto-revert migrations `001–017`; manage content visibility via `/admin`.
