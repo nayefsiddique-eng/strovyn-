@@ -151,7 +151,10 @@ export function AdminWorkspaceShell({
   };
 
   return (
-    <div className="w-full min-h-screen bg-ivory text-charcoal pt-24 sm:pt-28 pb-20 px-4 sm:px-6 lg:px-10">
+    <div
+      data-cms-shell="true"
+      className="w-full min-h-screen bg-ivory text-charcoal pt-24 sm:pt-28 pb-20 px-4 sm:px-6 lg:px-10"
+    >
       <div className="max-w-7xl mx-auto">
         {/* Shared CMS Workspace Top Strip */}
         <header className="bg-white border border-warm-grey/60 p-4 sm:p-5 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -326,7 +329,7 @@ export function AdminWorkspaceShell({
           </aside>
 
           {/* Active Workspace Content */}
-          <div className="lg:col-span-9 min-w-0">{children}</div>
+          <main className="lg:col-span-9 min-w-0">{children}</main>
         </div>
       </div>
     </div>

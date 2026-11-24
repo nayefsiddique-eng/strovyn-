@@ -29,7 +29,14 @@ import {
   renderTintedComposite,
   validateRoomImageFile,
 } from '@/lib/visualiser/imageProcessing';
-import { ILLUSTRATIVE_PALETTE, IllustrativePaletteSwatch } from './palette';
+import {
+  ILLUSTRATIVE_PALETTE,
+  PALETTE_FAMILIES,
+  PAINT_FINISHES,
+  type IllustrativePaletteSwatch,
+  type PaletteFamily,
+  type PaintFinishSpec,
+} from './palette';
 
 type ToolMode = 'smart-fill' | 'brush' | 'eraser';
 
@@ -45,10 +52,14 @@ export const WallColourVisualiser: React.FC = () => {
       : undefined) || ILLUSTRATIVE_PALETTE[4];
 
   const [selectedSwatch, setSelectedSwatch] = useState<IllustrativePaletteSwatch>(initialSwatch);
+  const [selectedFinish, setSelectedFinish] = useState<PaintFinishSpec>(PAINT_FINISHES[1]);
+  const [activeFamily, setActiveFamily] = useState<'All' | PaletteFamily>('All');
+  const [colourSearch, setColourSearch] = useState<string>('');
+  const [recentSwatches, setRecentSwatches] = useState<IllustrativePaletteSwatch[]>([initialSwatch]);
   const [activeTool, setActiveTool] = useState<ToolMode>('smart-fill');
   const [brushRadius, setBrushRadius] = useState<number>(22);
   const [fillTolerance, setFillTolerance] = useState<number>(26);
-  const [compareSplit, setCompareSplit] = useState<number>(55);
+  const [compareSplit, setCompareSplit] = useState<number>(50);
   const [holdingOriginal, setHoldingOriginal] = useState<boolean>(false);
 
   const [hasCustomPhoto, setHasCustomPhoto] = useState<boolean>(false);
@@ -106,7 +117,7 @@ export const WallColourVisualiser: React.FC = () => {
   };
 
   const redrawCanvases = useCallback(
-    (swatchHex: string) => {
+    (swatchHex: string, specBoost = 0) => {
       const room = roomRef.current;
       const mask = maskRef.current;
       const origCanvas = originalCanvasRef.current;
@@ -139,7 +150,8 @@ export const WallColourVisualiser: React.FC = () => {
         width,
         height,
         swatchHex,
-        tintedPixelsRef.current
+        tintedPixelsRef.current,
+        specBoost
       );
 
       const tCtx = tintCanvas.getContext('2d');
@@ -149,6 +161,14 @@ export const WallColourVisualiser: React.FC = () => {
     },
     []
   );
+
+  const selectSwatch = useCallback((swatch: IllustrativePaletteSwatch) => {
+    setSelectedSwatch(swatch);
+    setRecentSwatches((prev) => [
+      swatch,
+      ...prev.filter((s) => s.id !== swatch.id),
+    ].slice(0, 6));
+  }, []);
 
   const pushHistorySnapshot = useCallback((mask: Uint8Array) => {
     const truncated = historyRef.current.slice(0, historyIndexRef.current + 1);
@@ -201,7 +221,7 @@ export const WallColourVisualiser: React.FC = () => {
         if (originalCanvasRef.current) {
           originalCanvasRef.current.width = 0;
         }
-        redrawCanvases(selectedSwatch.hex);
+        redrawCanvases(selectedSwatch.hex, selectedFinish.specBoost);
       } catch (err: unknown) {
         setErrorMsg(
           err instanceof Error ? err.message : 'Unable to decode this photograph. Please try a JPEG, PNG, or WebP image.'
@@ -210,7 +230,7 @@ export const WallColourVisualiser: React.FC = () => {
         setIsLoadingImage(false);
       }
     },
-    [redrawCanvases, selectedSwatch.hex]
+    [redrawCanvases, selectedFinish.specBoost, selectedSwatch.hex]
   );
 
   // Initial mount: load sample room
@@ -219,12 +239,12 @@ export const WallColourVisualiser: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Re-render tinted layer whenever selected swatch changes
+  // Re-render tinted layer whenever selected swatch or finish changes
   useEffect(() => {
     if (roomRef.current && maskRef.current) {
-      redrawCanvases(selectedSwatch.hex);
+      redrawCanvases(selectedSwatch.hex, selectedFinish.specBoost);
     }
-  }, [selectedSwatch, redrawCanvases]);
+  }, [selectedSwatch, selectedFinish, redrawCanvases]);
 
   const handleFileChosen = (file: File | undefined) => {
     if (!file) return;
@@ -266,7 +286,7 @@ export const WallColourVisualiser: React.FC = () => {
     const empty = new Uint8Array(room.width * room.height);
     maskRef.current = empty;
     pushHistorySnapshot(empty);
-    redrawCanvases(selectedSwatch.hex);
+      redrawCanvases(selectedSwatch.hex, selectedFinish.specBoost);
   };
 
   const handleUndo = () => {
@@ -276,7 +296,7 @@ export const WallColourVisualiser: React.FC = () => {
     maskRef.current = snapshot;
     setHistoryMeta({ index: historyIndexRef.current, total: historyRef.current.length });
     setHasMaskEdits(checkMaskHasEdits(snapshot));
-    redrawCanvases(selectedSwatch.hex);
+    redrawCanvases(selectedSwatch.hex, selectedFinish.specBoost);
   };
 
   const handleRedo = () => {
@@ -286,7 +306,7 @@ export const WallColourVisualiser: React.FC = () => {
     maskRef.current = snapshot;
     setHistoryMeta({ index: historyIndexRef.current, total: historyRef.current.length });
     setHasMaskEdits(checkMaskHasEdits(snapshot));
-    redrawCanvases(selectedSwatch.hex);
+    redrawCanvases(selectedSwatch.hex, selectedFinish.specBoost);
   };
 
   const getCanvasCoords = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -319,7 +339,7 @@ export const WallColourVisualiser: React.FC = () => {
       );
       if (changed) {
         pushHistorySnapshot(mask);
-        redrawCanvases(selectedSwatch.hex);
+        redrawCanvases(selectedSwatch.hex, selectedFinish.specBoost);
       }
       return;
     }
@@ -340,7 +360,7 @@ export const WallColourVisualiser: React.FC = () => {
       brushRadius,
       val
     );
-    redrawCanvases(selectedSwatch.hex);
+    redrawCanvases(selectedSwatch.hex, selectedFinish.specBoost);
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -364,7 +384,7 @@ export const WallColourVisualiser: React.FC = () => {
       val
     );
     lastPointRef.current = coords;
-    redrawCanvases(selectedSwatch.hex);
+    redrawCanvases(selectedSwatch.hex, selectedFinish.specBoost);
   };
 
   const handlePointerUp = () => {
@@ -631,50 +651,53 @@ export const WallColourVisualiser: React.FC = () => {
               </div>
             )}
 
-            <div
-              className="relative w-full overflow-hidden"
-              style={{
-                aspectRatio: dimensions.w && dimensions.h ? `${dimensions.w} / ${dimensions.h}` : '16 / 10',
-                maxHeight: '560px',
-              }}
-            >
-              {/* Layer 1 (Full interactive surface): Tinted Wall Preview */}
-              <canvas
-                ref={tintedCanvasRef}
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-                onPointerCancel={handlePointerUp}
-                style={{ touchAction: 'none' }}
-                className={`w-full h-full object-contain block ${
-                  activeTool === 'smart-fill' ? 'cursor-crosshair' : 'cursor-cell'
-                }`}
-                aria-label="Interactive wall selection canvas. Tap or brush walls to apply selected paint finish."
-              />
+            <div className="w-full bg-[#141513] flex items-center justify-center overflow-hidden">
+              <div
+                className="relative max-w-full overflow-hidden"
+                style={{
+                  aspectRatio: dimensions.w && dimensions.h ? `${dimensions.w} / ${dimensions.h}` : '16 / 10',
+                  width: '100%',
+                  maxHeight: '560px',
+                }}
+              >
+                {/* Layer 1 (Full interactive surface): Tinted Wall Preview */}
+                <canvas
+                  ref={tintedCanvasRef}
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                  onPointerCancel={handlePointerUp}
+                  style={{ touchAction: 'none' }}
+                  className={`w-full h-full block ${
+                    activeTool === 'smart-fill' ? 'cursor-crosshair' : 'cursor-cell'
+                  }`}
+                  aria-label="Interactive wall selection canvas. Tap or brush walls to apply selected paint finish."
+                />
 
-              {/* Layer 2 (Left of Split, non-interactive overlay): Original Unmodified Photograph */}
-              <canvas
-                ref={originalCanvasRef}
-                className="absolute inset-0 w-full h-full object-contain block pointer-events-none"
-                style={{ clipPath: `inset(0 ${100 - effectiveSplit}% 0 0)` }}
-                aria-hidden="true"
-              />
-
-              {/* Split Line Indicator */}
-              {!holdingOriginal && (
-                <div
+                {/* Layer 2 (Left of Split, non-interactive overlay): Original Unmodified Photograph */}
+                <canvas
+                  ref={originalCanvasRef}
+                  className="absolute inset-0 w-full h-full block pointer-events-none"
+                  style={{ clipPath: `inset(0 ${100 - effectiveSplit}% 0 0)` }}
                   aria-hidden="true"
-                  className="absolute top-0 bottom-0 w-0.5 bg-white shadow-[0_0_8px_rgba(0,0,0,0.6)] pointer-events-none z-10"
-                  style={{ left: `${effectiveSplit}%` }}
-                >
-                  <span className="absolute top-3 right-2 bg-charcoal/85 text-white font-mono text-[10px] uppercase tracking-widest px-2 py-0.5">
-                    Original
-                  </span>
-                  <span className="absolute top-3 left-2 bg-bronze/95 text-white font-mono text-[10px] uppercase tracking-widest px-2 py-0.5">
-                    Preview
-                  </span>
-                </div>
-              )}
+                />
+
+                {/* Split Line Indicator */}
+                {!holdingOriginal && (
+                  <div
+                    aria-hidden="true"
+                    className="absolute top-0 bottom-0 w-0.5 bg-white shadow-[0_0_8px_rgba(0,0,0,0.7)] pointer-events-none z-10"
+                    style={{ left: `${effectiveSplit}%` }}
+                  >
+                    <span className="absolute top-3 right-2 bg-charcoal/90 text-white font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 whitespace-nowrap">
+                      Before (Original)
+                    </span>
+                    <span className="absolute top-3 left-2 bg-bronze/95 text-white font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 whitespace-nowrap">
+                      After ({selectedSwatch.name})
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Bottom Comparison Controls */}
@@ -692,7 +715,19 @@ export const WallColourVisualiser: React.FC = () => {
                 />
               </label>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCompareSplit(50);
+                    loadRoomSource(SAMPLE_IMAGE_URL, false);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-warm-grey/60 dark:border-white/20 bg-white dark:bg-[#242523] text-charcoal dark:text-[#F4F1EA] hover:border-bronze text-[11px] font-mono uppercase tracking-wider cursor-pointer"
+                >
+                  <RotateCcw size={13} aria-hidden="true" />
+                  <span>Reset</span>
+                </button>
+
                 <button
                   type="button"
                   onPointerDown={() => setHoldingOriginal(true)}
@@ -722,40 +757,151 @@ export const WallColourVisualiser: React.FC = () => {
         </div>
 
         {/* Right 4 Cols: Illustrative Palette, Specs & Enquiry Handoff */}
-        <div className="lg:col-span-4 space-y-5 bg-white dark:bg-[#242523] border border-warm-grey/40 dark:border-white/15 p-6">
+        <div className="lg:col-span-4 space-y-5 bg-white dark:bg-[#242523] border border-warm-grey/40 dark:border-white/15 p-5 sm:p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-bronze dark:text-[#C9B28F] font-semibold block mb-1">
+                ILLUSTRATIVE PALETTE ({ILLUSTRATIVE_PALETTE.length} COLOURS)
+              </span>
+              <h2 className="type-card-title text-2xl sm:text-3xl text-charcoal dark:text-white">
+                {selectedSwatch.name}
+              </h2>
+              <p className="font-mono text-xs text-warm-grey-dark dark:text-[#B5B2AA] mt-1">
+                {selectedSwatch.family} &middot; {selectedSwatch.hex} &middot; LRV {selectedSwatch.lrv}%
+              </p>
+            </div>
+            <span
+              className="w-10 h-10 shrink-0 border border-warm-grey/60 dark:border-white/25"
+              style={{ backgroundColor: selectedSwatch.hex }}
+              aria-hidden="true"
+            />
+          </div>
+
+          {/* Finish Sheen Selector */}
           <div>
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-bronze dark:text-[#C9B28F] font-semibold block mb-1">
-              ILLUSTRATIVE STROVYN PALETTE
+            <span className="font-mono text-[10px] uppercase tracking-widest text-warm-grey-dark dark:text-[#B5B2AA] block mb-2">
+              Finish Sheen ({selectedFinish.sheenRange}):
             </span>
-            <h2 className="type-card-title text-2xl sm:text-3xl text-charcoal dark:text-white">
-              {selectedSwatch.name}
-            </h2>
-            <p className="font-mono text-xs text-warm-grey-dark dark:text-[#B5B2AA] mt-1">
-              {selectedSwatch.category} &middot; {selectedSwatch.hex} &middot; {selectedSwatch.sheenLabel}
+            <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-3 gap-1.5" role="radiogroup" aria-label="Paint finish sheen">
+              {PAINT_FINISHES.map((fin) => {
+                const active = fin.id === selectedFinish.id;
+                return (
+                  <button
+                    key={fin.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => setSelectedFinish(fin)}
+                    className={`px-2 py-1.5 border text-[11px] font-mono uppercase tracking-wider cursor-pointer transition-colors ${
+                      active
+                        ? 'bg-charcoal dark:bg-[#F4F1EA] text-white dark:text-charcoal border-charcoal dark:border-[#F4F1EA] font-semibold'
+                        : 'bg-ivory-light dark:bg-[#1A1B19] text-charcoal dark:text-[#F4F1EA] border-warm-grey/40 dark:border-white/15 hover:border-bronze'
+                    }`}
+                  >
+                    {fin.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] font-sans text-warm-grey-dark dark:text-[#B5B2AA] mt-1.5 leading-snug">
+              {selectedFinish.summary}
             </p>
           </div>
 
+          {/* Search & Family Filter */}
+          <div className="space-y-2.5 pt-2 border-t border-warm-grey/30 dark:border-white/10">
+            <label htmlFor="visualiser-colour-search" className="sr-only">
+              Search illustrative paint colours by name or hex
+            </label>
+            <input
+              id="visualiser-colour-search"
+              type="search"
+              value={colourSearch}
+              onChange={(e) => setColourSearch(e.target.value)}
+              placeholder="Search 72 colours by name or HEX..."
+              className="w-full bg-ivory-light dark:bg-[#1A1B19] border border-warm-grey/60 dark:border-white/20 px-3 py-2 text-xs font-sans text-charcoal dark:text-[#F4F1EA] placeholder:text-charcoal/50 dark:placeholder:text-[#A8A59E]"
+            />
+
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1" role="tablist" aria-label="Colour family filter">
+              {(['All', ...PALETTE_FAMILIES] as const).map((fam) => {
+                const active = activeFamily === fam;
+                return (
+                  <button
+                    key={fam}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setActiveFamily(fam)}
+                    className={`px-2.5 py-1 border text-[10px] font-mono uppercase tracking-wider whitespace-nowrap cursor-pointer transition-colors ${
+                      active
+                        ? 'bg-bronze text-white border-bronze'
+                        : 'bg-ivory-light dark:bg-[#1A1B19] text-charcoal dark:text-[#F4F1EA] border-warm-grey/40 dark:border-white/15 hover:border-bronze'
+                    }`}
+                  >
+                    {fam}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Recently Selected Swatches */}
+          {recentSwatches.length > 1 && (
+            <div>
+              <span className="font-mono text-[10px] uppercase tracking-widest text-warm-grey-dark dark:text-[#B5B2AA] block mb-1.5">
+                Recently Previewed:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {recentSwatches.map((rs) => (
+                  <button
+                    key={rs.id}
+                    type="button"
+                    title={`${rs.name} (${rs.hex})`}
+                    aria-label={`Select recent colour ${rs.name}`}
+                    onClick={() => selectSwatch(rs)}
+                    className={`w-6 h-6 border cursor-pointer ${
+                      rs.id === selectedSwatch.id
+                        ? 'ring-2 ring-bronze border-charcoal dark:border-white'
+                        : 'border-black/25 dark:border-white/25'
+                    }`}
+                    style={{ backgroundColor: rs.hex }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Swatch Selector Grid */}
           <div>
-            <span className="font-mono text-[10px] uppercase tracking-widest text-warm-grey-dark dark:text-[#B5B2AA] block mb-2.5">
-              Select Illustrative Finish:
+            <span className="font-mono text-[10px] uppercase tracking-widest text-warm-grey-dark dark:text-[#B5B2AA] block mb-2">
+              Select Illustrative Colour:
             </span>
-            <div className="grid grid-cols-2 gap-2">
-              {ILLUSTRATIVE_PALETTE.map((swatch) => {
+            <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
+              {ILLUSTRATIVE_PALETTE.filter((s) => {
+                const matchesFam = activeFamily === 'All' || s.family === activeFamily;
+                const q = colourSearch.trim().toLowerCase();
+                const matchesQuery =
+                  !q ||
+                  s.name.toLowerCase().includes(q) ||
+                  s.hex.toLowerCase().includes(q) ||
+                  s.family.toLowerCase().includes(q);
+                return matchesFam && matchesQuery;
+              }).map((swatch) => {
                 const isSelected = swatch.id === selectedSwatch.id;
                 return (
                   <button
                     key={swatch.id}
                     type="button"
-                    onClick={() => setSelectedSwatch(swatch)}
-                    className={`flex items-center gap-2.5 p-2.5 border text-left text-xs transition-colors cursor-pointer ${
+                    aria-pressed={isSelected}
+                    onClick={() => selectSwatch(swatch)}
+                    className={`flex items-center gap-2 p-2 border text-left text-xs transition-colors cursor-pointer ${
                       isSelected
                         ? 'bg-charcoal dark:bg-[#F4F1EA] text-white dark:text-charcoal border-charcoal dark:border-[#F4F1EA]'
                         : 'bg-ivory-light dark:bg-[#1A1B19] text-charcoal dark:text-[#F4F1EA] border-warm-grey/40 dark:border-white/15 hover:border-bronze'
                     }`}
                   >
-                    <span className="w-4 h-4 shrink-0 border border-black/20" style={{ backgroundColor: swatch.hex }} aria-hidden="true" />
-                    <span className="font-sans text-[11px] font-medium leading-snug">
+                    <span className="w-4 h-4 shrink-0 border border-black/20 dark:border-white/20" style={{ backgroundColor: swatch.hex }} aria-hidden="true" />
+                    <span className="font-sans text-[11px] font-medium leading-tight truncate">
                       {swatch.name}
                     </span>
                   </button>

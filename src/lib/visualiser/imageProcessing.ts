@@ -274,7 +274,8 @@ function hslToRgb(h: number, s: number, l: number): [number, number, number] {
 
 /**
  * Renders original vs. luminance-preserving tinted wall composite onto target ImageData.
- * Preserves surface texture, raking daylight, and shadow gradients.
+ * Preserves surface texture, raking daylight, and shadow gradients while accurately
+ * representing light whites through deep charcoals and finish sheen highlights.
  */
 export function renderTintedComposite(
   originalPixels: Uint8ClampedArray,
@@ -282,9 +283,27 @@ export function renderTintedComposite(
   width: number,
   height: number,
   targetHex: string,
-  outPixels: Uint8ClampedArray
+  outPixels: Uint8ClampedArray,
+  specBoost = 0
 ): void {
   const [th, ts, tl] = hexToHsl(targetHex);
+
+  // Measure average luminance of the selected wall region so relative shadows/highlights
+  // stay anchored to the target paint's true lightness (even for dark charcoals or bright whites).
+  let lumSum = 0;
+  let lumCount = 0;
+  const total = width * height;
+  for (let i = 0; i < total; i += 4) {
+    if (mask[i] > 127) {
+      const p = i * 4;
+      const r0 = originalPixels[p] / 255;
+      const g0 = originalPixels[p + 1] / 255;
+      const b0 = originalPixels[p + 2] / 255;
+      lumSum += (Math.max(r0, g0, b0) + Math.min(r0, g0, b0)) * 0.5;
+      lumCount++;
+    }
+  }
+  const maskMeanLum = lumCount > 0 ? lumSum / lumCount : 0.65;
 
   for (let y = 0; y < height; y++) {
     const row = y * width;
@@ -327,9 +346,15 @@ export function renderTintedComposite(
       const min = Math.min(r0, g0, b0);
       const l0 = (max + min) / 2;
 
-      // Preserve shadow/highlight structure while allowing light finishes to brighten darker walls
-      const targetWeight = tl > l0 + 0.25 ? 0.32 : 0.24;
-      const lOut = Math.max(0.04, Math.min(0.96, l0 * (1 - targetWeight) + tl * targetWeight));
+      const shadingDelta = l0 - maskMeanLum;
+      const sheenLift =
+        specBoost > 0 && shadingDelta > 0.04
+          ? Math.min(0.22, (shadingDelta - 0.04) * specBoost * 4.5)
+          : 0;
+      const lOut = Math.max(
+        0.03,
+        Math.min(0.97, tl + shadingDelta * 0.62 + sheenLift)
+      );
       const [tr, tg, tb] = hslToRgb(th, ts, lOut);
 
       outPixels[p] = Math.round(originalPixels[p] * (1 - alpha) + tr * alpha);

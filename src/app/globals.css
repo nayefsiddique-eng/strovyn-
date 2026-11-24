@@ -283,8 +283,30 @@ button, input, textarea, select, img {
    STROVYN ARCHITECTURAL DARK THEME (SCOPED & PRESERVED)
    ========================================================================== */
 
+/* Semantic Theme Variables & Native Color Scheme */
+:root {
+  color-scheme: light;
+  --strovyn-bg: #F4F1EA;
+  --strovyn-surface: #FFFFFF;
+  --strovyn-elevated: #FAF8F5;
+  --strovyn-input: #FAF8F5;
+  --strovyn-fg: #20211F;
+  --strovyn-fg-muted: #595651;
+  --strovyn-border: rgba(184, 181, 174, 0.55);
+  --strovyn-accent: #7E6340;
+}
+
 /* Root & Base Container Inversion */
 html.dark {
+  color-scheme: dark;
+  --strovyn-bg: #181917;
+  --strovyn-surface: #242523;
+  --strovyn-elevated: #1E1F1D;
+  --strovyn-input: #1B1C1A;
+  --strovyn-fg: #F4F1EA;
+  --strovyn-fg-muted: #B8B5AE;
+  --strovyn-border: rgba(255, 255, 255, 0.14);
+  --strovyn-accent: #C9B28F;
   background-color: #181917;
   color: #F4F1EA;
 }
@@ -293,55 +315,84 @@ html.dark body {
   color: #F4F1EA;
 }
 
-/* Secondary Routes & General Main Content */
-html.dark main {
+/* Secondary Routes, Main Content & Authenticated CMS Shell */
+html.dark main,
+html.dark [data-cms-shell="true"] {
   background-color: #181917 !important;
   color: #F4F1EA !important;
 }
-html.dark main .bg-ivory {
+html.dark main .bg-ivory,
+html.dark [data-cms-shell="true"] .bg-ivory {
   background-color: #20211F !important;
 }
-html.dark main .bg-ivory-light {
+html.dark main .bg-ivory-light,
+html.dark [data-cms-shell="true"] .bg-ivory-light {
   background-color: #1E1F1D !important;
   border-color: rgba(255, 255, 255, 0.16) !important;
 }
 html.dark main .bg-white,
 html.dark main .bg-white\/70,
-html.dark main .bg-\[\#FAF9F5\] {
-  background-color: #2A2B29 !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
+html.dark main .bg-\[\#FAF9F5\],
+html.dark [data-cms-shell="true"] .bg-white,
+html.dark [data-cms-shell="true"] .bg-white\/70,
+html.dark [data-cms-shell="true"] .bg-\[\#FAF9F5\],
+html.dark [data-cms-shell="true"] .bg-stone-50,
+html.dark [data-cms-shell="true"] .bg-neutral-50 {
+  background-color: #242523 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+html.dark [data-cms-shell="true"] .bg-charcoal {
+  background-color: #F4F1EA !important;
+  color: #20211F !important;
+}
+html.dark [data-cms-shell="true"] .bg-charcoal .text-ivory,
+html.dark [data-cms-shell="true"] .text-ivory {
+  color: #20211F !important;
 }
 
 /* Typography Inversions on Naturally Light Surfaces */
 html.dark main .text-charcoal,
-html.dark main .text-\[\#20211F\] {
+html.dark main .text-\[\#20211F\],
+html.dark [data-cms-shell="true"] .text-charcoal,
+html.dark [data-cms-shell="true"] .text-\[\#20211F\] {
   color: #F4F1EA !important;
 }
-html.dark main .text-charcoal\/85 {
+html.dark main .text-charcoal\/90,
+html.dark [data-cms-shell="true"] .text-charcoal\/90,
+html.dark main .text-charcoal\/85,
+html.dark [data-cms-shell="true"] .text-charcoal\/85 {
   color: rgba(244, 241, 234, 0.90) !important;
 }
-html.dark main .text-charcoal\/80 {
+html.dark main .text-charcoal\/80,
+html.dark [data-cms-shell="true"] .text-charcoal\/80 {
   color: rgba(244, 241, 234, 0.84) !important;
 }
-html.dark main .text-charcoal\/75 {
+html.dark main .text-charcoal\/75,
+html.dark [data-cms-shell="true"] .text-charcoal\/75 {
   color: rgba(244, 241, 234, 0.80) !important;
 }
-html.dark main .text-charcoal\/70 {
+html.dark main .text-charcoal\/70,
+html.dark [data-cms-shell="true"] .text-charcoal\/70 {
   color: rgba(244, 241, 234, 0.78) !important;
 }
-html.dark main .text-charcoal\/60 {
+html.dark main .text-charcoal\/60,
+html.dark [data-cms-shell="true"] .text-charcoal\/60 {
   color: rgba(244, 241, 234, 0.74) !important;
 }
 html.dark main .text-charcoal\/50,
-html.dark main .text-charcoal\/40 {
+html.dark main .text-charcoal\/40,
+html.dark [data-cms-shell="true"] .text-charcoal\/50,
+html.dark [data-cms-shell="true"] .text-charcoal\/40 {
   color: #B5B2AA !important;
 }
-html.dark main .text-charcoal-muted {
+html.dark main .text-charcoal-muted,
+html.dark [data-cms-shell="true"] .text-charcoal-muted {
   color: #D0CDC6 !important;
 }
 
 /* Readable Bronze, Warm Grey & Brand Red on Dark Surfaces (Both Themes for inherently dark sections) */
 html.dark main .text-bronze,
+html.dark [data-cms-shell="true"] .text-bronze,
 html.dark header .text-bronze,
 footer .text-bronze,
 #expertise .text-bronze,
@@ -353,6 +404,7 @@ footer .text-bronze,
 }
 
 html.dark main .text-warm-grey-dark,
+html.dark [data-cms-shell="true"] .text-warm-grey-dark,
 html.dark header .text-warm-grey-dark,
 footer .text-warm-grey-dark,
 #expertise .text-warm-grey-dark,
@@ -365,10 +417,39 @@ footer .text-warm-grey-dark,
 }
 
 html.dark .text-brand-red,
+html.dark .text-brand-red-dark,
 #expertise .text-brand-red,
 #approach .text-brand-red,
 .bg-charcoal .text-brand-red {
-  color: #F87171 !important;
+  color: #FCA5A5 !important;
+}
+
+/* CMS Tables, Rich Text & Browser Autofill in Dark Mode */
+html.dark [data-cms-shell="true"] table,
+html.dark [data-cms-shell="true"] thead,
+html.dark [data-cms-shell="true"] tbody,
+html.dark [data-cms-shell="true"] tr {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+html.dark [data-cms-shell="true"] thead th {
+  background-color: #1E1F1D !important;
+  color: #C9B28F !important;
+}
+html.dark [data-cms-shell="true"] tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+html.dark [data-cms-shell="true"] .ProseMirror {
+  background-color: #1B1C1A !important;
+  color: #F4F1EA !important;
+}
+html.dark input:-webkit-autofill,
+html.dark input:-webkit-autofill:hover,
+html.dark input:-webkit-autofill:focus,
+html.dark textarea:-webkit-autofill,
+html.dark select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #242523 inset !important;
+  -webkit-text-fill-color: #F4F1EA !important;
+  caret-color: #F4F1EA !important;
 }
 
 /* Light-mode muted text on ivory/white: ensure >= 4.5:1 even when opacity utilities are used */
@@ -413,13 +494,17 @@ html.dark header .text-\[\#111110\] {
 }
 
 /* Mobile Navigation Overlay */
+html.dark #site-navigation-drawer,
 html.dark [role="dialog"][aria-label="Mobile Navigation Menu"] {
   background-color: #181917 !important;
   color: #F4F1EA !important;
 }
+html.dark #site-navigation-drawer .text-charcoal,
 html.dark [role="dialog"][aria-label="Mobile Navigation Menu"] .text-charcoal {
   color: #F4F1EA !important;
 }
+html.dark #site-navigation-drawer .border-warm-grey\/30,
+html.dark #site-navigation-drawer .border-warm-grey\/20,
 html.dark [role="dialog"][aria-label="Mobile Navigation Menu"] .border-warm-grey\/30 {
   border-color: rgba(255, 255, 255, 0.1) !important;
 }
