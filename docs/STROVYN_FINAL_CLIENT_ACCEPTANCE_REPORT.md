@@ -7,7 +7,7 @@
   1. **Netlify Private Access (`sso_login: true`)**: Intentionally kept Private per operator request (`HTTP 401` to unauthenticated visitors).
   2. **Custom Domain (`strovynpaints.com`)**: Not yet registered or attached to Netlify.
   3. **Branded Email & Custom SMTP**: Production `RESEND_FROM_EMAIL` remains `onboarding@resend.dev`; `STROVYN_CRON_ENABLED=false` and `RESEND_SEND_ACKNOWLEDGMENTS=false` until `strovynpaints.com` is verified in Resend.
-  4. **Netlify Ownership Transfer & Supabase Pro Plan**: Site remains on `nayefsiddique-eng`; Supabase Free-tier pauses after 7 days of inactivity without Pro upgrade.
+  4. **Netlify Ownership Transfer & Supabase Continuity**: Site remains on `nayefsiddique-eng`; Supabase Free-tier pauses after 7 days of inactivity without Pro upgrade (recommended for production continuity/backups, though not mandatory for technical launch).
   5. **Portfolio Content**: `0` published projects, `0` published articles, and `0` published testimonials in production (`qktgxxbmdvmpyipltamo`) until client sign-off.
 
 ## 2. Git Commit & Deployed Build
@@ -38,6 +38,7 @@
 | Employee (Editor) & Admin Journeys (`run-handover-three-role-e2e.mjs`) | Live Playwright + staging DB + RBAC `403` | **PASS** (cleaned up) |
 | Dark Mode & Visualiser (`run-visualiser-and-darkmode-qa.mjs`) | Live hosted preview (`design-strovyn-cinematic-3d`) | **PASS** (`BEFORE` invariant, `5` distinct colours) |
 | 6-Viewport Responsive + A11y (`run-playwright-qa-gate.mjs`) | Chromium `320`–`1920`, `axe-core` | **PASS** (`0` violations/overlaps) |
+| Homepage CLS Fix (`src/app/layout.tsx` Suspense `fallback={null}`) | Playwright `layout-shift` diagnostics (`next start`) | **PASS** (`CLS: 0`, `0` shifts) |
 | Live-browser Careers CV upload & private download | PGlite/unit verified (`test-submission-hardening.mjs`); live browser upload | **NOT VERIFIED** in live browser |
 | Production owner login (`nayefsiddique@gmail.com` / `strovyn@gmail.com`) | Account state `is_active: true` verified in `qktgxxbmdvmpyipltamo`; interactive login | **NOT VERIFIED** (owner-controlled password) |
 | Manual NVDA/VoiceOver screen-reader & Firefox/WebKit testing | Cross-browser / AT manual testing | **NOT VERIFIED** |
@@ -62,7 +63,7 @@
 | Resend Verified Sender | `RESEND_FROM_EMAIL=onboarding@resend.dev` | Verify `strovynpaints.com` (`DKIM`/`SPF`) in Resend |
 | Supabase Auth Custom SMTP | Free-tier mailer (2 emails/hr cap) | Configure Resend SMTP in `qktgxxbmdvmpyipltamo` |
 | Netlify Ownership | Under `nayefsiddique-eng` team | Create client Netlify team & invite `nayefsiddique-eng` as Owner |
-| Supabase Continuity | Free tier (7-day inactivity pause, no PITR) | Upgrade `qktgxxbmdvmpyipltamo` to Supabase Pro (`$25/mo`) |
+| Supabase Continuity | Free tier (7-day inactivity pause, no PITR; not a technical blocker) | Optional/recommended upgrade of `qktgxxbmdvmpyipltamo` to Supabase Pro (`$25/mo`) |
 | Portfolio Content | `0` public projects/articles/testimonials | Review & publish approved content in `/admin` |
 | Staff Login | `strovyn@gmail.com` & `nayefsiddique@gmail.com` active Admins | Sign in at `/admin` with owner-established passwords |
 

@@ -79,7 +79,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full bg-ivory text-charcoal font-sans antialiased flex flex-col">
-        <React.Suspense fallback={<div className="h-20" />}>
+        <React.Suspense fallback={null}>
           <Header />
         </React.Suspense>
         <div className="flex-1">
