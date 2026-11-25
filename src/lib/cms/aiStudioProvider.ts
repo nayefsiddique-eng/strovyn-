@@ -1261,28 +1261,104 @@ export function resolveAiProviderAdapter(options?: {
   return new DeterministicGroundingProvider();
 }
 
+function clampText(val: unknown, max: number): unknown {
+  if (typeof val !== 'string') return val;
+  const trimmed = val.trim();
+  if (trimmed.length <= max) return trimmed;
+  const slice = trimmed.slice(0, max - 1);
+  const lastSpace = slice.lastIndexOf(' ');
+  const cut = lastSpace > Math.floor(max * 0.6) ? slice.slice(0, lastSpace) : slice;
+  return cut.replace(/[,;:\s-]+$/, '');
+}
+
+function clampStringArray(val: unknown, maxItems: number, maxLen: number): unknown {
+  if (!Array.isArray(val)) return val;
+  return val.slice(0, maxItems).map((item) => clampText(item, maxLen));
+}
+
+function normalizeAiOutputBounds(mode: AiStudioMode, rawOutput: unknown): unknown {
+  if (!rawOutput || typeof rawOutput !== 'object') return rawOutput;
+  const obj = { ...(rawOutput as Record<string, unknown>) };
+
+  if (mode === 'project_description') {
+    obj.projectOverview = clampText(obj.projectOverview, 5000);
+    obj.shortDescription = clampText(obj.shortDescription, 320);
+    obj.workmanshipDescription = clampText(obj.workmanshipDescription, 3000);
+    obj.finishesSummary = clampText(obj.finishesSummary, 400);
+    obj.seoTitle = clampText(obj.seoTitle, 70);
+    obj.seoDescription = clampText(obj.seoDescription, 160);
+    obj.imageAltSuggestions = clampStringArray(obj.imageAltSuggestions, 6, 180);
+    obj.verificationChecklist = clampStringArray(obj.verificationChecklist, 8, 260);
+    if (obj.beforeAfterCaptions && typeof obj.beforeAfterCaptions === 'object') {
+      const cap = obj.beforeAfterCaptions as Record<string, unknown>;
+      obj.beforeAfterCaptions = {
+        beforeCaption: clampText(cap.beforeCaption, 240),
+        afterCaption: clampText(cap.afterCaption, 240),
+      };
+    }
+  } else if (mode === 'article_writer') {
+    obj.headline = clampText(obj.headline, 180);
+    obj.subtitle = clampText(obj.subtitle, 240);
+    obj.excerpt = clampText(obj.excerpt, 360);
+    obj.seoTitle = clampText(obj.seoTitle, 70);
+    obj.seoDescription = clampText(obj.seoDescription, 160);
+    obj.verificationChecklist = clampStringArray(obj.verificationChecklist, 8, 260);
+    if (Array.isArray(obj.bodySections)) {
+      obj.bodySections = obj.bodySections.slice(0, 8).map((sec) => {
+        if (!sec || typeof sec !== 'object') return sec;
+        const s = sec as Record<string, unknown>;
+        return {
+          heading: clampText(s.heading, 140),
+          paragraphs: clampStringArray(s.paragraphs, 6, 1200),
+        };
+      });
+    }
+    if (Array.isArray(obj.suggestedInternalLinks)) {
+      obj.suggestedInternalLinks = obj.suggestedInternalLinks.slice(0, 5);
+    }
+  } else if (mode === 'seo_assistant') {
+    obj.seoTitle = clampText(obj.seoTitle, 70);
+    obj.metaDescription = clampText(obj.metaDescription, 160);
+    obj.headingImprovements = clampStringArray(obj.headingImprovements, 6, 220);
+    obj.readabilityImprovements = clampStringArray(obj.readabilityImprovements, 6, 240);
+    obj.missingVerificationItems = clampStringArray(obj.missingVerificationItems, 8, 260);
+    if (Array.isArray(obj.internalLinkingOpportunities)) {
+      obj.internalLinkingOpportunities = obj.internalLinkingOpportunities.slice(0, 5);
+    }
+  } else if (mode === 'social_assistant') {
+    obj.instagramCaption = clampText(obj.instagramCaption, 1200);
+    obj.facebookPost = clampText(obj.facebookPost, 1500);
+    obj.linkedinUpdate = clampText(obj.linkedinUpdate, 1800);
+    obj.projectShowcaseCaption = clampText(obj.projectShowcaseCaption, 800);
+    obj.verificationChecklist = clampStringArray(obj.verificationChecklist, 8, 260);
+  }
+
+  return obj;
+}
+
 export function validateStructuredAiOutput(
   mode: AiStudioMode,
   rawOutput: unknown
 ): AiStudioOutput {
+  const normalizedOutput = normalizeAiOutputBounds(mode, rawOutput);
   let validated: AiStudioOutput;
 
   if (mode === 'article_writer') {
     const candidate =
-      rawOutput &&
-      typeof rawOutput === 'object' &&
-      'bodySections' in rawOutput &&
-      !('contentJson' in rawOutput)
+      normalizedOutput &&
+      typeof normalizedOutput === 'object' &&
+      'bodySections' in normalizedOutput &&
+      !('contentJson' in normalizedOutput)
         ? {
-            ...(rawOutput as Record<string, unknown>),
+            ...(normalizedOutput as Record<string, unknown>),
             contentJson: buildTiptapDocumentFromSections(
-              ((rawOutput as { bodySections?: unknown }).bodySections as Array<{
+              ((normalizedOutput as { bodySections?: unknown }).bodySections as Array<{
                 heading: string;
                 paragraphs: string[];
               }>) ?? []
             ),
           }
-        : rawOutput;
+        : normalizedOutput;
 
     const parsed = ArticleWriterOutputSchema.safeParse(candidate);
     if (!parsed.success) {
@@ -1296,7 +1372,7 @@ export function validateStructuredAiOutput(
     }
     validated = parsed.data;
   } else if (mode === 'project_description') {
-    const parsed = ProjectDescriptionOutputSchema.safeParse(rawOutput);
+    const parsed = ProjectDescriptionOutputSchema.safeParse(normalizedOutput);
     if (!parsed.success) {
       throw new EditorialHttpError(
         502,
@@ -1308,7 +1384,7 @@ export function validateStructuredAiOutput(
     }
     validated = parsed.data;
   } else if (mode === 'seo_assistant') {
-    const parsed = SeoAssistantOutputSchema.safeParse(rawOutput);
+    const parsed = SeoAssistantOutputSchema.safeParse(normalizedOutput);
     if (!parsed.success) {
       throw new EditorialHttpError(
         502,
@@ -1320,7 +1396,7 @@ export function validateStructuredAiOutput(
     }
     validated = parsed.data;
   } else {
-    const parsed = SocialAssistantOutputSchema.safeParse(rawOutput);
+    const parsed = SocialAssistantOutputSchema.safeParse(normalizedOutput);
     if (!parsed.success) {
       throw new EditorialHttpError(
         502,

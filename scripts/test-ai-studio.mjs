@@ -165,10 +165,52 @@ async function run() {
     assert.equal(capturedBody.generationConfig.maxOutputTokens, 4096);
     assert.equal(capturedBody.generationConfig.thinkingConfig, undefined);
     assert.equal(capturedBody.generationConfig.responseSchema?.type, 'OBJECT');
-    assert.ok(
+    assert.equal(
       capturedBody.generationConfig.responseSchema?.required?.includes('projectOverview'),
+      true,
       'Expected responseSchema to require projectOverview'
     );
+
+    // 7b. Mocked GeminiRestProvider with >160 char seoDescription and >6 imageAltSuggestions -> normalized cleanly
+    resetAiUsageForTesting();
+    globalThis.fetch = async () =>
+      new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: JSON.stringify({
+                      ...det.output,
+                      seoTitle: 'Norwood Limestone Residence Architectural Painting & Heritage Conservation Adelaide SA',
+                      seoDescription:
+                        'Norwood Limestone Residence in Norwood, SA featuring Level 5 plaster preparation, dust-controlled orbital sanding, heritage cornice detailing, and potassium silicate architectural finishes for discerning Adelaide estate owners.',
+                      imageAltSuggestions: [
+                        'Alt text one for gallery view',
+                        'Alt text two for cornice detail',
+                        'Alt text three for mineral wall finish',
+                        'Alt text four for timber millwork',
+                        'Alt text five for entry hall',
+                        'Alt text six for exterior stone',
+                        'Alt text seven extra item',
+                        'Alt text eight extra item',
+                      ],
+                    }),
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    const clampedOk = await executeAiStudioGeneration(activeAdmin.id, validProjectReq, {
+      providerOverride: new GeminiRestProvider('AIzaSyTestKey1234567890', 'gemini-2.5-flash'),
+    });
+    assert.ok(clampedOk.output.seoTitle.length <= 70);
+    assert.ok(clampedOk.output.seoDescription.length <= 160);
+    assert.ok(clampedOk.output.imageAltSuggestions.length <= 6);
 
     // 8. Provider HTTP 400 (API_KEY_INVALID) -> 503 AI_CONFIG_ERROR, ZERO duplicate retries
     let calls = 0;
