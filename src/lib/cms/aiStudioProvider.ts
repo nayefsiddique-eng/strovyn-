@@ -914,17 +914,21 @@ function buildGeminiResponseSchema(mode: AiStudioMode): Record<string, unknown> 
         seoDescription: { type: 'STRING' },
         bodySections: {
           type: 'ARRAY',
+          minItems: 2,
+          maxItems: 6,
           items: {
             type: 'OBJECT',
             required: ['heading', 'paragraphs'],
             properties: {
               heading: { type: 'STRING' },
-              paragraphs: { type: 'ARRAY', items: { type: 'STRING' } },
+              paragraphs: { type: 'ARRAY', minItems: 1, maxItems: 5, items: { type: 'STRING' } },
             },
           },
         },
         suggestedInternalLinks: {
           type: 'ARRAY',
+          minItems: 1,
+          maxItems: 5,
           items: {
             type: 'OBJECT',
             required: ['label', 'href', 'reason'],
@@ -935,7 +939,7 @@ function buildGeminiResponseSchema(mode: AiStudioMode): Record<string, unknown> 
             },
           },
         },
-        verificationChecklist: { type: 'ARRAY', items: { type: 'STRING' } },
+        verificationChecklist: { type: 'ARRAY', minItems: 1, maxItems: 6, items: { type: 'STRING' } },
       },
     };
   }
@@ -969,10 +973,10 @@ function buildGeminiResponseSchema(mode: AiStudioMode): Record<string, unknown> 
             afterCaption: { type: 'STRING' },
           },
         },
-        imageAltSuggestions: { type: 'ARRAY', items: { type: 'STRING' } },
+        imageAltSuggestions: { type: 'ARRAY', minItems: 2, maxItems: 6, items: { type: 'STRING' } },
         seoTitle: { type: 'STRING' },
         seoDescription: { type: 'STRING' },
-        verificationChecklist: { type: 'ARRAY', items: { type: 'STRING' } },
+        verificationChecklist: { type: 'ARRAY', minItems: 1, maxItems: 6, items: { type: 'STRING' } },
       },
     };
   }
@@ -993,9 +997,11 @@ function buildGeminiResponseSchema(mode: AiStudioMode): Record<string, unknown> 
         mode: { type: 'STRING', enum: ['seo_assistant'] },
         seoTitle: { type: 'STRING' },
         metaDescription: { type: 'STRING' },
-        headingImprovements: { type: 'ARRAY', items: { type: 'STRING' } },
+        headingImprovements: { type: 'ARRAY', minItems: 1, maxItems: 6, items: { type: 'STRING' } },
         internalLinkingOpportunities: {
           type: 'ARRAY',
+          minItems: 1,
+          maxItems: 5,
           items: {
             type: 'OBJECT',
             required: ['label', 'href', 'reason'],
@@ -1006,8 +1012,8 @@ function buildGeminiResponseSchema(mode: AiStudioMode): Record<string, unknown> 
             },
           },
         },
-        readabilityImprovements: { type: 'ARRAY', items: { type: 'STRING' } },
-        missingVerificationItems: { type: 'ARRAY', items: { type: 'STRING' } },
+        readabilityImprovements: { type: 'ARRAY', minItems: 1, maxItems: 6, items: { type: 'STRING' } },
+        missingVerificationItems: { type: 'ARRAY', minItems: 1, maxItems: 6, items: { type: 'STRING' } },
       },
     };
   }
@@ -1028,7 +1034,7 @@ function buildGeminiResponseSchema(mode: AiStudioMode): Record<string, unknown> 
       facebookPost: { type: 'STRING' },
       linkedinUpdate: { type: 'STRING' },
       projectShowcaseCaption: { type: 'STRING' },
-      verificationChecklist: { type: 'ARRAY', items: { type: 'STRING' } },
+      verificationChecklist: { type: 'ARRAY', minItems: 1, maxItems: 6, items: { type: 'STRING' } },
     },
   };
 }
