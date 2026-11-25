@@ -493,6 +493,13 @@ function resolveConfiguredApiKey(): string | null {
   return raw;
 }
 
+function isDirectStrovynKeyConfigured(): boolean {
+  const raw = (process.env.STROVYN_AI_API_KEY?.trim() || '')
+    .replace(/^['"]+|['"]+$/g, '')
+    .trim();
+  return Boolean(raw && !raw.includes('placeholder') && raw.length >= 16);
+}
+
 export function getAiProviderStatus(): AiProviderStatus {
   const apiKey = resolveConfiguredApiKey();
   const forceDeterministic =
@@ -827,16 +834,55 @@ function stripJsonCodeFences(raw: string): string {
   return match ? match[1].trim() : trimmed;
 }
 
-function resolveGeminiBaseUrl(): string {
-  const raw = (
-    process.env.STROVYN_AI_BASE_URL?.trim() ||
-    process.env.GOOGLE_GEMINI_BASE_URL?.trim() ||
-    ''
-  ).replace(/\/+$/, '');
-  if (raw && /^https:\/\//i.test(raw)) {
-    return raw;
+export function resolveGeminiBaseUrl(): string {
+  const explicitBase = (process.env.STROVYN_AI_BASE_URL?.trim() || '').replace(/\/+$/, '');
+  if (explicitBase && /^https:\/\//i.test(explicitBase)) {
+    return explicitBase;
+  }
+  // When direct Google AI Studio key (STROVYN_AI_API_KEY) is configured,
+  // never route through Netlify's injected GOOGLE_GEMINI_BASE_URL.
+  if (isDirectStrovynKeyConfigured()) {
+    return 'https://generativelanguage.googleapis.com';
+  }
+  const gatewayBase = (process.env.GOOGLE_GEMINI_BASE_URL?.trim() || '').replace(/\/+$/, '');
+  if (gatewayBase && /^https:\/\//i.test(gatewayBase)) {
+    return gatewayBase;
   }
   return 'https://generativelanguage.googleapis.com';
+}
+
+export async function probeGeminiAvailableModels(): Promise<{
+  routingMode: 'direct_google' | 'netlify_gateway' | 'unconfigured';
+  models: string[];
+  probeStatus: number | null;
+}> {
+  const apiKey = resolveConfiguredApiKey();
+  if (!apiKey) {
+    return { routingMode: 'unconfigured', models: [], probeStatus: null };
+  }
+  const routingMode = isDirectStrovynKeyConfigured() ? 'direct_google' : 'netlify_gateway';
+  const baseUrl = resolveGeminiBaseUrl();
+  const endpoint = /\/v1(?:beta)?$/i.test(baseUrl)
+    ? `${baseUrl}/models`
+    : `${baseUrl}/v1beta/models`;
+  try {
+    const res = await fetch(endpoint, {
+      method: 'GET',
+      headers: { 'x-goog-api-key': apiKey },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) {
+      return { routingMode, models: [], probeStatus: res.status };
+    }
+    const data = (await res.json()) as { models?: Array<{ name?: string }> };
+    const models = (data.models ?? [])
+      .map((m) => (m.name || '').replace(/^models\//, ''))
+      .filter(Boolean)
+      .slice(0, 25);
+    return { routingMode, models, probeStatus: res.status };
+  } catch {
+    return { routingMode, models: [], probeStatus: null };
+  }
 }
 
 export class GeminiRestProvider implements AiProviderAdapter {

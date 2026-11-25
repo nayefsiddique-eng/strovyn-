@@ -25,6 +25,7 @@ async function run() {
     executeAiStudioGeneration,
     resetAiUsageForTesting,
     getAiProviderStatus,
+    resolveGeminiBaseUrl,
   } = providerMod;
   const { generateAiStudioContent } = serviceMod;
 
@@ -53,6 +54,8 @@ async function run() {
   const prevKey = process.env.STROVYN_AI_API_KEY;
   const prevGemini = process.env.GEMINI_API_KEY;
   const prevProvider = process.env.STROVYN_AI_PROVIDER;
+  const prevBaseUrl = process.env.GOOGLE_GEMINI_BASE_URL;
+  const prevStrovynBase = process.env.STROVYN_AI_BASE_URL;
 
   try {
     // 1. Valid deterministic generation
@@ -96,12 +99,28 @@ async function run() {
       (err) => err.status === 503
     );
 
-    // 6. Quoted key hygiene check
+    // 6. Quoted key hygiene + direct vs Netlify gateway base URL isolation
     process.env.STROVYN_AI_API_KEY = '"AIzaSyTestQuotedKey1234567890"';
+    process.env.GOOGLE_GEMINI_BASE_URL = 'https://gateway.netlify.test/gemini';
+    delete process.env.STROVYN_AI_BASE_URL;
     const status = getAiProviderStatus();
     assert.equal(status.apiKeyConfigured, true);
     assert.equal(status.providerName, 'gemini_rest');
     assert.equal(status.model, 'gemini-2.5-flash');
+    assert.equal(
+      resolveGeminiBaseUrl(),
+      'https://generativelanguage.googleapis.com',
+      'Direct STROVYN_AI_API_KEY must bypass Netlify GOOGLE_GEMINI_BASE_URL'
+    );
+    delete process.env.STROVYN_AI_API_KEY;
+    process.env.GEMINI_API_KEY = 'gw-token-1234567890';
+    assert.equal(
+      resolveGeminiBaseUrl(),
+      'https://gateway.netlify.test/gemini',
+      'Netlify GEMINI_API_KEY should use GOOGLE_GEMINI_BASE_URL'
+    );
+    delete process.env.GEMINI_API_KEY;
+    delete process.env.GOOGLE_GEMINI_BASE_URL;
 
     // 7. Mocked GeminiRestProvider: Valid 200 with fenced JSON + x-goog-api-key + baseUrl /v1beta dedup
     resetAiUsageForTesting();
@@ -317,6 +336,10 @@ async function run() {
     else process.env.GEMINI_API_KEY = prevGemini;
     if (prevProvider === undefined) delete process.env.STROVYN_AI_PROVIDER;
     else process.env.STROVYN_AI_PROVIDER = prevProvider;
+    if (prevBaseUrl === undefined) delete process.env.GOOGLE_GEMINI_BASE_URL;
+    else process.env.GOOGLE_GEMINI_BASE_URL = prevBaseUrl;
+    if (prevStrovynBase === undefined) delete process.env.STROVYN_AI_BASE_URL;
+    else process.env.STROVYN_AI_BASE_URL = prevStrovynBase;
     resetAiUsageForTesting();
   }
 }

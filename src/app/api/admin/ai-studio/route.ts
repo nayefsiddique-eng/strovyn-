@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import {
   getAiProviderStatus,
   getAiUsageSnapshot,
+  probeGeminiAvailableModels,
 } from '@/lib/cms/aiStudioProvider';
 import { generateAiStudioContent } from '@/lib/cms/aiStudioService';
 import {
@@ -16,14 +17,18 @@ import { readJsonBodyWithLimit } from '@/lib/security/requestLimits';
 
 const MAX_AI_REQUEST_BYTES = 32 * 1024;
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const staff = await requireStaffSession({ action: 'ai_studio:use' });
+    const url = new URL(req.url);
+    const shouldProbe = url.searchParams.get('probe') === 'models';
+    const modelProbe = shouldProbe ? await probeGeminiAvailableModels() : undefined;
     return NextResponse.json(
       {
         success: true,
         provider: getAiProviderStatus(),
         usage: getAiUsageSnapshot(staff.id),
+        ...(modelProbe ? { modelProbe } : {}),
       },
       { headers: { 'Cache-Control': 'private, no-store' } }
     );
