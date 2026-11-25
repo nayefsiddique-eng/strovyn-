@@ -164,6 +164,11 @@ async function run() {
     assert.equal(capturedHeaders['x-goog-api-key'], 'AIzaSyTestKey1234567890');
     assert.equal(capturedBody.generationConfig.maxOutputTokens, 4096);
     assert.equal(capturedBody.generationConfig.thinkingConfig, undefined);
+    assert.equal(capturedBody.generationConfig.responseSchema?.type, 'OBJECT');
+    assert.ok(
+      capturedBody.generationConfig.responseSchema?.required?.includes('projectOverview'),
+      'Expected responseSchema to require projectOverview'
+    );
 
     // 8. Provider HTTP 400 (API_KEY_INVALID) -> 503 AI_CONFIG_ERROR, ZERO duplicate retries
     let calls = 0;
