@@ -5,7 +5,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import Button from '@/components/ui/Button';
-import { ArchitecturalTiltCard } from '@/components/ui/ArchitecturalTiltCard';
 
 export interface ExpertiseItem {
   number: string;
@@ -136,26 +135,21 @@ export const OurExpertise: React.FC<OurExpertiseProps> = ({ className = '' }) =>
           </div>
         </motion.div>
 
-        {/* Haven-Inspired Architectural Portfolio Grid (Large Image Cards) */}
+        {/* Architectural Monograph Grid (no 3D tilt/glow) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10">
           {expertiseServices.map((service, index) => (
-            <ArchitecturalTiltCard
+            <motion.article
               key={service.slug}
-              maxTilt={3.5}
-              sheenOpacity={0.07}
-              className="flex"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-50px' }}
+              transition={{
+                duration: 0.6,
+                ease: [0.16, 1, 0.3, 1],
+                delay: index * 0.06,
+              }}
+              className="group w-full border border-white/10 bg-[#252624] flex flex-col justify-between transition-colors duration-300 hover:border-bronze/55"
             >
-              <motion.article
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-60px' }}
-                transition={{
-                  duration: 0.7,
-                  ease: [0.16, 1, 0.3, 1],
-                  delay: index * 0.08,
-                }}
-                className="group w-full border border-white/10 bg-[#2A2B29] flex flex-col justify-between transition-all duration-300 hover:shadow-xl hover:border-bronze/50"
-              >
               <div>
                 {/* Large Architectural Photograph */}
                 <Link
@@ -170,7 +164,7 @@ export const OurExpertise: React.FC<OurExpertiseProps> = ({ className = '' }) =>
                     className="object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-black/15 group-hover:bg-transparent transition-colors duration-300" />
-                  
+
                   {/* Number Tag */}
                   <span className="absolute top-4 left-4 z-10 font-mono text-xs bg-charcoal text-white px-2.5 py-1 tracking-widest">
                     {service.number}
@@ -178,15 +172,10 @@ export const OurExpertise: React.FC<OurExpertiseProps> = ({ className = '' }) =>
                 </Link>
 
                 {/* Editorial Details */}
-                <div className="p-6 sm:p-8 flex flex-col gap-3">
-                  <div className="border-b border-white/10 pb-3">
-                    <span className="font-mono text-[10px] text-bronze uppercase tracking-widest font-semibold block mb-1">
-                      SPECIFICATION
-                    </span>
-                    <span className="font-mono text-xs text-[#B8B5AE] leading-snug block">
-                      {service.spec}
-                    </span>
-                  </div>
+                <div className="p-6 sm:p-7 flex flex-col gap-3">
+                  <span className="font-mono text-[10px] text-bronze uppercase tracking-[0.18em] font-medium block">
+                    {service.spec}
+                  </span>
 
                   <h3 className="type-card-title text-2xl text-white group-hover:text-bronze transition-colors">
                     <Link href={`/services/${service.slug}`}>
@@ -201,7 +190,7 @@ export const OurExpertise: React.FC<OurExpertiseProps> = ({ className = '' }) =>
               </div>
 
               {/* Bottom Link Action */}
-              <div className="p-6 sm:p-8 pt-0 border-t border-white/10 mt-4 flex items-center justify-between">
+              <div className="px-6 sm:px-7 py-4 border-t border-white/10 flex items-center justify-between">
                 <Link
                   href={`/services/${service.slug}`}
                   className="font-mono text-xs uppercase tracking-[0.16em] text-[#B8B5AE] group-hover:text-bronze font-medium transition-colors inline-flex items-center gap-2"
@@ -211,7 +200,6 @@ export const OurExpertise: React.FC<OurExpertiseProps> = ({ className = '' }) =>
                 </Link>
               </div>
             </motion.article>
-            </ArchitecturalTiltCard>
           ))}
         </div>
       </div>

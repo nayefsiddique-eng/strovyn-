@@ -85,11 +85,6 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
   }, []);
 
   const finishIntro = useCallback(() => {
-    try {
-      sessionStorage.setItem('strovyn_intro_seen', 'true');
-    } catch {
-      // Ignore private browsing storage blocks
-    }
     setIsActive(false);
     onEnterRef.current();
   }, []);
@@ -103,12 +98,6 @@ export function CinematicIntro({ onEnter }: CinematicIntroProps) {
 
       timelineRef.current?.kill();
       timelineRef.current = null;
-
-      try {
-        sessionStorage.setItem('strovyn_intro_seen', 'true');
-      } catch {
-        // Ignore private browsing storage blocks
-      }
 
       if (mode === 'instant' || prefersReducedMotion()) {
         exitTimelineRef.current?.kill();

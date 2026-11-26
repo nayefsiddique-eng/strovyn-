@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { aiAssistantSchema } from '@/lib/security/schemas';
-import { checkRateLimit } from '@/lib/security/rateLimiter';
 import { readJsonBodyWithLimit } from '@/lib/security/requestLimits';
+import {
+  checkStroPublicAbuseLimits,
+  generateStroConversationalReply,
+  type StroHistoryTurn,
+} from '@/lib/ai/stroChatService';
 
 export type StroIntent =
   | 'quote'
@@ -23,31 +27,6 @@ export interface StroSuggestedAction {
   href?: string;
   prefillService?: string;
 }
-
-const STRO_SYSTEM_PROMPT = `
-You are STRO, Strovyn Painting Co.'s digital assistant ("Your guide to better finishes.").
-
-CONFIRMED COMPANY & SERVICE INFORMATION:
-- Business: Strovyn Painting Co. — Adelaide, South Australia (serving Greater Adelaide).
-- Confirmed Contact: WhatsApp +61 406 646 061 (https://wa.me/61406646061) and the Quotation Request form (/contact).
-- Interactive Tools:
-  - Wall Colour Visualiser (/visualiser): browser-based preview where visitors can upload a room photo (processed locally in the browser), test illustrative wall finishes/sheens, and send their chosen finish directly into /contact or WhatsApp. Digital previews are illustrative only due to lighting and screen variance.
-  - Portfolio (/projects), Insights (/insights), Careers Expression of Interest (/careers).
-- Published Services (/services):
-  1. Interior Architectural Painting (precision wall & ceiling finishes, clean junctions, dust-controlled preparation).
-  2. Exterior Facade Restoration & Coatings (protective mineral silicates and weather-resistant exterior systems for South Australian UV conditions).
-  3. Fine Cabinetry & Millwork Lacquering (spray-applied 2K polyurethane and satin/velvet joinery finishes).
-  4. Artisanal Plasters & Lime Washes (trowelled mineral lime plasters and natural matte wall textures).
-  5. Historic & Heritage Conservation (substrate preservation, period molding repair, breathable mineral finishes).
-  6. Commercial & Hospitality Finishes (durable low-VOC coatings for retail, hospitality, and gallery spaces).
-- Preparation & Process Principles: Substrate assessment, repair/skimming, dust-controlled sanding, directional light checks, and multi-coat architectural application.
-
-STRICT INTEGRITY RULES:
-1. NEVER invent or state prices, estimates, hourly rates, availability, business opening hours, warranties, licences, qualifications, insurance details, unconfirmed completed project counts, fake testimonials, or unconfirmed policies.
-2. If asked for information not confirmed above (such as pricing, scheduling/opening hours, warranties, licences, or insurance), state honestly that STRO does not have those details and invite the visitor to confirm directly with the Adelaide team via WhatsApp (+61 406 646 061) or the quote form (/contact).
-3. Ask 1–2 concise clarifying follow-up questions when a visitor is starting a project enquiry (e.g., interior or exterior, approximate rooms/scope, suburb in Greater Adelaide, surface condition) to help them organise their requirements for /contact.
-4. Keep responses concise, calm, architectural, and practical (2–4 sentences).
-`;
 
 interface HistoryTurn {
   role: 'user' | 'assistant' | 'system';
@@ -293,20 +272,15 @@ export function classifyStroIntent(
 
 export async function POST(req: Request) {
   try {
-    // 1. Persistent Rate Limiting (15 requests per minute per IP)
-    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'local-client';
-    const rateCheck = await checkRateLimit(`ai_${clientIp}`, 15, 60000);
-    if (!rateCheck.allowed) {
+    const contentType = req.headers.get('content-type') || '';
+    if (!contentType.toLowerCase().includes('application/json')) {
       return NextResponse.json(
-        {
-          success: false,
-          error: 'Too many requests in a short period. Please wait a moment before sending another message.',
-        },
-        { status: 429 }
+        { success: false, error: 'Unsupported content type. Expected application/json.' },
+        { status: 415 }
       );
     }
 
-    // 2. Enforce Raw Request Size Limit (32 KB) & Parse JSON
+    // 1. Enforce Raw Request Size Limit (32 KB) & Parse JSON
     const bodyResult = await readJsonBodyWithLimit(req, 32 * 1024);
     if (!bodyResult.ok) {
       return NextResponse.json(
@@ -324,93 +298,87 @@ export async function POST(req: Request) {
       );
     }
 
-    const { message, history = [] } = parseResult.data;
+    const { message, history = [], sessionId, website } = parseResult.data;
 
-    // Sanitize client history: only allow user/assistant turns
-    const cleanHistory: HistoryTurn[] = history
-      .filter((m) => m.role === 'user' || m.role === 'assistant')
-      .map((m) => ({
-        role: m.role,
-        content: m.content.slice(0, 1000),
-      }));
-
-    // Classify intent cleanly upfront for suggested contextual actions (and deterministic fallback)
-    const classified = classifyStroIntent(message, cleanHistory);
-
-    const apiKey = process.env.AI_API_KEY;
-    const model = process.env.AI_MODEL || 'gemini-2.0-flash';
-
-    // 3. Optional External Gemini API with timeout & defensive JSON handling
-    if (apiKey && apiKey.trim().length > 0) {
-      const geminiHistory = cleanHistory.map((m) => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }],
-      }));
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-      try {
-        const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-
-        const response = await fetch(geminiEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': apiKey.trim(),
-          },
-          signal: controller.signal,
-          body: JSON.stringify({
-            systemInstruction: {
-              parts: [{ text: STRO_SYSTEM_PROMPT }],
-            },
-            contents: [
-              ...geminiHistory,
-              {
-                role: 'user',
-                parts: [{ text: message }],
-              },
-            ],
-            generationConfig: {
-              temperature: 0.2,
-              maxOutputTokens: 350,
-            },
-          }),
-        });
-
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-          const aiData = await response.json().catch(() => null);
-          const candidate = aiData?.candidates?.[0];
-          const generatedText = candidate?.content?.parts?.[0]?.text;
-          if (typeof generatedText === 'string' && generatedText.trim().length > 0) {
-            return NextResponse.json({
-              success: true,
-              connected: true,
-              provider: 'gemini',
-              intent: classified.intent,
-              actions: classified.actions,
-              message: generatedText.trim(),
-            });
-          }
-        } else {
-          console.error('Gemini API returned error status:', response.status);
-        }
-      } catch (e) {
-        clearTimeout(timeoutId);
-        console.error('External AI API failure, engaging STRO contextual fallback:', e);
-      }
+    // 2. Bot/Honeypot & Spam Guard
+    if (website && website.trim().length > 0) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid submission.' },
+        { status: 400 }
+      );
+    }
+    if (/(.)\1{24,}/.test(message)) {
+      return NextResponse.json(
+        { success: false, error: 'Please enter a valid question for STRO.' },
+        { status: 400 }
+      );
     }
 
-    // 4. Contextual Architectural Fallback
+    // 3. Cross-Instance Rate Limiting & Daily Usage Protection
+    const clientIp =
+      req.headers.get('x-nf-client-connection-ip')?.trim() ||
+      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      'local-client';
+
+    const abuseCheck = await checkStroPublicAbuseLimits({ clientIp, sessionId });
+    if (!abuseCheck.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            abuseCheck.reason ||
+            'Too many requests in a short period. Please wait a moment before sending another message.',
+        },
+        { status: 429 }
+      );
+    }
+
+    // Sanitize client history: only allow user/assistant turns
+    const cleanHistory: StroHistoryTurn[] = history
+      .filter((m): m is { role: 'user' | 'assistant'; content: string } =>
+        m.role === 'user' || m.role === 'assistant'
+      )
+      .slice(-10)
+      .map((m) => ({
+        role: m.role,
+        content: m.content.slice(0, 600),
+      }));
+
+    // Classify intent for contextual fallback & suggested action chips
+    const classified = classifyStroIntent(message, cleanHistory);
+
+    const result = await generateStroConversationalReply({
+      message,
+      history: cleanHistory,
+      fallbackMessage: classified.message,
+      fallbackActions: classified.actions,
+    });
+
+    if (!result.success) {
+      const status =
+        result.errorCode === 'CONCURRENCY_LIMIT'
+          ? 429
+          : result.errorCode === 'PROVIDER_TIMEOUT'
+            ? 504
+            : 502;
+      return NextResponse.json(
+        {
+          success: false,
+          error: result.message,
+          errorCode: result.errorCode,
+        },
+        { status }
+      );
+    }
+
     return NextResponse.json({
       success: true,
-      connected: false,
-      provider: 'fallback',
+      connected: result.connected,
+      provider: result.provider,
+      model: result.model,
       intent: classified.intent,
-      actions: classified.actions,
-      message: classified.message,
+      actions: result.actions,
+      message: result.message,
     });
   } catch (err: unknown) {
     console.error('AI assistant route internal error:', err instanceof Error ? err.message : 'Unknown error');

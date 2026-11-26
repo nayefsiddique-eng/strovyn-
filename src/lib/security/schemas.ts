@@ -138,6 +138,13 @@ export const aiAssistantMessageSchema = z.object({
 export const aiAssistantSchema = z.object({
   message: z.string().trim().min(1, 'Query message cannot be empty').max(800),
   history: z.array(aiAssistantMessageSchema).max(10).optional(),
+  sessionId: z
+    .string()
+    .trim()
+    .max(80)
+    .regex(/^[a-zA-Z0-9_-]+$/, 'Invalid session identifier')
+    .optional(),
+  website: z.string().max(100).optional(),
 });
 
 // Admin Auth Schema

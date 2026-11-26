@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArchitecturalTiltCard } from '@/components/ui/ArchitecturalTiltCard';
 
 export interface ProcessStep {
   number: string;
@@ -95,85 +94,60 @@ export const StrovynApproach: React.FC<StrovynApproachProps> = ({ className = ''
           </div>
         </motion.div>
 
-        {/* 4-Stage Horizontal Grid with Animated Connecting Line */}
-        <div className="relative">
-          {/* Animated Connecting Line Across Columns */}
-          <div className="hidden lg:block absolute top-[52px] left-0 right-0 h-[1.5px] bg-white/15 z-0" />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-8 relative z-10">
-            {processStages.map((step, idx) => (
-              <ArchitecturalTiltCard
-                key={step.number}
-                maxTilt={2.5}
-                sheenOpacity={0.05}
-                className="flex"
-              >
-                <motion.div
-                  initial={{ opacity: 0, y: 24 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: '-60px' }}
-                  transition={{
-                    duration: 0.7,
-                    ease: [0.16, 1, 0.3, 1],
-                    delay: idx * 0.1,
-                  }}
-                  className="w-full bg-[#20211F] border border-white/15 p-6 sm:p-8 flex flex-col justify-between group hover:border-bronze/60 transition-all duration-300"
-                >
+        {/* 4-Stage Architectural Specification Ledger (MotionSites-inspired editorial cadence) */}
+        <div className="border-t border-white/15">
+          {processStages.map((step, idx) => (
+            <motion.article
+              key={step.number}
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-50px' }}
+              transition={{
+                duration: 0.55,
+                ease: [0.16, 1, 0.3, 1],
+                delay: idx * 0.06,
+              }}
+              className="group relative grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 py-8 sm:py-10 border-b border-white/15 transition-colors duration-300 hover:bg-white/[0.02] px-2 sm:px-4"
+            >
+              {/* Left architectural index & stage title */}
+              <div className="lg:col-span-4 flex items-baseline gap-5">
+                <span className="font-mono text-xs tracking-[0.22em] text-bronze font-semibold shrink-0">
+                  {step.number}
+                </span>
                 <div>
-                  {/* Step Header with Node */}
-                  <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/10">
-                    <span className="w-10 h-10 bg-[#161715] border border-bronze flex items-center justify-center font-mono text-xs font-semibold text-bronze">
-                      {step.number}
-                    </span>
-                    <span className="font-mono text-[10px] text-white/50 tracking-widest uppercase">
-                      STAGE {step.number}
-                    </span>
-                  </div>
-
-                  {/* Stage Title */}
-                  <h3 className="type-card-title text-2xl sm:text-3xl text-white mb-2 group-hover:text-bronze transition-colors">
+                  <h3 className="type-card-title text-2xl sm:text-3xl text-white group-hover:text-bronze transition-colors duration-300">
                     {step.title}
                   </h3>
-
-                  <h4 className="font-sans text-xs text-bronze uppercase tracking-wider font-medium mb-4">
+                  <p className="font-sans text-xs text-bronze/90 uppercase tracking-[0.14em] font-medium mt-1">
                     {step.subtitle}
-                  </h4>
-
-                  <p className="font-sans text-xs sm:text-sm text-warm-grey-light font-light leading-relaxed mb-6">
-                    {step.description}
                   </p>
                 </div>
+              </div>
 
-                <div className="pt-4 border-t border-white/10 mt-auto">
-                  <span className="font-mono text-[10px] text-white/60 uppercase tracking-widest block mb-1">
-                    EXECUTION METRIC
-                  </span>
-                  <span className="font-mono text-xs text-white font-medium">
-                    {step.action}
-                  </span>
-                </div>
-              </motion.div>
-              </ArchitecturalTiltCard>
-            ))}
-          </div>
-        </div>
+              {/* Center discipline narrative */}
+              <div className="lg:col-span-5 flex items-center">
+                <p className="font-sans text-sm text-warm-grey-light font-light leading-relaxed">
+                  {step.description}
+                </p>
+              </div>
 
-        {/* Collaboration Footnote Banner */}
-        <div className="mt-12 p-6 bg-[#20211F] border border-white/15 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-          <div className="max-w-2xl">
-            <span className="font-sans text-xs uppercase tracking-[0.16em] text-bronze font-semibold block mb-1">
-              ARCHITECT &amp; HEAD CONTRACTOR COLLABORATION
-            </span>
-            <p className="font-sans text-xs sm:text-sm text-warm-grey-light font-light leading-relaxed">
-              We coordinate seamlessly with Adelaide designers, builders and estate managers—providing physical drawdown test panels, strict milestone governance, and dust containment protocols.
-            </p>
-          </div>
+              {/* Right execution datum */}
+              <div className="lg:col-span-3 flex flex-col justify-center lg:items-end lg:text-right border-t lg:border-t-0 border-white/10 pt-4 lg:pt-0">
+                <span className="font-mono text-[10px] text-white/50 uppercase tracking-[0.2em] block mb-1">
+                  Execution Datum
+                </span>
+                <span className="font-mono text-xs text-white/95 font-medium">
+                  {step.action}
+                </span>
+              </div>
 
-          <div className="shrink-0 flex items-center gap-4 text-xs font-mono text-white/60 uppercase tracking-wider">
-            <span>ADELAIDE ARCHITECTURAL SPECIALISTS</span>
-            <span className="text-bronze">|</span>
-            <span>WRITTEN SCOPE SCHEDULES</span>
-          </div>
+              {/* Subtle bottom bronze hairline reveal on hover */}
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute bottom-0 left-0 h-px w-0 bg-bronze transition-all duration-500 ease-out group-hover:w-full"
+              />
+            </motion.article>
+          ))}
         </div>
       </div>
     </section>

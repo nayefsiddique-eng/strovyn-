@@ -84,7 +84,7 @@ const SERVICE_OPTIONS = [
 const INITIAL_ASSISTANT_GREETING: ChatMessage = {
   role: 'assistant',
   content:
-    'Welcome to Strovyn. I’m STRO — your guide to finishes, surface preparation, and getting your project started.',
+    'Welcome to Strovyn. I’m STRO, your AI assistant for finishes, colour guidance, surface preparation, and getting your project started.',
 };
 
 const INITIAL_QUOTE_DRAFT: QuoteDraft = {
@@ -96,6 +96,13 @@ const INITIAL_QUOTE_DRAFT: QuoteDraft = {
   phone: '',
   preferredContact: 'email',
 };
+
+function createEphemeralSessionId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `stro-${crypto.randomUUID().slice(0, 12)}`;
+  }
+  return `stro-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
 
 /**
  * AIAssistant (STRO) — Redesigned Strovyn Digital Assistant & Guided Quote Handoff.
@@ -121,6 +128,14 @@ export const AIAssistant: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const idempotencyKeyRef = useRef<string>('');
+  const chatSessionIdRef = useRef<string>('');
+
+  const ensureChatSessionId = (): string => {
+    if (!chatSessionIdRef.current) {
+      chatSessionIdRef.current = createEphemeralSessionId();
+    }
+    return chatSessionIdRef.current;
+  };
 
   // Auto-scroll newest reply into view (respecting reduced-motion)
   useEffect(() => {
@@ -177,6 +192,7 @@ export const AIAssistant: React.FC = () => {
         body: JSON.stringify({
           message: trimmed,
           history: historyPayload,
+          sessionId: ensureChatSessionId(),
         }),
       });
       clearTimeout(timeoutId);
@@ -346,6 +362,7 @@ export const AIAssistant: React.FC = () => {
     setQuoteError('');
     setPanelView('chat');
     idempotencyKeyRef.current = '';
+    chatSessionIdRef.current = '';
   };
 
   const whatsappDirectHref = `${WHATSAPP_DETAILS.chatUrl}?text=${WHATSAPP_DETAILS.defaultEnquiryMessage}`;
@@ -422,11 +439,11 @@ export const AIAssistant: React.FC = () => {
                   </span>
                   <span className="w-1.5 h-1.5 bg-[#C41E1E]" aria-hidden="true" />
                   <span className="font-sans text-[11px] font-medium tracking-wide text-[#C9B28F]">
-                    Strovyn&apos;s Digital Assistant
+                    Strovyn&apos;s AI Assistant
                   </span>
                 </div>
                 <p className="text-[11px] text-[#B8B5AE] font-light mt-0.5">
-                  Your guide to better finishes.
+                  AI guide to finishes &amp; colour.
                 </p>
               </div>
             </div>
@@ -614,9 +631,9 @@ export const AIAssistant: React.FC = () => {
                 )}
 
                 {loading && (
-                  <div className="flex justify-start">
+                  <div className="flex justify-start" role="status" aria-live="polite">
                     <div className="bg-white dark:bg-[#222320] border border-warm-grey/40 dark:border-white/12 px-3 py-2 text-warm-grey-dark dark:text-[#B8B5AE] font-mono text-[11px]">
-                      Reviewing specification&hellip;
+                      STRO is thinking&hellip;
                     </div>
                   </div>
                 )}

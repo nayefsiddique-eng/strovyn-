@@ -15,6 +15,12 @@ const useIsomorphicLayoutEffect =
  * Reduced-motion visitors receive the homepage immediately without delay.
  * Internal routes render immediately without interruption.
  */
+/**
+ * In-memory per-document flag: resets on every full browser load/refresh,
+ * while preventing replay during client-side Next.js route transitions.
+ */
+let hasCompletedIntroInDocument = false;
+
 export const IntroWrapper = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
   const isHomepage = pathname === '/';
@@ -24,25 +30,16 @@ export const IntroWrapper = ({ children }: { children: React.ReactNode }) => {
   useIsomorphicLayoutEffect(() => {
     document.documentElement.removeAttribute('data-intro-pending');
 
-    if (!isHomepage || prefersReducedMotion()) {
+    if (!isHomepage || prefersReducedMotion() || hasCompletedIntroInDocument) {
       setShowIntro(false);
       return;
     }
 
-    try {
-      const seen = sessionStorage.getItem('strovyn_intro_seen');
-      setShowIntro(seen !== 'true');
-    } catch {
-      setShowIntro(false);
-    }
+    setShowIntro(true);
   }, [isHomepage]);
 
   const handleEnter = useCallback(() => {
-    try {
-      sessionStorage.setItem('strovyn_intro_seen', 'true');
-    } catch {
-      // ignore private storage restrictions
-    }
+    hasCompletedIntroInDocument = true;
     document.documentElement.removeAttribute('data-intro-pending');
     setShowIntro(false);
   }, []);
