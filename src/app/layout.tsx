@@ -4,6 +4,7 @@ import { inter, anton } from '@/styles/fonts';
 import { Header, Footer } from '@/components/layout';
 import { PublicConversionWidgets } from '@/components/floating/PublicConversionWidgets';
 import { IntroWrapper } from '@/components/intro';
+import { V3LuxuryShell } from '@/components/v3-luxury/shell/V3LuxuryShell';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -82,7 +83,9 @@ export default function RootLayout({
           <Header />
         </React.Suspense>
         <div className="flex-1">
-          <IntroWrapper>{children}</IntroWrapper>
+          <V3LuxuryShell>
+            <IntroWrapper>{children}</IntroWrapper>
+          </V3LuxuryShell>
         </div>
         <Footer />
         <PublicConversionWidgets />

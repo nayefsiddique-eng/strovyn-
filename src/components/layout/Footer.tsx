@@ -36,7 +36,7 @@ export const Footer: React.FC<FooterProps> = ({ className }) => {
   // Temporary honest disclosure state until approved legal copy is provided for /privacy, /terms, /cookies
   const [legalNotice, setLegalNotice] = React.useState<'privacy' | 'terms' | 'cookies' | null>(null);
 
-  if (pathname?.startsWith("/prototype/v3-")) {
+  if (!pathname?.startsWith("/admin")) {
     return null;
   }
 

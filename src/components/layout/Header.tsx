@@ -115,7 +115,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const isSolid = true; // Reference design uses clean white background with crisp charcoal links
 
-  if (pathname?.startsWith("/prototype/v3-")) {
+  if (!pathname?.startsWith("/admin")) {
     return null;
   }
 
