@@ -17,6 +17,7 @@ import { HomeClientExperiencesSection } from '@/components/home/HomeClientExperi
 import { HomeInsightsSection } from '@/components/home/HomeInsightsSection';
 import { HomeProjectsSection } from '@/components/home/HomeProjectsSection';
 import { HomeTestimonialsSection } from '@/components/home/HomeTestimonialsSection';
+import { getPublicInsuranceStatus } from '@/lib/cms/insuranceService';
 
 export const metadata: Metadata = {
   title: {
@@ -26,7 +27,9 @@ export const metadata: Metadata = {
     'Thoughtful preparation, refined finishes and professional painting for spaces that deserve a higher standard. Serving greater Adelaide, South Australia.',
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const insuranceStatus = await getPublicInsuranceStatus();
+
   return (
     <main className="w-full min-h-screen bg-ivory text-charcoal flex flex-col selection:bg-brand-red selection:text-white">
       {/* SECTION A & B: CINEMATIC OPENING & MAIN HERO */}
@@ -68,7 +71,7 @@ export default function HomePage() {
       <SearchableFAQ />
 
       {/* SECTION H: FINAL CONTACT SECTION */}
-      <FinalContact />
+      <FinalContact insuranceStatus={insuranceStatus} />
     </main>
   );
 }

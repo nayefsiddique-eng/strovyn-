@@ -41,6 +41,9 @@ yarn-error.log*
 # Private storage directory (private uploads outside public web folder)
 /private_storage/
 
+# Scratch workspace
+/scratch/
+
 # vercel
 .vercel
 

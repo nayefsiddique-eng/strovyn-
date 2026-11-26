@@ -11,6 +11,7 @@ export type AdminModuleId =
   | 'customer-feedback'
   | 'media-library'
   | 'ai-content-studio'
+  | 'insurance'
   | 'staff';
 
 export type AdminModuleStatus = 'live' | 'foundation' | 'planned';
@@ -126,6 +127,16 @@ export const ADMIN_NAVIGATION_ITEMS: readonly AdminNavItem[] = [
     phaseLabel: 'Phase F',
     description: 'Staff-assisted drafting workspace (no automated publishing).',
     allowedRoles: ['editor', 'publisher', 'admin'],
+  },
+  {
+    id: 'insurance',
+    label: 'Insurance & Compliance',
+    href: '/admin/insurance',
+    group: 'core',
+    status: 'live',
+    phaseLabel: 'Compliance',
+    description: 'Public liability insurance credentials, policy verification, and public statement governance.',
+    allowedRoles: ['admin'],
   },
   {
     id: 'staff',

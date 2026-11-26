@@ -1,6 +1,8 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import { Button } from '@/components/ui/Button';
+import { getPublicInsuranceStatus } from '@/lib/cms/insuranceService';
+import { PublicInsuranceSection } from '@/components/about/PublicInsuranceSection';
 
 export const metadata: Metadata = {
   title: 'About',
@@ -8,7 +10,9 @@ export const metadata: Metadata = {
     'Learn about our dedication to architectural coatings, Level 5 surface preparation, and the philosophy of quiet luxury in contemporary finishes.',
 };
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const insuranceStatus = await getPublicInsuranceStatus();
+
   return (
     <main className="w-full min-h-screen bg-ivory text-charcoal">
       {/* Editorial Hero Header */}
@@ -131,6 +135,9 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
+
+      {/* Public Liability Insurance (Suppressed until verified client evidence is active) */}
+      <PublicInsuranceSection status={insuranceStatus} />
 
       {/* For Architects & Trade Partners */}
       <section className="py-20 md:py-28 px-6 sm:px-8 lg:px-12 max-w-7xl mx-auto">

@@ -60,6 +60,8 @@ const ROLE_PERMISSION_SETS: Record<EditorialRole, ReadonlySet<EditorialAction>> 
     ...EDITOR_ACTIONS,
     ...PUBLISHER_ONLY_ACTIONS,
     'staff:manage',
+    'insurance:read',
+    'insurance:manage',
   ]),
 };
 

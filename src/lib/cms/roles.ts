@@ -56,6 +56,8 @@ export const EDITORIAL_ACTIONS = [
   'submission:download_attachment',
   'ai_studio:use',
   'staff:manage',
+  'insurance:read',
+  'insurance:manage',
 ] as const;
 export type EditorialAction = (typeof EDITORIAL_ACTIONS)[number];
 

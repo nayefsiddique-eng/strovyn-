@@ -4,14 +4,18 @@ import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { WHATSAPP_DETAILS } from '@/lib/constants';
+import type { PublicInsuranceStatus } from '@/lib/cms/insuranceTypes';
+import { InsuranceTrustPill } from './InsuranceTrustPill';
 
 export interface FinalContactProps {
   className?: string;
   quoteHref?: string;
+  insuranceStatus?: PublicInsuranceStatus;
 }
 
 export const FinalContact: React.FC<FinalContactProps> = ({
   className = '',
+  insuranceStatus,
 }) => {
   return (
     <section
@@ -69,6 +73,12 @@ export const FinalContact: React.FC<FinalContactProps> = ({
                 </svg>
                 <span>Serving greater Adelaide, South Australia</span>
               </div>
+
+              {insuranceStatus && insuranceStatus.isPublished && (
+                <div className="pt-2">
+                  <InsuranceTrustPill status={insuranceStatus} />
+                </div>
+              )}
             </div>
           </motion.div>
 
