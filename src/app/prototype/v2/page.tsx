@@ -2,6 +2,12 @@ import React, { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { connection } from 'next/server';
 import { getProjectsWithOverridesAsync } from '@/lib/projectPhotos';
+import { FinishExplorer } from '@/components/home/FinishExplorer';
+import { HomeInsightsSection } from '@/components/home/HomeInsightsSection';
+import { HomeTestimonialsSection } from '@/components/home/HomeTestimonialsSection';
+import { InsightsArticles } from '@/components/home/InsightsArticles';
+import { SearchableFAQ } from '@/components/home/SearchableFAQ';
+import { TestimonialCarousel } from '@/components/home/TestimonialCarousel';
 import { StrovynV2IntroGate } from '@/components/v2/StrovynV2IntroGate';
 import { StrovynV2Navbar } from '@/components/v2/StrovynV2Navbar';
 import { StrovynV2Hero } from '@/components/v2/StrovynV2Hero';
@@ -39,10 +45,20 @@ export default function StrovynPrototypeV2Page() {
         <StrovynV2Hero />
         <StrovynV2Craftsmanship />
         <StrovynV2Services />
+        <FinishExplorer />
         <StrovynV2Approach />
         <Suspense fallback={<StrovynV2Portfolio projects={[]} />}>
           <LivePortfolioLoader />
         </Suspense>
+        <Suspense fallback={<TestimonialCarousel isLoading />}>
+          <HomeTestimonialsSection />
+        </Suspense>
+        <Suspense fallback={<InsightsArticles isLoading />}>
+          <HomeInsightsSection />
+        </Suspense>
+        <div id="v2-faq" className="w-full bg-ivory">
+          <SearchableFAQ />
+        </div>
         <StrovynV2ConsultationCta />
       </main>
     </>

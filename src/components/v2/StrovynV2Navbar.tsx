@@ -8,14 +8,14 @@ import { WHATSAPP_DETAILS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 const V2_NAV_LINKS = [
-  { label: 'Craft', href: '#v2-craft', sectionId: 'v2-craft' },
   { label: 'Services', href: '#v2-services', sectionId: 'v2-services' },
+  { label: 'Finishes', href: '#finish-studio', sectionId: 'finish-studio' },
   { label: 'Approach', href: '#v2-approach', sectionId: 'v2-approach' },
   { label: 'Portfolio', href: '#v2-portfolio', sectionId: 'v2-portfolio' },
+  { label: 'Insights', href: '#insights', sectionId: 'insights' },
+  { label: 'FAQ', href: '#v2-faq', sectionId: 'v2-faq' },
   { label: 'Visualiser', href: '/visualiser' },
-  { label: 'Insights', href: '/insights' },
   { label: 'About', href: '/about' },
-  { label: 'Careers', href: '/careers' },
 ] as const;
 
 export const StrovynV2Navbar: React.FC = () => {
@@ -43,7 +43,17 @@ export const StrovynV2Navbar: React.FC = () => {
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
 
-    const sectionIds = ['v2-craft', 'v2-services', 'v2-approach', 'v2-portfolio', 'v2-consultation'];
+    const sectionIds = [
+      'v2-craft',
+      'v2-services',
+      'finish-studio',
+      'v2-approach',
+      'v2-portfolio',
+      'endorsements',
+      'insights',
+      'v2-faq',
+      'v2-consultation',
+    ];
     const elements = sectionIds
       .map((id) => document.getElementById(id))
       .filter((el): el is HTMLElement => Boolean(el));
