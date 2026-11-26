@@ -82,8 +82,12 @@ export function classifyStroIntent(
     };
   }
 
-  // 2. Opening hours / live availability
-  if (/\b(hour|hours|open|opening|close|closing|weekend|saturday|sunday|monday|available|availability|when can|time slot|schedule)\b/.test(q)) {
+  // 2. Opening hours / live availability (strictly targeted; avoids "open-plan", "drying hours")
+  const asksOpeningHours =
+    /\b(?:business|studio|office|trading|opening)\s+hours?\b|\bwhat\s+(?:are\s+your\s+)?hours\b|\b(?:open|closed?)\s+(?:on\s+)?(?:weekends?|saturdays?|sundays?|mondays?|public\s+holidays?)\b|\b(?:available\s+)?time\s*slots?\b|\bbook\s+(?:a\s+)?time\b|\bbooking\s+calendar\b/i.test(q) &&
+    !/\b(?:open[- ](?:plan|layout|living|concept|space)|hours?\s+(?:between|to\s+dry|dry|cure))\b/i.test(q);
+
+  if (asksOpeningHours) {
     return {
       intent: 'scheduling_refusal',
       message:
@@ -148,8 +152,12 @@ export function classifyStroIntent(
     };
   }
 
-  // 6. Careers / Employment intent
-  if (/\b(career|careers|job|jobs|hire|hiring|apprentice|apply|work for strovyn|employment|painter position)\b/.test(q)) {
+  // 6. Careers / Employment intent (strictly targeted; avoids "paint job", "how long will the job take")
+  const asksCareers =
+    /\b(?:careers?|join\s+(?:the\s+)?team|employment|apprentices?|internships?|job\s+(?:openings?|vacanc(?:y|ies)|opportunities?|applications?)|work\s+for\s+strovyn|painter\s+positions?)\b/i.test(q) &&
+    !/\b(?:paint\s+jobs?|interior\s+job|exterior\s+job|quote\s+for\s+the\s+job|how\s+long\s+(?:will|does)\s+the\s+job|finish\s+the\s+job)\b/i.test(q);
+
+  if (asksCareers) {
     return {
       intent: 'careers',
       message:
@@ -173,7 +181,7 @@ export function classifyStroIntent(
     return {
       intent: 'finishes',
       message:
-        'Finish selection balances daylight reflection and daily wear: ultra-flat and velvet matte (1–3% sheen) soften harsh raking light across walls and ceilings, low-sheen/eggshell adds cleanable durability in hallways, and catalyzed 2K polyurethane or satin enamel protects doors, trim, and cabinetry. Which room or substrate are you planning?',
+        'Finish selection balances daylight reflection and daily wear: ultra-flat and velvet matte (1–3% sheen) soften harsh raking light across walls and ceilings, low-sheen/eggshell adds cleanable durability in hallways, and catalysed 2K polyurethane or satin enamel protects doors, trim, and cabinetry. Which room or substrate are you planning?',
       actions: [
         { type: 'link', label: 'Preview Tones in Visualiser', href: '/visualiser' },
         { type: 'open_quote_builder', label: 'Enquire About a Finish', prefillService: inferredService },
@@ -229,8 +237,24 @@ export function classifyStroIntent(
     };
   }
 
-  // 11. Contact Strovyn / Service Area
-  if (/\b(contact|whatsapp|phone|call|reach|adelaide|location|where|suburb|south australia)\b/.test(q)) {
+  // 11a. Service-Area Boundaries: Stirling, Adelaide Hills & Outer Suburbs
+  if (/\b(stirling|adelaide hills|mount barker|crafers|aldgate|outer suburbs?|regional sa|fleurieu|barossa)\b/i.test(q)) {
+    return {
+      intent: 'contact',
+      message:
+        'Strovyn operates primarily across Greater Adelaide, South Australia. Availability for specific outer suburbs or the Adelaide Hills (such as Stirling or Mount Barker) requires direct confirmation with our Adelaide team via WhatsApp (+61 406 646 061) or our Consultation Portal (/contact).',
+      actions: [
+        { type: 'whatsapp', label: 'Confirm Hills Availability on WhatsApp' },
+        { type: 'link', label: 'Go to /contact', href: '/contact' },
+      ],
+    };
+  }
+
+  // 11b. General Contact Details / Location Inquiry (avoid matching every mention of 'adelaide')
+  const asksContactOrLocation =
+    /\b(?:contact\s+(?:strovyn|you|team|details|info)|phone\s+number|call\s+you|how\s+(?:can|do)\s+i\s+(?:contact|reach)|where\s+are\s+you\s+located|where\s+is\s+strovyn|what\s+(?:areas?|suburbs?)\s+do\s+you\s+(?:service|serve|paint))\b/i.test(q);
+
+  if (asksContactOrLocation) {
     return {
       intent: 'contact',
       message:
