@@ -249,8 +249,8 @@ export const StrovynV2Navbar: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[60] bg-[#161715] text-[#F4F1EA] flex flex-col justify-between p-6 sm:p-8"
+            transition={{ duration: 0.16 }}
+            className="fixed inset-0 z-[80] bg-[#161715] text-[#F4F1EA] flex flex-col justify-between p-6 sm:p-8 overflow-y-auto"
           >
             <div className="flex items-center justify-between border-b border-white/15 pb-5">
               <div className="flex items-center gap-2.5">

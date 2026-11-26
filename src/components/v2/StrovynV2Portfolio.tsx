@@ -10,9 +10,39 @@ import { VERIFIED_PROJECT } from '@/components/home/FeaturedProjects';
 
 export interface StrovynV2PortfolioProps {
   projects: PublicProjectDetail[];
+  isLoading?: boolean;
 }
 
-export const StrovynV2Portfolio: React.FC<StrovynV2PortfolioProps> = ({ projects }) => {
+export const StrovynV2Portfolio: React.FC<StrovynV2PortfolioProps> = ({
+  projects,
+  isLoading = false,
+}) => {
+  if (!isLoading && projects.length === 0) {
+    return (
+      <section
+        id="v2-portfolio"
+        aria-label="Selected Architectural Commissions"
+        className="w-full bg-ivory text-charcoal border-b border-warm-grey/35 py-20 md:py-28"
+      >
+        <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-12 text-center space-y-4">
+          <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-bronze font-semibold block">
+            [ 04 / SELECTED COMMISSIONS ]
+          </span>
+          <p className="font-sans text-sm text-charcoal-muted">
+            Architectural commission case studies are currently being updated.
+          </p>
+          <Link
+            href="/projects"
+            className="inline-flex items-center gap-2 border border-charcoal/35 px-5 py-2.5 font-mono text-xs uppercase tracking-[0.18em] text-charcoal hover:border-bronze hover:text-bronze transition-colors"
+          >
+            <span>View Portfolio</span>
+            <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </Link>
+        </div>
+      </section>
+    );
+  }
+
   const primary =
     projects.find((p) => p.isFeatured) ??
     projects.find((p) => p.slug === VERIFIED_PROJECT.slug) ??

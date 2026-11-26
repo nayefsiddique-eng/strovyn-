@@ -47,7 +47,7 @@ export default function StrovynPrototypeV2Page() {
         <StrovynV2Services />
         <FinishExplorer />
         <StrovynV2Approach />
-        <Suspense fallback={<StrovynV2Portfolio projects={[]} />}>
+        <Suspense fallback={<StrovynV2Portfolio projects={[]} isLoading />}>
           <LivePortfolioLoader />
         </Suspense>
         <Suspense fallback={<TestimonialCarousel isLoading />}>
