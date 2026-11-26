@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui";
 
 import { WHATSAPP_DETAILS } from "@/lib/constants";
@@ -30,9 +31,14 @@ const companyLinks = [
 ];
 
 export const Footer: React.FC<FooterProps> = ({ className }) => {
+  const pathname = usePathname();
   const currentYear = 2026;
   // Temporary honest disclosure state until approved legal copy is provided for /privacy, /terms, /cookies
   const [legalNotice, setLegalNotice] = React.useState<'privacy' | 'terms' | 'cookies' | null>(null);
+
+  if (pathname?.startsWith("/prototype/v3-")) {
+    return null;
+  }
 
   const toggleNotice = (key: 'privacy' | 'terms' | 'cookies') => {
     setLegalNotice((prev) => (prev === key ? null : key));
