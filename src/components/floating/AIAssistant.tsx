@@ -15,14 +15,15 @@ import {
   X,
 } from 'lucide-react';
 import { WHATSAPP_DETAILS } from '@/lib/constants';
+import {
+  extractClientAssistantPayload,
+  normalizeStroAssistantText,
+  type StroActionChip,
+} from '@/lib/ai/stroResponseNormalizer';
+import { StroFormattedMessage } from './StroFormattedMessage';
 import { StroLogo } from './StroLogo';
 
-interface ActionChip {
-  type: 'open_quote_builder' | 'link' | 'whatsapp';
-  label: string;
-  href?: string;
-  prefillService?: string;
-}
+type ActionChip = StroActionChip;
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -30,6 +31,7 @@ interface ChatMessage {
   actions?: ActionChip[];
   isError?: boolean;
   retryPrompt?: string;
+  allowCodeBlocks?: boolean;
 }
 
 interface QuoteDraft {
@@ -171,10 +173,20 @@ export const AIAssistant: React.FC = () => {
     const historyPayload = messages
       .filter((m) => !m.isError)
       .slice(-8)
-      .map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
+      .map((m) => {
+        if (m.role === 'assistant') {
+          const normalized = normalizeStroAssistantText(m.content);
+          return {
+            role: m.role,
+            content: (normalized.ok ? normalized.content : m.content).slice(0, 900),
+          };
+        }
+        return {
+          role: m.role,
+          content: m.content.slice(0, 600),
+        };
+      })
+      .filter((m) => m.content.trim().length > 0);
 
     setMessages((prev) => [...prev, { role: 'user', content: trimmed }]);
     setInput('');
@@ -182,7 +194,7 @@ export const AIAssistant: React.FC = () => {
     setPanelView('chat');
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000);
+    const timeoutId = setTimeout(() => controller.abort(), 14000);
 
     try {
       const res = await fetch('/api/ai-assistant', {
@@ -197,31 +209,27 @@ export const AIAssistant: React.FC = () => {
       });
       clearTimeout(timeoutId);
 
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.success || typeof data.message !== 'string') {
-        const errMsg =
-          res.status === 429
-            ? data.error || 'Too many requests right now. Please pause a moment and try again.'
-            : data.error || 'STRO could not respond just now. You can retry or contact our Adelaide team on WhatsApp.';
+      const data = await res.json().catch(() => null);
+      const parsed = extractClientAssistantPayload(data, res.status, trimmed);
+
+      if (!res.ok || !parsed.ok) {
         setMessages((prev) => [
           ...prev,
           {
             role: 'assistant',
-            content: errMsg,
+            content: parsed.content,
             isError: true,
             retryPrompt: trimmed,
           },
         ]);
       } else {
-        const responseActions = Array.isArray(data.actions)
-          ? (data.actions as ActionChip[])
-          : undefined;
         setMessages((prev) => [
           ...prev,
           {
             role: 'assistant',
-            content: data.message,
-            actions: responseActions,
+            content: parsed.content,
+            actions: parsed.actions,
+            allowCodeBlocks: parsed.preserveCodeBlocks,
           },
         ]);
       }
@@ -503,24 +511,35 @@ export const AIAssistant: React.FC = () => {
           {panelView === 'chat' ? (
             <>
               {/* Conversation Viewport */}
-              <div className="flex-1 min-h-[210px] overflow-y-auto p-4 space-y-3.5 text-xs bg-ivory-light dark:bg-[#191A18]">
+              <div className="flex-1 min-h-[210px] overflow-y-auto overflow-x-hidden p-4 space-y-3.5 text-[12.5px] bg-ivory-light dark:bg-[#191A18]">
                 {messages.map((msg, idx) => (
                   <div
                     key={idx}
-                    className={`flex flex-col ${
+                    className={`flex flex-col min-w-0 ${
                       msg.role === 'user' ? 'items-end' : 'items-start'
                     }`}
                   >
                     <div
-                      className={`max-w-[90%] px-3.5 py-2.5 leading-relaxed ${
+                      data-stro-bubble={msg.role}
+                      className={`max-w-[92%] min-w-0 px-3.5 py-2.5 leading-relaxed break-words [overflow-wrap:anywhere] ${
                         msg.role === 'user'
                           ? 'bg-charcoal text-white dark:bg-[#F4F1EA] dark:text-[#20211F]'
                           : msg.isError
                           ? 'bg-red-50 dark:bg-[#2A1616] border border-red-300 dark:border-red-700/60 text-red-900 dark:text-red-200'
-                          : 'bg-white dark:bg-[#222320] border border-warm-grey/40 dark:border-white/12 text-charcoal dark:text-[#F4F1EA] shadow-xs'
+                          : 'bg-white dark:bg-[#222320] border border-warm-grey/40 dark:border-white/15 text-charcoal dark:text-[#F4F1EA] shadow-xs'
                       }`}
                     >
-                      <p className="whitespace-pre-line">{msg.content}</p>
+                      {msg.role === 'assistant' ? (
+                        <StroFormattedMessage
+                          content={msg.content}
+                          allowCodeBlocks={msg.allowCodeBlocks}
+                          onNavigate={() => setIsOpen(false)}
+                        />
+                      ) : (
+                        <p className="whitespace-pre-line break-words [overflow-wrap:anywhere]">
+                          {msg.content}
+                        </p>
+                      )}
 
                       {msg.retryPrompt && (
                         <button
