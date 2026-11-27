@@ -1,6 +1,8 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import { Button } from '@/components/ui/Button';
+import { getPublicInsuranceStatus } from '@/lib/cms/insuranceService';
+import { PublicInsuranceSection } from '@/components/about/PublicInsuranceSection';
 
 export const metadata: Metadata = {
   title: 'About',
@@ -8,7 +10,9 @@ export const metadata: Metadata = {
     'Learn about our dedication to architectural coatings, Level 5 surface preparation, and the philosophy of quiet luxury in contemporary finishes.',
 };
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const insuranceStatus = await getPublicInsuranceStatus();
+
   return (
     <main className="w-full min-h-screen bg-ivory text-charcoal">
       {/* Editorial Hero Header */}
@@ -132,12 +136,15 @@ export default function AboutPage() {
         </div>
       </section>
 
+      {/* Public Liability Insurance Enquiries & Incident Reporting */}
+      <PublicInsuranceSection status={insuranceStatus} />
+
       {/* For Architects & Trade Partners */}
       <section className="py-20 md:py-28 px-6 sm:px-8 lg:px-12 max-w-7xl mx-auto">
         <div className="bg-charcoal text-white p-8 sm:p-12 lg:p-16 border border-charcoal">
           <div className="max-w-3xl">
             <span className="font-sans text-xs uppercase tracking-[0.2em] text-bronze font-medium block mb-4">
-              [ 03 / TRADE COLLABORATION ]
+              [ 04 / TRADE COLLABORATION ]
             </span>
             <h2 className="type-section-title text-3xl sm:text-4xl lg:text-5xl mb-6">
               Partnering with architects, interior designers, and master builders.

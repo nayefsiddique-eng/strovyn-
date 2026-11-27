@@ -47,6 +47,8 @@ function getModuleIcon(id: AdminModuleId) {
       return <Camera className="w-4 h-4" aria-hidden="true" />;
     case 'ai-content-studio':
       return <Sparkles className="w-4 h-4" aria-hidden="true" />;
+    case 'insurance':
+      return <ShieldCheck className="w-4 h-4" aria-hidden="true" />;
     case 'staff':
       return <ShieldCheck className="w-4 h-4" aria-hidden="true" />;
   }
